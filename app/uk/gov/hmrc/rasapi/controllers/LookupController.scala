@@ -18,19 +18,45 @@ package uk.gov.hmrc.rasapi.controllers
 
 import play.api.mvc.{Action, AnyContent}
 import uk.gov.hmrc.play.microservice.controller.BaseController
+import uk.gov.hmrc.api.controllers.HeaderValidator
+import uk.gov.hmrc.play.config.RunMode
+import uk.gov.hmrc.rasapi.connectors.{CachingConnector, DESConnector}
+import uk.gov.hmrc.rasapi.models.{CustomerDetails, InvalidUUIDForbiddenResponse, ResidencyStatus}
+import play.api.libs.json.Json._
+import play.api.Logger
+
+
 import scala.concurrent.Future
 import scala.concurrent.ExecutionContext.Implicits.global
 
-trait LookupController extends BaseController{
+trait LookupController extends BaseController with HeaderValidator with RunMode {
 
-  def helloWorld(): Action[AnyContent] = ???
+  val cachingConnector: CachingConnector
+  val desConnector: DESConnector
+
+  def getResidencyStatus(uuid: String): Action[AnyContent] = validateAccept(acceptHeaderValidationRules).async {
+    implicit request =>
+
+      val customerDetails: Option[CustomerDetails] = cachingConnector.getCachedData(uuid)
+      val residencyStatus: Option[ResidencyStatus] = desConnector.getResidencyStatus(customerDetails.getOrElse(CustomerDetails()))
+
+      if (isValidUUID(uuid))
+        Future(Ok(toJson(residencyStatus.getOrElse(ResidencyStatus("","")))))
+      else
+        Future(Forbidden(toJson(InvalidUUIDForbiddenResponse)))
+
+  }
+
+  private def isValidUUID(uuid: String): Boolean = {
+
+    val uuidRegex = "^((2800a7ab-fe20-42ca-98d7-c33f4133cfc2)|(633e0ee7-315b-49e6-baed-d79c3dffe467)|" +
+      "(77648d82-309e-484d-a310-d0ffd2997791)|(79f21755-8cd4-4785-9c10-13253f7a8bb6))$"
+
+    uuid.matches(uuidRegex)
+  }
 }
 
 object LookupController extends LookupController {
-
-  override def helloWorld() = {Action.async {
-    implicit request =>
-
-    Future(Ok("Hello World"))
-  }}
+  override val cachingConnector: CachingConnector = CachingConnector
+  override val desConnector: DESConnector = DESConnector
 }

@@ -21,15 +21,55 @@ import org.scalatestplus.play.OneAppPerSuite
 import play.api.test.{FakeRequest, Helpers}
 import play.api.test.Helpers._
 import org.scalatest.{ShouldMatchers, WordSpec}
+import play.api.libs.json.Json
+import play.mvc.Http.HeaderNames
 
 class LookupControllerSpec extends WordSpec with MockitoSugar with ShouldMatchers with OneAppPerSuite {
 
-  "LookupController" should {
-    "return status 200 with text hello world" in {
-      val result = LookupController.helloWorld().apply(FakeRequest(Helpers.GET, "/"))
+  val acceptHeader: (String, String) = (HeaderNames.ACCEPT, "application/vnd.hmrc.1.0+json")
 
-      status(result) shouldBe 200
-      contentAsString(result) shouldBe "Hello World"
+  "LookupController" should {
+
+    "return status 200 with correct residency status json" when {
+
+      "a valid UUID is given" in {
+
+        val uuid: String = "2800a7ab-fe20-42ca-98d7-c33f4133cfc2"
+
+        val expectedJsonResult = Json.parse(
+          """
+            {
+              "currentYearResidencyStatus" : "otherUKResident",
+              "nextYearForecastResidencyStatus" : "otherUKResident"
+            }
+          """.stripMargin)
+
+        val result = LookupController.getResidencyStatus(uuid).apply(FakeRequest(Helpers.GET, "/").withHeaders(acceptHeader))
+
+        status(result) shouldBe 200
+        contentAsJson(result) shouldBe expectedJsonResult
+      }
+    }
+
+    "return status 403" when {
+
+      "an invalid UUID is given" in {
+
+        val uuid: String = "2800a7ab-fe20-42ca-98d7-c33f4133cfc1"
+
+        val expectedJsonResult = Json.parse(
+          """
+            |{
+            |  "code": "INVALID_UUID",
+            |  "message": "The match has timed out and the UUID is no longer valid. The match (POST to /match) will need to be repeated."
+            |}
+          """.stripMargin)
+
+        val result = LookupController.getResidencyStatus(uuid).apply(FakeRequest(Helpers.GET, "/").withHeaders(acceptHeader))
+
+        status(result) shouldBe 403
+        contentAsJson(result) shouldBe expectedJsonResult
+      }
     }
   }
 }
