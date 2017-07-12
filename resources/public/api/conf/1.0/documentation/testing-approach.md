@@ -1,1 +1,2 @@
-<p>You can test the defined resources for all possible success and failure responses using the testdata provided for each resource to test specific scenarios.</p>
+<p>You can <a href="https://test-developer.service.hmrc.gov.uk/api-documentation/docs/sandbox/introduction">use the HMRC Developer Sandbox to test the API</a>. The Sandbox is an enhanced testing service that functions as a simulator of HMRC’s production environment.</p>
+<p>The Sandbox for the Relief at Source API does not currently support <a href="https://test-developer.service.hmrc.gov.uk/api-documentation/docs/sandbox/stateful-behaviour">stateful behaviour</a>, but you can use the payloads described in the resources to test specific scenarios.</p>
