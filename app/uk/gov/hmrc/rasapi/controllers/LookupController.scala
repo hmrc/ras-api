@@ -56,7 +56,7 @@ trait LookupController extends BaseController with HeaderValidator with RunMode 
               case OK =>
                 Logger.debug("[LookupController][getResidencyStatus] Nino returned successfully.")
                 val nino = customerCacheResponse.json.as[Nino]
-                responseHandlerService.handleResidencyStatusResponse(nino).map {
+                responseHandlerService.handleResidencyStatusResponse(nino, id).map {
                   case Left(residencyStatus) => auditResponse(failureReason = None,
                     nino = Some(nino.nino),
                     residencyStatus = Some(residencyStatus))

@@ -38,6 +38,7 @@ class DesConnectorSpec extends WordSpec with OneAppPerSuite with MockitoSugar wi
     override val http: HttpGet = mockHttp
     override val desBaseUrl = ""
     override def getResidencyStatusUrl(nino: String) = ""
+    override val edhUrl: String = "test-url"
   }
 
   val residencyStatus = Json.parse(
@@ -48,7 +49,7 @@ class DesConnectorSpec extends WordSpec with OneAppPerSuite with MockitoSugar wi
     """.stripMargin
   )
 
-  "DESConnector" should {
+  "DESConnector getResidencyStatus" should {
 
     "handle successful response when 200 is returned from des" in {
 
@@ -76,6 +77,35 @@ class DesConnectorSpec extends WordSpec with OneAppPerSuite with MockitoSugar wi
 
       val result = TestDesConnector.getResidencyStatus(Nino("LE241131B"))
       await(result).status shouldBe INTERNAL_SERVER_ERROR
+    }
+  }
+
+  "DESConnector " should {
+
+    "handle successful response when 200 is returned from EDH" in {
+      when(mockHttp.GET[HttpResponse](Matchers.any())(Matchers.any(),Matchers.any())).
+        thenReturn(Future.successful(HttpResponse(200)))
+
+      val userId = "123456"
+      val nino = "LE241131B"
+      val resStatus = ResidencyStatus(currentYearResidencyStatus = "scotResident",
+                                      nextYearForecastResidencyStatus = "scotResident")
+
+      val result = await(TestDesConnector.sendDataToEDH(userId, nino, resStatus))
+      result.status shouldBe OK
+    }
+
+    "handle successful response when 500 is returned from EDH" in {
+      when(mockHttp.GET[HttpResponse](Matchers.any())(Matchers.any(),Matchers.any())).
+        thenReturn(Future.successful(HttpResponse(500)))
+
+      val userId = "123456"
+      val nino = "LE241131B"
+      val resStatus = ResidencyStatus(currentYearResidencyStatus = "scotResident",
+                                      nextYearForecastResidencyStatus = "scotResident")
+
+      val result = await(TestDesConnector.sendDataToEDH(userId, nino, resStatus))
+      result.status shouldBe INTERNAL_SERVER_ERROR
     }
   }
 }

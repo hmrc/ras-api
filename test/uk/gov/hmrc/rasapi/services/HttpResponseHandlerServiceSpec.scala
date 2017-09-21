@@ -17,24 +17,108 @@
 package uk.gov.hmrc.rasapi.services
 
 import play.api.libs.json.Json
-import uk.gov.hmrc.play.http.{HeaderCarrier, HttpResponse}
+import uk.gov.hmrc.play.http.{HeaderCarrier, HttpResponse, Upstream5xxResponse}
 import uk.gov.hmrc.play.test.UnitSpec
 import uk.gov.hmrc.rasapi.connectors.DesConnector
 import uk.gov.hmrc.rasapi.models.{Nino, ResidencyStatus}
 import org.scalatest.mock.MockitoSugar.mock
-import org.mockito.Mockito.when
-import org.mockito.Matchers.any
+import org.mockito.Mockito._
+import org.mockito.Matchers.{eq => Meq, _}
+import org.scalatest.BeforeAndAfter
+import play.api.test.{FakeRequest, Helpers}
 
 import scala.concurrent.Future
 
-class HttpResponseHandlerServiceSpec extends UnitSpec{
+class HttpResponseHandlerServiceSpec extends UnitSpec with BeforeAndAfter {
 
   val mockDesConnector = mock[DesConnector]
+  val mockAuditService = mock[AuditService]
 
-  implicit val fakeHeaderCarrier: HeaderCarrier = HeaderCarrier()
+  val uri = s"/relief-at-source/customer/2800a7ab-fe20-42ca-98d7-c33f4133cfc2/residency-status"
+
+  implicit val fakeHeaderCarrier: HeaderCarrier = HeaderCarrier().withExtraHeaders("" -> "")
+  implicit val fakeRequest = FakeRequest(Helpers.GET, uri)
 
   val SUT = new HttpResponseHandlerService {
     override val desConnector: DesConnector = mockDesConnector
+    override val auditService: AuditService = mockAuditService
+  }
+
+  before {
+    reset(mockAuditService)
+  }
+
+  "the EDH response" should {
+    "be audited" when {
+      "EDH has returned a successful response" in {
+
+        val responseJson = Json.parse(
+          """
+            {
+            	"nino": "AB123456",
+            	"deathDate": "1753-01-01",
+            	"deathDateStatus": "not​ ​ verified",
+            	"deseasedIndicator": true,
+            	"currentYearResidencyStatus": "Uk",
+            	"nextYearResidencyStatus": "Uk",
+            	"processingDate": "2001-12-17T09:30:47Z"
+            }
+          """.stripMargin)
+
+        val desResponse = HttpResponse(responseStatus = 200, responseJson = Some(responseJson))
+
+        when(mockDesConnector.getResidencyStatus(any())(any())).thenReturn(Future.successful(desResponse))
+
+        when(mockDesConnector.sendDataToEDH(any(), any(), any())(any())).thenReturn(Future.successful(HttpResponse(200)))
+
+        val nino = Nino("AB123456")
+        val userId = "123456"
+
+        await(SUT.handleResidencyStatusResponse(nino, userId))
+
+        verify(mockAuditService).audit(
+          auditType = Meq("ReliefAtSourceAudit"),
+          path = Meq(uri),
+          auditData = Meq(Map("userId" -> userId,
+            "nino" -> nino.nino,
+            "edhAuditSuccess" -> "true"))
+        )(any())
+      }
+
+      "EDH has returned a failure response" in {
+        val responseJson = Json.parse(
+          """
+            {
+            	"nino": "AB123456",
+            	"deathDate": "1753-01-01",
+            	"deathDateStatus": "not​ ​ verified",
+            	"deseasedIndicator": true,
+            	"currentYearResidencyStatus": "Uk",
+            	"nextYearResidencyStatus": "Uk",
+            	"processingDate": "2001-12-17T09:30:47Z"
+            }
+          """.stripMargin)
+
+        val desResponse = HttpResponse(responseStatus = 200, responseJson = Some(responseJson))
+
+        when(mockDesConnector.getResidencyStatus(any())(any())).thenReturn(Future.successful(desResponse))
+        when(mockDesConnector.sendDataToEDH(any(), any(), any())(any())).thenReturn(
+          Future.failed(new Upstream5xxResponse("message", 500, 500)))
+
+        val nino = Nino("AB123456")
+        val userId = "123456"
+
+        await(SUT.handleResidencyStatusResponse(nino, userId))
+
+        verify(mockAuditService).audit(
+          auditType = Meq("ReliefAtSourceAudit"),
+          path = Meq(uri),
+          auditData = Meq(Map("userId" -> userId,
+            "nino" -> nino.nino,
+            "edhAuditSuccess" -> "false"))
+        )(any())
+      }
+    }
   }
 
   "handleResidencyStatusResponse" should {
@@ -57,13 +141,15 @@ class HttpResponseHandlerServiceSpec extends UnitSpec{
         val desResponse = HttpResponse(responseStatus = 200, responseJson = Some(responseJson))
 
         when(mockDesConnector.getResidencyStatus(any())(any())).thenReturn(Future.successful(desResponse))
+        when(mockDesConnector.sendDataToEDH(any(), any(), any())(any())).thenReturn(Future.successful(HttpResponse(200)))
 
         val expectedResult = Left(ResidencyStatus(currentYearResidencyStatus = "otherUKResident",
                                                   nextYearForecastResidencyStatus = "otherUKResident"))
 
         val nino = Nino("AB123456")
+        val userId = "123456"
 
-        val result = await(SUT.handleResidencyStatusResponse(nino))
+        val result = await(SUT.handleResidencyStatusResponse(nino, userId))
 
         result shouldBe expectedResult
       }
@@ -84,13 +170,15 @@ class HttpResponseHandlerServiceSpec extends UnitSpec{
         val desResponse = HttpResponse(responseStatus = 200, responseJson = Some(responseJson))
 
         when(mockDesConnector.getResidencyStatus(any())(any())).thenReturn(Future.successful(desResponse))
+        when(mockDesConnector.sendDataToEDH(any(), any(), any())(any())).thenReturn(Future.successful(HttpResponse(200)))
 
         val expectedResult = Left(ResidencyStatus(currentYearResidencyStatus = "otherUKResident",
                                                   nextYearForecastResidencyStatus = "scotResident"))
 
         val nino = Nino("AB123456")
+        val userId = "123456"
 
-        val result = await(SUT.handleResidencyStatusResponse(nino))
+        val result = await(SUT.handleResidencyStatusResponse(nino, userId))
 
         result shouldBe expectedResult
       }
@@ -111,12 +199,14 @@ class HttpResponseHandlerServiceSpec extends UnitSpec{
         val desResponse = HttpResponse(responseStatus = 400, responseJson = Some(responseJson))
 
         when(mockDesConnector.getResidencyStatus(any())(any())).thenReturn(Future.successful(desResponse))
+        when(mockDesConnector.sendDataToEDH(any(), any(), any())(any())).thenReturn(Future.successful(HttpResponse(200)))
 
         val expectedResult = Right("")
 
         val nino = Nino("AB123456")
+        val userId = "123456"
 
-        val result = await(SUT.handleResidencyStatusResponse(nino))
+        val result = await(SUT.handleResidencyStatusResponse(nino, userId))
 
         result shouldBe expectedResult
       }
@@ -134,12 +224,14 @@ class HttpResponseHandlerServiceSpec extends UnitSpec{
         val desResponse = HttpResponse(responseStatus = 404, responseJson = Some(responseJson))
 
         when(mockDesConnector.getResidencyStatus(any())(any())).thenReturn(Future.successful(desResponse))
+        when(mockDesConnector.sendDataToEDH(any(), any(), any())(any())).thenReturn(Future.successful(HttpResponse(200)))
 
         val expectedResult = Right("")
 
         val nino = Nino("AB123456")
+        val userId = "123456"
 
-        val result = await(SUT.handleResidencyStatusResponse(nino))
+        val result = await(SUT.handleResidencyStatusResponse(nino, userId))
 
         result shouldBe expectedResult
       }
@@ -157,12 +249,14 @@ class HttpResponseHandlerServiceSpec extends UnitSpec{
         val desResponse = HttpResponse(responseStatus = 503, responseJson = Some(responseJson))
 
         when(mockDesConnector.getResidencyStatus(any())(any())).thenReturn(Future.successful(desResponse))
+        when(mockDesConnector.sendDataToEDH(any(), any(), any())(any())).thenReturn(Future.successful(HttpResponse(200)))
 
         val expectedResult = Right("")
 
         val nino = Nino("AB123456")
+        val userId = "123456"
 
-        val result = await(SUT.handleResidencyStatusResponse(nino))
+        val result = await(SUT.handleResidencyStatusResponse(nino, userId))
 
         result shouldBe expectedResult
       }
@@ -180,12 +274,14 @@ class HttpResponseHandlerServiceSpec extends UnitSpec{
         val desResponse = HttpResponse(responseStatus = 404, responseJson = Some(responseJson))
 
         when(mockDesConnector.getResidencyStatus(any())(any())).thenReturn(Future.successful(desResponse))
+        when(mockDesConnector.sendDataToEDH(any(), any(), any())(any())).thenReturn(Future.successful(HttpResponse(200)))
 
         val expectedResult = Right("")
 
         val nino = Nino("AB123456")
+        val userId = "123456"
 
-        val result = await(SUT.handleResidencyStatusResponse(nino))
+        val result = await(SUT.handleResidencyStatusResponse(nino, userId))
 
         result shouldBe expectedResult
       }
@@ -203,12 +299,14 @@ class HttpResponseHandlerServiceSpec extends UnitSpec{
         val desResponse = HttpResponse(responseStatus = 500, responseJson = Some(responseJson))
 
         when(mockDesConnector.getResidencyStatus(any())(any())).thenReturn(Future.successful(desResponse))
+        when(mockDesConnector.sendDataToEDH(any(), any(), any())(any())).thenReturn(Future.successful(HttpResponse(200)))
 
         val expectedResult = Right("")
 
         val nino = Nino("AB123456")
+        val userId = "123456"
 
-        val result = await(SUT.handleResidencyStatusResponse(nino))
+        val result = await(SUT.handleResidencyStatusResponse(nino, userId))
 
         result shouldBe expectedResult
       }
@@ -226,12 +324,14 @@ class HttpResponseHandlerServiceSpec extends UnitSpec{
         val desResponse = HttpResponse(responseStatus = 503, responseJson = Some(responseJson))
 
         when(mockDesConnector.getResidencyStatus(any())(any())).thenReturn(Future.successful(desResponse))
+        when(mockDesConnector.sendDataToEDH(any(), any(), any())(any())).thenReturn(Future.successful(HttpResponse(200)))
 
         val expectedResult = Right("")
 
         val nino = Nino("AB123456")
+        val userId = "123456"
 
-        val result = await(SUT.handleResidencyStatusResponse(nino))
+        val result = await(SUT.handleResidencyStatusResponse(nino, userId))
 
         result shouldBe expectedResult
       }

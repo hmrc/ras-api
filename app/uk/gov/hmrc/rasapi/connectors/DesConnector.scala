@@ -30,18 +30,24 @@ trait DesConnector extends ServicesConfig {
   val http: HttpGet
   val desBaseUrl: String
   def getResidencyStatusUrl(nino: String): String
+  val edhUrl: String
 
   def getResidencyStatus(nino: Nino)(implicit hc: HeaderCarrier): Future[HttpResponse] = {
 
     val customerNino = nino.nino
     val uri = desBaseUrl + getResidencyStatusUrl(customerNino)
 
-    http.GET(uri)(httpReads, updateHeaderCarrier(hc))
+    http.GET(uri)(implicitly[HttpReads[HttpResponse]], hc = updateHeaderCarrier(hc))
   }
 
-  val httpReads: HttpReads[HttpResponse] = new HttpReads[HttpResponse] {
-    override def read(method: String, url: String, response: HttpResponse) = response
+  def sendDataToEDH(userId: String, nino: String, residencyStatus: ResidencyStatus)(implicit hc: HeaderCarrier): Future[HttpResponse] = {
+
+    http.GET(edhUrl)(implicitly[HttpReads[HttpResponse]], hc = updateHeaderCarrier(hc))
   }
+
+//  private val httpReads: HttpReads[HttpResponse] = new HttpReads[HttpResponse] {
+//    override def read(method: String, url: String, response: HttpResponse) = response
+//  }
 
   private def updateHeaderCarrier(headerCarrier: HeaderCarrier) =
     headerCarrier.copy(extraHeaders = Seq(("Environment" -> AppContext.desUrlHeaderEnv)),
@@ -53,5 +59,6 @@ object DesConnector extends DesConnector{
   override val http: HttpGet = WSHttp
   override val desBaseUrl = baseUrl("des")
   override def getResidencyStatusUrl(nino: String) = String.format(AppContext.residencyStatusUrl, nino) //"/ras-stubs/get-residency-status"
+  override val edhUrl: String = desBaseUrl + AppContext.edhUrl
   // $COVERAGE-ON$
 }
