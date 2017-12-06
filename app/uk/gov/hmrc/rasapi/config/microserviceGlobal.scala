@@ -17,22 +17,24 @@
 package uk.gov.hmrc.rasapi.config
 
 import com.typesafe.config.Config
+import config.WSHttp
 import play.api._
-import uk.gov.hmrc.play.config.{AppName, ControllerConfig, RunMode}
+import uk.gov.hmrc.play.config.{AppName, ControllerConfig, RunMode, ServicesConfig}
 import uk.gov.hmrc.play.microservice.bootstrap.DefaultMicroserviceGlobal
 import net.ceedubs.ficus.Ficus._
 import play.api.libs.json.Json.toJson
 import play.api.mvc.{RequestHeader, Result}
 import play.api.mvc.Results.{BadRequest, NotFound, Status}
 import uk.gov.hmrc.api.controllers.{ErrorInternalServerError, ErrorUnauthorized}
+import uk.gov.hmrc.crypto.ApplicationCrypto
 import uk.gov.hmrc.rasapi.connectors.ServiceLocatorConnector
 import uk.gov.hmrc.rasapi.models.{BadRequestResponse, ErrorNotFound}
+import uk.gov.hmrc.http.cache.client.{SessionCache, ShortLivedCache, ShortLivedHttpCaching}
+
 import scala.concurrent.ExecutionContext.Implicits.global
-
-
 import scala.concurrent.Future
 import uk.gov.hmrc.http.HeaderCarrier
-import uk.gov.hmrc.play.microservice.filters.{ AuditFilter, LoggingFilter, MicroserviceFilterSupport }
+import uk.gov.hmrc.play.microservice.filters.{AuditFilter, LoggingFilter, MicroserviceFilterSupport}
 
 
 trait ServiceLocatorRegistration extends GlobalSettings with RunMode {
@@ -101,4 +103,23 @@ object MicroserviceGlobal extends DefaultMicroserviceGlobal with RunMode with Mi
       }
     })
   }
+}
+
+object RasShortLivedHttpCaching extends ShortLivedHttpCaching with AppName with ServicesConfig {
+  override lazy val http = WSHttp
+  override lazy val defaultSource = appName
+  override lazy val baseUri = baseUrl("cachable.short-lived-cache")
+  override lazy val domain = getConfString("cachable.short-lived-cache.domain", throw new Exception(s"Could not find config 'cachable.short-lived-cache.domain'"))
+}
+
+object RasShortLivedCache extends ShortLivedCache {
+  override implicit lazy val crypto = ApplicationCrypto.JsonCrypto
+  override lazy val shortLiveCache = RasShortLivedHttpCaching
+}
+
+object RasSessionCache extends SessionCache with AppName with ServicesConfig {
+  override lazy val http = WSHttp
+  override lazy val defaultSource = appName
+  override lazy val baseUri = baseUrl("cachable.session-cache")
+  override lazy val domain = getConfString("cachable.session-cache.domain", throw new Exception(s"Could not find config 'cachable.session-cache.domain'"))
 }

@@ -30,7 +30,7 @@ object FileProcessingService extends FileProcessingService {
 
 trait FileProcessingService extends RasFileReader with RasFileWriter with ResultsGenerator{
 
-  def processFile(envelopeId: String, fileId: String)(implicit hc: HeaderCarrier) = {
+  def processFile(envelopeId: String, fileId: String)(implicit hc: HeaderCarrier): List[String] = {
     lazy val results:ListBuffer[String] = ListBuffer.empty
 
     readFile(envelopeId,fileId).map { res =>
@@ -38,6 +38,8 @@ trait FileProcessingService extends RasFileReader with RasFileWriter with Result
         if (!row.isEmpty) fetchResult(row).map(results += _)
       }
     }
+
+    results.toList
   }
 }
 
