@@ -65,13 +65,12 @@ trait DesConnector extends ServicesConfig {
 
     val uri = s"${desBaseUrl}/pension-scheme/customers/look-up"
 
-    val result =  httpPost.POST[JsValue, HttpResponse](uri, Json.toJson[IndividualDetails](member), Seq())
+    val result = httpPost.POST[JsValue, HttpResponse](uri, Json.toJson[IndividualDetails](member), Seq())
     (implicitly[Writes[IndividualDetails]], implicitly[HttpReads[HttpResponse]], updateHeaderCarrier(hc),
       MdcLoggingExecutionContext.fromLoggingDetails(hc))
 
-    result.map (response => resolveResponse(response))
+    result.map(response => resolveResponse(response))
   }
-
   private def resolveResponse(httpResponse: HttpResponse) :Either[ResidencyStatus, ResidencyStatusFailure] =   {
     Try(httpResponse.json.as[ResidencyStatusSuccess](ResidencyStatusFormats.successFormats)) match {
       case Success(payload) =>
@@ -82,8 +81,13 @@ trait DesConnector extends ServicesConfig {
         Try(httpResponse.json.as[ResidencyStatusFailure](ResidencyStatusFormats.failureFormats)) match {
           case Success(data) => Logger.debug(s"DesFailureResponse from DES :${data}")
             Right(data)
-          case Failure(ex) => Logger.error(s"Error from DES :${ex.getMessage}")
-            Right(ResidencyStatusFailure("500","HODS NOTAVAILABLE"))
+          case Failure(ex) =>
+            if(httpResponse.status == 404)
+              Right(ResidencyStatusFailure("MATCHING_FAILED","The customer details provided did not match with HMRC’s records."))
+            else {
+              Logger.error(s"Error from DES :${ex.getMessage}")
+              Right(ResidencyStatusFailure(ErrorInternalServerError.errorCode, ErrorInternalServerError.message))
+            }
         }
     }
   }
