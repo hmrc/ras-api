@@ -41,6 +41,7 @@ class DesConnectorSpec extends UnitSpec with OneAppPerSuite with BeforeAndAfter 
   val mockHttpGet = mock[HttpGet]
   val mockHttpPost = mock[HttpPost]
   implicit val format = ResidencyStatusFormats.successFormats
+  implicit val formatF = ResidencyStatusFormats.failureFormats
 
   object TestDesConnector extends DesConnector {
     override val httpGet: HttpGet = mockHttpGet
@@ -134,7 +135,6 @@ class DesConnectorSpec extends UnitSpec with OneAppPerSuite with BeforeAndAfter 
     }
 
     "handle failure response from des" in {
-      implicit val formatF = ResidencyStatusFormats.failureFormats
       val errorResponse = ResidencyStatusFailure("NOT_MATCHED","matching failed")
       when(mockHttpPost.POST[IndividualDetails,HttpResponse](any(), any(), any())(any(), any(),any(), any())).
         thenReturn(Future.successful(HttpResponse(403, Some(Json.toJson(errorResponse)))))
@@ -148,9 +148,19 @@ class DesConnectorSpec extends UnitSpec with OneAppPerSuite with BeforeAndAfter 
 
       when(mockHttpPost.POST[IndividualDetails,HttpResponse](any(), any(), any())(any(), any(),any(), any())).
         thenReturn(Future.successful(HttpResponse(500)))
-      val errorResponse = ResidencyStatusFailure("500","HODS NOTAVAILABLE")
+      val errorResponse = ResidencyStatusFailure("INTERNAL_SERVER_ERROR","Internal server error")
 
       val result = await(TestDesConnector.getResidencyStatus(IndividualDetails("AB123456C","JOHN", "Lewis", new DateTime("1990-02-21"))))
+      result.isLeft shouldBe false
+      result.right.get shouldBe errorResponse
+    }
+    "handle unexpected responses as 400 from des" in {
+
+      when(mockHttpPost.POST[IndividualDetails,HttpResponse](any(), any(), any())(any(), any(),any(), any())).
+        thenReturn(Future.successful(HttpResponse(404,Some(Json.toJson("MATCHING_FAILED")))))
+      val errorResponse = ResidencyStatusFailure("MATCHING_FAILED","The customer details provided did not match with HMRC’s records.")
+
+      val result = await(TestDesConnector.getResidencyStatus(IndividualDetails("AB15456C","Dawn", "Lewis", new DateTime("1990-02-21"))))
       result.isLeft shouldBe false
       result.right.get shouldBe errorResponse
     }
