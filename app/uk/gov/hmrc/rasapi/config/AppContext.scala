@@ -38,6 +38,7 @@ object AppContext extends ServicesConfig {
   lazy val waitTimeBeforeRetryingRequest: Long = current.configuration.getLong("wait-time-before-retrying").getOrElse(1000L)
   lazy val deceasedStatus: String = current.configuration.getString("status.deceased").getOrElse("DECEASED")
   lazy val matchingFailedStatus: String = current.configuration.getString("status.matching-failed.api").getOrElse("STATUS_UNAVAILABLE")
+  lazy val doNotReProcessStatus: String = current.configuration.getString("status.do-not-re-process").getOrElse("DO_NOT_RE_PROCESS")
   lazy val fileProcessingMatchingFailedStatus: String = current.configuration.getString("status.matching-failed.csv").getOrElse("cannot_provide_status")
   lazy val fileProcessingInternalServerErrorStatus: String = current.configuration.getString("status.internal-server-error.csv").getOrElse("problem-getting-status")
   lazy val internalServerErrorStatus: String = current.configuration.getString("status.internal-server-error.api").getOrElse("INTERNAL_SERVER_ERROR")

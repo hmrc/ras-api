@@ -39,15 +39,15 @@ object ResultsFileMetaData {
 
 }
 
-case class FileSession(userFile: Option[CallbackData], resultsFile: Option[ResultsFileMetaData], userId: String, uploadTimeStamp : Option[Long], fileMetadata: Option[FileMetadata])
-
-object FileSession {
-  implicit val format = Json.format[FileSession]
-}
-
 case class Chunks(_id:BSONObjectID, files_id:BSONObjectID)
+
 object Chunks {
   implicit val objectIdformats = ReactiveMongoFormats.objectIdFormats
   implicit  val format = Json.format[Chunks]
 }
 
+case class FileSession(userFile: Option[CallbackData], resultsFile: Option[ResultsFileMetaData], userId: String, uploadTimeStamp : Option[Long], fileMetadata: Option[FileMetadata])
+
+object FileSession {
+  implicit val format = Json.format[FileSession]
+}
