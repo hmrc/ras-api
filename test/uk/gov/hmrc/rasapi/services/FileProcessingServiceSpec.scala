@@ -811,9 +811,6 @@ class FileProcessingServiceSpec extends UnitSpec with OneAppPerSuite with ScalaF
         verify(mockSessionCache, times(1)).updateFileSession(any(), captor.capture, any(), any())(any())
 
         val resultsFileMetaData = captor.getValue
-        println("-")
-        println(resultsFileMetaData)
-        println("-")
         resultsFileMetaData.status shouldBe "ERROR"
       }
     }

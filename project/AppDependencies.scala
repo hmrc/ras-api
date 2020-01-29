@@ -1,11 +1,10 @@
-import sbt._
-import play.sbt.PlayImport._
 import play.core.PlayVersion
+import sbt._
 
 object AppDependencies {
 
   val compile: Seq[ModuleID] = Seq(
-    "uk.gov.hmrc" %% "auth-client" % "2.19.0-play-25", //TODO 2.19.0-play-25 -> 2.32.1-play-25 err // Matchers
+    "uk.gov.hmrc" %% "auth-client" % "2.32.1-play-25",
     "uk.gov.hmrc" %% "domain" % "5.6.0-play-25",
     "uk.gov.hmrc" %% "http-caching-client" % "9.0.0-play-25",
     "uk.gov.hmrc" %% "json-encryption" % "4.4.0-play-25",
@@ -21,7 +20,6 @@ object AppDependencies {
   val test: Seq[ModuleID] = Seq(
     "uk.gov.hmrc" %% "hmrctest" % "3.9.0-play-25",
     "uk.gov.hmrc" %% "reactivemongo-test" % "4.16.0-play-25",
-
     "org.scalatest" %% "scalatest" % "3.0.8",
     "org.pegdown" % "pegdown" % "1.6.0",
     "com.typesafe.play" %% "play-test" % PlayVersion.current,

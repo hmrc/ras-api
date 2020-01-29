@@ -107,70 +107,80 @@ class FileUploadConnectorSpec
     }
   }
 
-//  "getFileMetadata" should {
-//
-//    "return the original filename when file metadata returns 200" in {
-//      when(
-//        mockWsHttp.doGet(any[String])(any[HeaderCarrier],
-//                                      any[ExecutionContext]))
-//        .thenReturn(
-//          Future.successful(HttpResponse(200, Some(Json.toJson(fileMetadata)))))
-//
-//      val result =
-//        await(TestConnector.getFileMetadata(envelopeId, fileId, userId))
-//      result.get shouldBe fileMetadata
-//    }
-//
-//    "return None when file metadata does not return 200" in {
-//      when(mockWsHttp.doGet(any())(any[HeaderCarrier], any[ExecutionContext]))
-//        .thenReturn(Future.successful(HttpResponse(404)))
-//      val result =
-//        await(TestConnector.getFileMetadata(envelopeId, fileId, userId))
-//      result shouldBe None
-//    }
-//
-//    "return None when file metadata return an exception" in {
-//      when(mockWsHttp.doGet(any())(any[HeaderCarrier], any[ExecutionContext]))
-//        .thenReturn(Future.failed(new RequestTimeoutException("")))
-//      val result =
-//        await(TestConnector.getFileMetadata(envelopeId, fileId, userId))
-//      result shouldBe None
-//    }
-//  }
-//
-//  "deleteUploadedFile" should {
-//
-//    "submit delete request to file-upload service" in {
-//      when(
-//        mockWsHttp.doDelete(any[String])(any[HeaderCarrier],
-//                                         any[ExecutionContext]))
-//        .thenReturn(Future.successful(HttpResponse(200)))
-//
-//      val result =
-//        await(TestConnector.deleteUploadedFile(envelopeId, fileId, userId))
-//      result shouldBe true
-//    }
-//
-//    "failed delete request to file-upload service" in {
-//      when(
-//        mockWsHttp.doDelete(any[String])(any[HeaderCarrier],
-//                                         any[ExecutionContext]))
-//        .thenReturn(Future.successful(HttpResponse(400)))
-//
-//      val result =
-//        await(TestConnector.deleteUploadedFile(envelopeId, fileId, userId))
-//      result shouldBe false
-//    }
-//
-//    "return false when delete returns an exception" in {
-//      when(
-//        mockWsHttp.doDelete(any[String])(any[HeaderCarrier],
-//                                         any[ExecutionContext]))
-//        .thenReturn(Future.failed(new RequestTimeoutException("")))
-//
-//      val result =
-//        await(TestConnector.deleteUploadedFile(envelopeId, fileId, userId))
-//      result shouldBe false
-//    }
-//  }
+  "getFileMetadata" should {
+
+    "return the original filename when file metadata returns 200" in {
+      when(
+        mockWsHttp.doGet(any[String], any[Seq[(String, String)]])(
+          any[HeaderCarrier],
+          any[ExecutionContext]))
+        .thenReturn(
+          Future.successful(HttpResponse(200, Some(Json.toJson(fileMetadata)))))
+
+      val result =
+        await(TestConnector.getFileMetadata(envelopeId, fileId, userId))
+      result.get shouldBe fileMetadata
+    }
+
+    "return None when file metadata does not return 200" in {
+      when(
+        mockWsHttp.doGet(any(), any[Seq[(String, String)]])(
+          any[HeaderCarrier],
+          any[ExecutionContext]))
+        .thenReturn(Future.successful(HttpResponse(404)))
+      val result =
+        await(TestConnector.getFileMetadata(envelopeId, fileId, userId))
+      result shouldBe None
+    }
+
+    "return None when file metadata return an exception" in {
+      when(
+        mockWsHttp.doGet(any(), any[Seq[(String, String)]])(
+          any[HeaderCarrier],
+          any[ExecutionContext]))
+        .thenReturn(Future.failed(new RequestTimeoutException("")))
+      val result =
+        await(TestConnector.getFileMetadata(envelopeId, fileId, userId))
+      result shouldBe None
+    }
+  }
+
+  "deleteUploadedFile" should {
+
+    "submit delete request to file-upload service" in {
+      when(
+        mockWsHttp.doDelete(any[String], any[Seq[(String, String)]])(
+          any[HeaderCarrier],
+          any[ExecutionContext]))
+        .thenReturn(Future.successful(HttpResponse(200)))
+
+      val result =
+        await(TestConnector.deleteUploadedFile(envelopeId, fileId, userId))
+      result shouldBe true
+    }
+
+    "failed delete request to file-upload service" in {
+      when(
+        mockWsHttp.doDelete(any[String], any[Seq[(String, String)]])(
+          any[HeaderCarrier],
+          any[ExecutionContext]))
+        .thenReturn(Future.successful(HttpResponse(400)))
+
+      val result =
+        await(TestConnector.deleteUploadedFile(envelopeId, fileId, userId))
+      result shouldBe false
+    }
+
+    "return false when delete returns an exception" in {
+      when(
+        mockWsHttp.doDelete(any[String], any[Seq[(String, String)]])(
+          any[HeaderCarrier],
+          any[ExecutionContext]))
+        .thenReturn(Future.failed(new RequestTimeoutException("")))
+
+      val result =
+        await(TestConnector.deleteUploadedFile(envelopeId, fileId, userId))
+      result shouldBe false
+    }
+  }
 }

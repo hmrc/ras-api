@@ -65,7 +65,6 @@ trait DataCleansingService {
     } yield chunksDeleted
   }
 
-  //Further refactor can be done on this
   private def processFutures[A, B](seq: Iterable[A])(
       fn: A => Future[B]): Future[List[B]] =
     seq.foldLeft(Future(List.empty[B])) { (previousFuture, next) =>

@@ -63,7 +63,6 @@ class RasFileWriterSpec
         fileWriter.writeResultToFile(res._2, str, userId))
       fileWriter.closeWriter(res._2)
       val lines = Source.fromFile(res._1.toFile).getLines().toArray
-//      lines.size shouldBe 3
       lines should contain theSameElementsAs resultsArr
       Files.deleteIfExists(res._1)
     }
