@@ -10,10 +10,9 @@ object AppDependencies {
     "uk.gov.hmrc" %% "http-caching-client" % "9.0.0-play-25",
     "uk.gov.hmrc" %% "json-encryption" % "4.4.0-play-25",
     "uk.gov.hmrc" %% "microservice-bootstrap" % "10.9.0",
-    "uk.gov.hmrc" %% "mongo-caching" % "6.8.0-play-25", //TODO 5.4.0 -> 6.8.0-play-25 // MAJOR
+    "uk.gov.hmrc" %% "mongo-caching" % "6.8.0-play-25",
     "uk.gov.hmrc" %% "play-hmrc-api" % "4.1.0-play-25",
     "uk.gov.hmrc" %% "play-reactivemongo" % "6.8.0",
-
     "com.typesafe.akka" % "akka-actor_2.11" % "2.5.18",
     "com.typesafe.akka" % "akka-testkit_2.11" % "2.5.18",
     "joda-time" % "joda-time" % "2.7.0"
@@ -21,7 +20,7 @@ object AppDependencies {
 
   val test: Seq[ModuleID] = Seq(
     "uk.gov.hmrc" %% "hmrctest" % "3.9.0-play-25",
-    "uk.gov.hmrc" %% "reactivemongo-test" % "3.1.0", //TODO 3.1.0 -> 4.16.0-play-25 // MAJOR
+    "uk.gov.hmrc" %% "reactivemongo-test" % "4.16.0-play-25",
 
     "org.scalatest" %% "scalatest" % "3.0.8",
     "org.pegdown" % "pegdown" % "1.6.0",

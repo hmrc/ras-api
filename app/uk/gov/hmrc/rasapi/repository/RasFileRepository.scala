@@ -19,10 +19,10 @@ package uk.gov.hmrc.rasapi.repository
 import java.io.FileInputStream
 import java.nio.file.Path
 
+import org.joda.time.DateTime
 import play.api.Logger
 import play.api.libs.iteratee.Enumerator
 import play.modules.reactivemongo.MongoDbConnection
-import reactivemongo.api.gridfs.DefaultFileToSave.FileName
 import reactivemongo.api.gridfs.DefaultFileToSave.FileName.SomeFileName
 import reactivemongo.api.gridfs.Implicits._
 import reactivemongo.api.gridfs._
@@ -67,12 +67,14 @@ class RasFileRepository(mongo: () => DB with DBMetaCommands)(
                filePath: Path,
                fileId: String): Future[ResultsFile] = {
     Logger.info("[RasFileRepository] Starting to save file")
-    val fileToSave =
-      DefaultFileToSave(s"${fileId}",
-                        Some(contentType),
-                        metadata = BSONDocument("envelopeId" -> envelopeId,
-                                                "fileId" -> fileId,
-                                                "userId" -> userId))(Some("${fileId}"))
+
+    val fileToSave = DefaultFileToSave(
+      Some(s"$fileId"),
+      Some(contentType),
+      Some(DateTime.now.getMillis),
+      metadata = BSONDocument("envelopeId" -> envelopeId,
+                              "fileId" -> fileId,
+                              "userId" -> userId))
 
     gridFSG
       .writeFromInputStream(fileToSave, new FileInputStream(filePath.toFile))
