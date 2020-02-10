@@ -1,5 +1,5 @@
 /*
- * Copyright 2020 HM Revenue & Customs
+ * Copyright 2019 HM Revenue & Customs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,7 +17,7 @@
 package uk.gov.hmrc.rasapi.services
 
 import org.scalatest.BeforeAndAfter
-import org.scalatestplus.mockito.MockitoSugar
+import org.scalatest.mockito.MockitoSugar
 import org.scalatestplus.play.OneAppPerSuite
 import play.api.Logger
 import reactivemongo.bson.BSONObjectID
@@ -26,23 +26,23 @@ import uk.gov.hmrc.rasapi.repositories.RepositoriesHelper
 
 import scala.concurrent.ExecutionContext.Implicits.global
 
-class DataCleansingServiceSpec
-    extends UnitSpec
-    with MockitoSugar
-    with OneAppPerSuite
-    with BeforeAndAfter {
-  before {
+class DataCleansingServiceSpec extends UnitSpec with MockitoSugar with OneAppPerSuite
+with BeforeAndAfter  {
+  before{
     await(RepositoriesHelper.rasFileRepository.removeAll())
     await(RepositoriesHelper.rasBulkOperationsRepository.removeAll())
   }
-  after {
+  after{
     await(RepositoriesHelper.rasFileRepository.removeAll())
     await(RepositoriesHelper.rasBulkOperationsRepository.removeAll())
+
   }
 
-  "DataCleansingService" should {
+  "DataCleansingService" should{
 
-    " not remove chunks that are not orphoned" in {
+    " not remove chunks that are not orphoned" in  {
+      val testData1 = await(RepositoriesHelper.saveTempFile("user14","envelope14","fileId14"))
+      val testData2=  await(RepositoriesHelper.saveTempFile("user15","envelope15","fileId15"))
 
       val result = await(DataCleansingService.removeOrphanedChunks())
 
@@ -51,16 +51,14 @@ class DataCleansingServiceSpec
       await(RepositoriesHelper.rasFileRepository.remove("fileId15"))
     }
 
-    "remove orphaned chunks" in {
-      Logger.warn("1 ~~~~~~~~####### Testing Data Cleansing")
-      val testFiles = RepositoriesHelper
-        .createTestDataForDataCleansing()
-        .map(_.id.asInstanceOf[BSONObjectID])
+    "remove orphaned chunks" in  {
+      Logger.warn("1 ~~~~~~~~####### Testing Data Cleansing" )
+      val testFiles = RepositoriesHelper.createTestDataForDataCleansing().map(_.id.asInstanceOf[BSONObjectID])
 
       val result = await(DataCleansingService.removeOrphanedChunks())
-      Logger.warn("7 ~~~~~~~~####### results complete")
+      Logger.warn("7 ~~~~~~~~####### results complete" )
 
-      result shouldEqual testFiles
+      result shouldEqual  testFiles
     }
 
   }

@@ -1,5 +1,5 @@
 /*
- * Copyright 2020 HM Revenue & Customs
+ * Copyright 2019 HM Revenue & Customs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,23 +17,21 @@
 package uk.gov.hmrc.rasapi.services
 
 import play.api.{Configuration, Play}
-import uk.gov.hmrc.http.HeaderCarrier
-import uk.gov.hmrc.play.audit.AuditExtensions._
+import uk.gov.hmrc.rasapi.config.MicroserviceAuditConnector
 import uk.gov.hmrc.play.audit.http.connector.{AuditConnector, AuditResult}
 import uk.gov.hmrc.play.audit.model.DataEvent
+import uk.gov.hmrc.play.audit.AuditExtensions._
 import uk.gov.hmrc.play.config.AppName
-import uk.gov.hmrc.rasapi.config.MicroserviceAuditConnector
 
-import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
+import scala.concurrent.ExecutionContext.Implicits.global
+import uk.gov.hmrc.http.HeaderCarrier
 
 trait AuditService extends AppName {
   val connector: AuditConnector
-  override protected def appNameConfiguration: Configuration =
-    Play.current.configuration
+  override protected def appNameConfiguration: Configuration = Play.current.configuration
 
-  def audit(auditType: String, path: String, auditData: Map[String, String])(
-      implicit hc: HeaderCarrier): Future[AuditResult] = {
+  def audit(auditType: String, path: String, auditData: Map[String, String])(implicit hc:HeaderCarrier): Future[AuditResult] = {
     val event = DataEvent(
       auditSource = appName,
       auditType = auditType,

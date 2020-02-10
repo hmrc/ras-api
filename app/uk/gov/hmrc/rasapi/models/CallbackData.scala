@@ -1,5 +1,5 @@
 /*
- * Copyright 2020 HM Revenue & Customs
+ * Copyright 2019 HM Revenue & Customs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,46 +20,33 @@ import play.api.libs.json.Json
 import reactivemongo.bson.BSONObjectID
 import uk.gov.hmrc.mongo.json.ReactiveMongoFormats
 
-case class FileMetadata(id: String,
-                        name: Option[String],
-                        created: Option[String])
+case class FileMetadata(id: String, name: Option[String], created: Option[String])
 
 object FileMetadata {
   implicit val format = Json.format[FileMetadata]
 }
 
-case class CallbackData(envelopeId: String,
-                        fileId: String,
-                        status: String,
-                        reason: Option[String])
+case class CallbackData(envelopeId: String, fileId: String, status: String, reason: Option[String])
 
 object CallbackData {
   implicit val formats = Json.format[CallbackData]
 }
 
-case class ResultsFileMetaData(id: String,
-                               filename: Option[String],
-                               uploadDate: Option[Long],
-                               chunkSize: Int,
-                               length: Long)
+case class ResultsFileMetaData (id: String, filename: Option[String],uploadDate: Option[Long], chunkSize: Int, length: Long)
 
 object ResultsFileMetaData {
   implicit val formats = Json.format[ResultsFileMetaData]
 
 }
 
-case class Chunks(_id: BSONObjectID, files_id: BSONObjectID)
+case class Chunks(_id:BSONObjectID, files_id:BSONObjectID)
 
 object Chunks {
   implicit val objectIdformats = ReactiveMongoFormats.objectIdFormats
-  implicit val format = Json.format[Chunks]
+  implicit  val format = Json.format[Chunks]
 }
 
-case class FileSession(userFile: Option[CallbackData],
-                       resultsFile: Option[ResultsFileMetaData],
-                       userId: String,
-                       uploadTimeStamp: Option[Long],
-                       fileMetadata: Option[FileMetadata])
+case class FileSession(userFile: Option[CallbackData], resultsFile: Option[ResultsFileMetaData], userId: String, uploadTimeStamp : Option[Long], fileMetadata: Option[FileMetadata])
 
 object FileSession {
   implicit val format = Json.format[FileSession]

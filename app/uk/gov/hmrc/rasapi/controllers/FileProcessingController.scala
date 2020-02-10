@@ -1,5 +1,5 @@
 /*
- * Copyright 2020 HM Revenue & Customs
+ * Copyright 2019 HM Revenue & Customs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -29,8 +29,7 @@ import scala.util.{Success, Try}
 
 object FileProcessingController extends FileProcessingController {
 
-  override val fileProcessingService: FileProcessingService =
-    FileProcessingService
+  override val fileProcessingService: FileProcessingService = FileProcessingService
   override val sessionCacheService: SessionCacheService = SessionCacheService
 }
 
@@ -42,52 +41,39 @@ trait FileProcessingController extends BaseController {
   val fileProcessingService: FileProcessingService
   val sessionCacheService: SessionCacheService
 
-  def statusCallback(userId: String, version: String): Action[AnyContent] =
-    Action.async { implicit request =>
+  def statusCallback(userId: String, version: String): Action[AnyContent] = Action.async {
+    implicit request =>
       val optVersion = version match {
         case "1.0" => Some(V1_0)
         case "2.0" => Some(V2_0)
-        case _     => None
+        case _ => None
       }
       (optVersion, withValidJson) match {
         case (Some(apiVersion), Some(callbackData)) =>
           callbackData.status match {
             case STATUS_AVAILABLE =>
-              Logger.warn(
-                s"[FileProcessingController] [statusCallback] Callback request received with status available: file processing " +
-                  s"started for userId ($userId).")
-              if (Try(fileProcessingService
-                    .processFile(userId, callbackData, apiVersion)).isFailure) {
-                sessionCacheService.updateFileSession(userId,
-                                                      callbackData,
-                                                      None,
-                                                      None)
+              Logger.warn(s"[FileProcessingController] [statusCallback] Callback request received with status available: file processing " +
+                s"started for userId ($userId).")
+              if (Try(fileProcessingService.processFile(userId, callbackData, apiVersion)).isFailure) {
+                sessionCacheService.updateFileSession(userId, callbackData, None, None)
               }
-            case STATUS_ERROR =>
-              Logger.error(s"[FileProcessingController] [statusCallback] There is a problem with the " +
-                s"file for userId ($userId) ERROR (${callbackData.fileId}), the status is: ${callbackData.status} and the reason is: ${callbackData.reason.get}")
-              sessionCacheService.updateFileSession(userId,
-                                                    callbackData,
-                                                    None,
-                                                    None)
-            case _ =>
-              Logger.warn(
-                s"There is a problem with the file (${callbackData.fileId}) for userId ($userId), the status is:" +
-                  s" ${callbackData.status}")
+            case STATUS_ERROR => Logger.error(s"[FileProcessingController] [statusCallback] There is a problem with the " +
+              s"file for userId ($userId) ERROR (${callbackData.fileId}), the status is: ${callbackData.status} and the reason is: ${callbackData.reason.get}")
+              sessionCacheService.updateFileSession(userId, callbackData, None, None)
+            case _ => Logger.warn(s"There is a problem with the file (${callbackData.fileId}) for userId ($userId), the status is:" +
+              s" ${callbackData.status}")
           }
           Future(Ok(""))
         case _ => Future.successful(BadRequest(""))
       }
-    }
+  }
 
-  private def withValidJson()(
-      implicit request: Request[AnyContent]): Option[CallbackData] = {
+  private def withValidJson()(implicit request: Request[AnyContent]): Option[CallbackData] = {
     request.body.asJson match {
       case Some(json) =>
         Try(json.validate[CallbackData]) match {
           case Success(JsSuccess(payload, _)) => Some(payload)
-          case _ =>
-            Logger.info(s"Json could not be parsed. Json Data: $json"); None
+          case _ => Logger.info(s"Json could not be parsed. Json Data: $json"); None
         }
       case _ => Logger.info("No json provided."); None
     }

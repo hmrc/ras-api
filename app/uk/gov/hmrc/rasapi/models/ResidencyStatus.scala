@@ -1,5 +1,5 @@
 /*
- * Copyright 2020 HM Revenue & Customs
+ * Copyright 2019 HM Revenue & Customs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,15 +18,13 @@ package uk.gov.hmrc.rasapi.models
 
 import play.api.libs.json.Json
 
-case class ResidencyStatus(currentYearResidencyStatus: String = "",
-                           nextYearForecastResidencyStatus: Option[String] =
-                             None) {
-  override def toString: String =
-    if (nextYearForecastResidencyStatus.nonEmpty)
-      s"${currentYearResidencyStatus}${"," + nextYearForecastResidencyStatus.get}"
-    else
-      currentYearResidencyStatus
+case class ResidencyStatus(currentYearResidencyStatus: String = "", nextYearForecastResidencyStatus: Option[String] = None)
+{
+  override def toString: String = if(nextYearForecastResidencyStatus.nonEmpty)
+    s"${currentYearResidencyStatus}${","+nextYearForecastResidencyStatus.get}"
+  else
+    currentYearResidencyStatus
 }
-object ResidencyStatus {
+object ResidencyStatus{
   implicit val format = Json.format[ResidencyStatus]
 }

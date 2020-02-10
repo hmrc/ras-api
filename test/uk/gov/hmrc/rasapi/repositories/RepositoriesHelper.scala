@@ -1,5 +1,5 @@
 /*
- * Copyright 2020 HM Revenue & Customs
+ * Copyright 2019 HM Revenue & Customs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -34,60 +34,55 @@ import scala.concurrent.ExecutionContext.Implicits.global
 import scala.io.Source
 import scala.util.Random
 
-object TestFileWriter extends RasFileWriter {
-  def generateFile(data: Iterator[Any]): Path = {
-    val file = Files.createTempFile(Random.nextInt().toString, ".csv")
+object TestFileWriter extends RasFileWriter
+{
+  def generateFile(data: Iterator[Any]) :Path = {
+    val file = Files.createTempFile(Random.nextInt().toString,".csv")
     val outputStream = new BufferedWriter(new FileWriter(file.toFile))
     try {
-      data.foreach { line =>
-        outputStream.write(line.toString)
+      data.foreach { line => outputStream.write(line.toString)
         outputStream.newLine
       }
 
       file
-    } catch {
-      case ex: Throwable =>
-        Logger.error("Error creating file" + ex.getMessage)
-        outputStream.close;
-        throw new RuntimeException(
-          "Exception in generating file" + ex.getMessage)
-    } finally outputStream.close
+    }
+    catch {
+      case ex: Throwable => Logger.error("Error creating file" + ex.getMessage)
+        outputStream.close ;throw new RuntimeException("Exception in generating file" + ex.getMessage)
+    }
+    finally outputStream.close
   }
 }
 
 object RepositoriesHelper extends MongoSpecSupport with UnitSpec {
 
   val hostPort = System.getProperty("mongoHostPort", "127.0.0.1:27017")
-  override val databaseName = "ras-api"
+  override val  databaseName = "ras-api"
   val mongoConnector = MongoConnector(s"mongodb://$hostPort/$databaseName").db
 
   val rasFileRepository = new RasFileRepositoryTest
 
-  val resultsArr = Array(
-    "456C,John,Smith,1990-02-21,nino-INVALID_FORMAT",
+  val resultsArr = Array("456C,John,Smith,1990-02-21,nino-INVALID_FORMAT",
     "AB123456C,John,Smith,1990-02-21,NOT_MATCHED",
-    "AB123456C,John,Smith,1990-02-21,otherUKResident,scotResident"
-  )
+    "AB123456C,John,Smith,1990-02-21,otherUKResident,scotResident")
 
-  val tempFile = Array("TestMe START", 1234345, "sdfjdkljfdklgj", "Test Me END")
+  val tempFile = Array("TestMe START",1234345,"sdfjdkljfdklgj", "Test Me END")
+
 
   lazy val createFile = {
     await(TestFileWriter.generateFile(resultsArr.iterator))
   }
 
-  def saveTempFile(userID: String, envelopeID: String, fileId: String) = {
+  def saveTempFile(userID:String, envelopeID:String,fileId:String) = {
     val filePath = await(TestFileWriter.generateFile(tempFile.iterator))
-    await(rasFileRepository.saveFile(userID, envelopeID, filePath, fileId))
+    await(rasFileRepository.saveFile(userID,envelopeID,filePath, fileId))
   }
+  case class FileData( data: Enumerator[Array[Byte]] = null)
 
-  case class FileData(data: Enumerator[Array[Byte]] = null)
-
-  def getAll: Iteratee[Array[Byte], Array[Byte]] =
-    Iteratee.consume[Array[Byte]]()
+  def getAll: Iteratee[Array[Byte], Array[Byte]] = Iteratee.consume[Array[Byte]]()
 
   class RasFileRepositoryTest(implicit ec: ExecutionContext)
-      extends RasFileRepository(mongoConnector)
-      with MongoSpecSupport {
+    extends RasFileRepository(mongoConnector) with MongoSpecSupport {
 
     override implicit val mongo: () => DefaultDB = mongoConnectorForTest.db
 
@@ -98,28 +93,23 @@ object RepositoriesHelper extends MongoSpecSupport with UnitSpec {
       Source.fromInputStream(inputStream).getLines
     }
 
-    def remove(fileName: String) = {
-      gridFSG.files.remove[BSONDocument](BSONDocument("filename" -> fileName))
-    }
+    def remove(fileName:String) = {gridFSG.files.remove[BSONDocument](BSONDocument("filename"-> fileName))}
   }
 
   val rasBulkOperationsRepository = new RasChunksRepository(mongoConnector)
 
   def createTestDataForDataCleansing(): List[ResultsFile] = {
-    val fileNames = List("file1212", "file1313")
+    val fileNames = List("file1212","file1313")
 
-    for {
-      file1 <- await(
-        RepositoriesHelper
-          .saveTempFile("user1212", "envelope1212", fileNames.head))
-      file2 <- await(
-        RepositoriesHelper
-          .saveTempFile("user1313", "envelope1313", fileNames.last))
-      remFile1 <- await(
-        RepositoriesHelper.rasFileRepository.remove((fileNames.head)))
-      remFile2 <- await(
-        RepositoriesHelper.rasFileRepository.remove((fileNames.last)))
-    } yield List(file1, file2)
+    for{
+      file1 <- await(RepositoriesHelper.saveTempFile("user1212","envelope1212",fileNames.head))
+      file2 <- await(RepositoriesHelper.saveTempFile("user1313","envelope1313",fileNames.last))
+      remFile1 <- await(RepositoriesHelper.rasFileRepository.remove((fileNames.head)))
+      remFile2 <- await(RepositoriesHelper.rasFileRepository.remove((fileNames.last)))
+    } yield List(file1,file2)
   }
 
 }
+
+
+

@@ -1,5 +1,5 @@
 /*
- * Copyright 2020 HM Revenue & Customs
+ * Copyright 2019 HM Revenue & Customs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -38,8 +38,7 @@ package object models {
     private val invalidFormat = "INVALID_FORMAT"
     private val missing = "MISSING_FIELD"
     private val invalidDateValidation = "INVALID_DATE"
-    private val ninoRegex =
-      "^((?!(BG|GB|KN|NK|NT|TN|ZZ)|(D|F|I|Q|U|V)[A-Z]|[A-Z](D|F|I|O|Q|U|V))[A-Z]{2})[0-9]{6}[A-D]?$"
+    private val ninoRegex = "^((?!(BG|GB|KN|NK|NT|TN|ZZ)|(D|F|I|Q|U|V)[A-Z]|[A-Z](D|F|I|O|Q|U|V))[A-Z]{2})[0-9]{6}[A-D]?$"
 
     private val isoDatePattern = Map(
       "yyyy-MM-dd" -> "^[\\d]{4}-[\\d]{2}-[\\d]{2}$"
@@ -60,16 +59,12 @@ package object models {
 
       def reads(json: JsValue): JsResult[NINO] = {
         json match {
-          case JsString(data) =>
-            data match {
-              case strValue if strValue.isEmpty =>
-                JsError(Seq(JsPath() -> Seq(ValidationError(missing))))
-              case strValue if !strValue.toUpperCase.matches(ninoRegex) =>
-                JsError(Seq(JsPath() -> Seq(ValidationError(invalidFormat))))
-              case strValue => JsSuccess(strValue)
-            }
-          case _ =>
-            JsError(Seq(JsPath() -> Seq(ValidationError(invalidDataType))))
+          case JsString(data) => data match {
+            case strValue if strValue.isEmpty => JsError(Seq(JsPath() -> Seq(ValidationError(missing))))
+            case strValue if !strValue.toUpperCase.matches(ninoRegex) => JsError(Seq(JsPath() -> Seq(ValidationError(invalidFormat))))
+            case strValue => JsSuccess(strValue)
+          }
+          case _ => JsError(Seq(JsPath() -> Seq(ValidationError(invalidDataType))))
         }
       }
     }
@@ -85,17 +80,12 @@ package object models {
       def reads(json: JsValue): JsResult[Name] = {
 
         json match {
-          case JsString(data) =>
-            data match {
-              case strValue if strValue.trim.isEmpty =>
-                JsError(Seq(JsPath() -> Seq(ValidationError(missing))))
-              case strValue
-                  if !strValue.matches("^[a-zA-Z &`\\-\\'^]{1,35}$") =>
-                JsError(Seq(JsPath() -> Seq(ValidationError(invalidFormat))))
-              case strValue => JsSuccess(strValue)
-            }
-          case _ =>
-            JsError(Seq(JsPath() -> Seq(ValidationError(invalidDataType))))
+          case JsString(data) => data match {
+            case strValue if strValue.trim.isEmpty => JsError(Seq(JsPath() -> Seq(ValidationError(missing))))
+            case strValue if !strValue.matches("^[a-zA-Z &`\\-\\'^]{1,35}$") => JsError(Seq(JsPath() -> Seq(ValidationError(invalidFormat))))
+            case strValue => JsSuccess(strValue)
+          }
+          case _ => JsError(Seq(JsPath() -> Seq(ValidationError(invalidDataType))))
         }
       }
     }
@@ -106,27 +96,21 @@ package object models {
       *
       * @param patterns
       */
-    private def dateReads(patterns: Map[String, String]): Reads[DateTime] =
-      new Reads[DateTime] {
-        def reads(json: JsValue): JsResult[DateTime] = json match {
-          case JsString(s) if !s.trim.isEmpty =>
-            s.extractDateFormat(patterns) match {
-              case Some(format) =>
-                s.toDateTime(format) match {
-                  case Some(d: DateTime) if !d.isAfterNow => JsSuccess(d)
-                  case _ =>
-                    JsError(Seq(
-                      JsPath() -> Seq(ValidationError(invalidDateValidation))))
-                }
-              case None =>
-                JsError(Seq(JsPath() -> Seq(ValidationError(invalidFormat))))
-            }
-          case JsString(s) if s.trim.isEmpty =>
-            JsError(Seq(JsPath() -> Seq(ValidationError(missing))))
-          case _ =>
-            JsError(Seq(JsPath() -> Seq(ValidationError(invalidDataType))))
-        }
+    private def dateReads(patterns: Map[String, String]): Reads[DateTime] = new Reads[DateTime] {
+      def reads(json: JsValue): JsResult[DateTime] = json match {
+        case JsString(s) if !s.trim.isEmpty =>
+          s.extractDateFormat(patterns) match {
+            case Some(format) =>
+              s.toDateTime(format) match {
+                case Some(d: DateTime) if !d.isAfterNow => JsSuccess(d)
+                case _ => JsError(Seq(JsPath() -> Seq(ValidationError(invalidDateValidation))))
+              }
+            case None => JsError(Seq(JsPath() -> Seq(ValidationError(invalidFormat))))
+          }
+        case JsString(s) if s.trim.isEmpty => JsError(Seq(JsPath() -> Seq(ValidationError(missing))))
+        case _ => JsError(Seq(JsPath() -> Seq(ValidationError(invalidDataType))))
       }
+    }
   }
 
   object Extensions {
@@ -146,7 +130,7 @@ package object models {
       def extractDateFormat(patterns: Map[String, String]): Option[String] = {
         patterns.find(pattern => date.matches(pattern._2)) match {
           case Some((format, _)) => Some(format)
-          case _                 => None
+          case _ => None
         }
       }
 
@@ -157,9 +141,10 @@ package object models {
         * @return
         */
       def toDateTime(format: String): Option[DateTime] = {
-        scala.util.control.Exception.allCatch[DateTime] opt (DateTime
-          .parse(date, DateTimeFormat.forPattern(format)))
+        scala.util.control.Exception.allCatch[DateTime] opt (DateTime.parse(date, DateTimeFormat.forPattern(format)))
       }
     }
+
   }
+
 }

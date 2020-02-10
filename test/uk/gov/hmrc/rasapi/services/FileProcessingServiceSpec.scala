@@ -1,5 +1,5 @@
 /*
- * Copyright 2020 HM Revenue & Customs
+ * Copyright 2019 HM Revenue & Customs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,11 +22,11 @@ import java.nio.file.Files
 
 import org.joda.time.DateTime
 import org.mockito.ArgumentCaptor
-import org.mockito.ArgumentMatchers.{eq => Meq, _}
+import org.mockito.Matchers.{eq => Meq, _}
 import org.mockito.Mockito._
 import org.scalatest.BeforeAndAfter
 import org.scalatest.concurrent.ScalaFutures
-import org.scalatestplus.mockito.MockitoSugar
+import org.scalatest.mockito.MockitoSugar
 import org.scalatestplus.play.OneAppPerSuite
 import play.api.libs.json.Json
 import play.api.test.FakeRequest
@@ -135,7 +135,7 @@ class FileProcessingServiceSpec extends UnitSpec with OneAppPerSuite with ScalaF
           override val SERVICE_UNAVAILABLE: String = STATUS_SERVICE_UNAVAILABLE
         }
 
-        when(mockFileUploadConnector.getFile(any(), any(), any())(any(), any())).thenReturn(Future.successful(Some(new FileInputStream(testFilePath.toFile))))
+        when(mockFileUploadConnector.getFile(any(), any(), any())(any())).thenReturn(Future.successful(Some(new FileInputStream(testFilePath.toFile))))
         when(mockFileUploadConnector.deleteUploadedFile(any(), any(), any())(any())).thenReturn(Future.successful(true))
 
         when(mockDesConnector.otherUk).thenReturn("otherUKResident")
@@ -214,7 +214,7 @@ class FileProcessingServiceSpec extends UnitSpec with OneAppPerSuite with ScalaF
           override val SERVICE_UNAVAILABLE: String = STATUS_SERVICE_UNAVAILABLE
         }
 
-        when(mockFileUploadConnector.getFile(any(), any(), any())(any(), any())).thenReturn(Future.successful(Some(new FileInputStream(testFilePath.toFile))))
+        when(mockFileUploadConnector.getFile(any(), any(), any())(any())).thenReturn(Future.successful(Some(new FileInputStream(testFilePath.toFile))))
         when(mockFileUploadConnector.deleteUploadedFile(any(), any(), any())(any())).thenReturn(Future.successful(true))
 
         when(mockDesConnector.otherUk).thenReturn("otherUKResident")
@@ -292,7 +292,7 @@ class FileProcessingServiceSpec extends UnitSpec with OneAppPerSuite with ScalaF
           override val SERVICE_UNAVAILABLE: String = STATUS_SERVICE_UNAVAILABLE
         }
 
-        when(mockFileUploadConnector.getFile(any(), any(), any())(any(), any())).thenReturn(Future.successful(Some(new FileInputStream(testFilePath.toFile))))
+        when(mockFileUploadConnector.getFile(any(), any(), any())(any())).thenReturn(Future.successful(Some(new FileInputStream(testFilePath.toFile))))
         when(mockFileUploadConnector.deleteUploadedFile(any(), any(), any())(any())).thenReturn(Future.successful(true))
 
         when(mockDesConnector.otherUk).thenReturn("otherUKResident")
@@ -369,7 +369,7 @@ class FileProcessingServiceSpec extends UnitSpec with OneAppPerSuite with ScalaF
           override val SERVICE_UNAVAILABLE: String = STATUS_SERVICE_UNAVAILABLE
         }
 
-        when(mockFileUploadConnector.getFile(any(), any(), any())(any(), any())).thenReturn(Future.successful(Some(new FileInputStream(testFilePath.toFile))))
+        when(mockFileUploadConnector.getFile(any(), any(), any())(any())).thenReturn(Future.successful(Some(new FileInputStream(testFilePath.toFile))))
         when(mockFileUploadConnector.deleteUploadedFile(any(), any(), any())(any())).thenReturn(Future.successful(true))
 
         when(mockDesConnector.otherUk).thenReturn("otherUKResident")
@@ -446,7 +446,7 @@ class FileProcessingServiceSpec extends UnitSpec with OneAppPerSuite with ScalaF
           override val SERVICE_UNAVAILABLE: String = STATUS_SERVICE_UNAVAILABLE
         }
 
-        when(mockFileUploadConnector.getFile(any(), any(), any())(any(), any())).thenReturn(Future.successful(Some(new FileInputStream(testFilePath.toFile))))
+        when(mockFileUploadConnector.getFile(any(), any(), any())(any())).thenReturn(Future.successful(Some(new FileInputStream(testFilePath.toFile))))
         when(mockFileUploadConnector.deleteUploadedFile(any(), any(), any())(any())).thenReturn(Future.successful(true))
 
         when(mockDesConnector.otherUk).thenReturn("otherUKResident")
@@ -522,7 +522,7 @@ class FileProcessingServiceSpec extends UnitSpec with OneAppPerSuite with ScalaF
           override val SERVICE_UNAVAILABLE: String = STATUS_SERVICE_UNAVAILABLE
         }
 
-        when(mockFileUploadConnector.getFile(any(), any(), any())(any(), any())).thenReturn(Future.successful(Some(new FileInputStream(testFilePath.toFile))))
+        when(mockFileUploadConnector.getFile(any(), any(), any())(any())).thenReturn(Future.successful(Some(new FileInputStream(testFilePath.toFile))))
         when(mockFileUploadConnector.deleteUploadedFile(any(), any(), any())(any())).thenReturn(Future.successful(true))
 
         when(mockDesConnector.otherUk).thenReturn("otherUKResident")
@@ -586,7 +586,7 @@ class FileProcessingServiceSpec extends UnitSpec with OneAppPerSuite with ScalaF
         val row1 = "Johné,Smithè,AB123456C,1990-02-21".getBytes(StandardCharsets.ISO_8859_1)
         val inputStream = new ByteArrayInputStream(row1)
 
-        when(mockFileUploadConnector.getFile(any(), any(), any())(any(), any())).thenReturn(Future.successful(Some(inputStream)))
+        when(mockFileUploadConnector.getFile(any(), any(), any())(any())).thenReturn(Future.successful(Some(inputStream)))
 
         val result = await(SUT.readFile(envelopeId, fileId, userId))
 
@@ -755,7 +755,7 @@ class FileProcessingServiceSpec extends UnitSpec with OneAppPerSuite with ScalaF
 
         val testFilePath = getTestFilePath
 
-        when(mockFileUploadConnector.getFile(any(), any(), any())(any(), any())).thenReturn(Future.successful(Some(new FileInputStream(testFilePath.toFile))))
+        when(mockFileUploadConnector.getFile(any(), any(), any())(any())).thenReturn(Future.successful(Some(new FileInputStream(testFilePath.toFile))))
         when(mockFileUploadConnector.deleteUploadedFile(any(), any(), any())(any())).thenReturn(Future.successful(true))
 
         val expectedResultsFile = "National Insurance number,First name,Last name,Date of birth,2017 to 2018 residency status,2018 to 2019 residency status" +
@@ -798,6 +798,7 @@ class FileProcessingServiceSpec extends UnitSpec with OneAppPerSuite with ScalaF
 
     "return status of error" when {
       "there is a problem manipulating the file" in {
+
         val envelopeId = "0b215ey97-11d4-4006-91db-c067e74fc657"
         val fileId = Random.nextInt().toString
         val fileStatus = "AVAILABLE"

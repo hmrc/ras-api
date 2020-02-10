@@ -1,5 +1,5 @@
 /*
- * Copyright 2020 HM Revenue & Customs
+ * Copyright 2019 HM Revenue & Customs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -30,8 +30,6 @@ trait ResidencyYearResolver {
     */
   def isBetweenJanAndApril(): Boolean = {
     val currentDate = currentDateTime
-    currentDate.isAfter(
-      new DateTime(currentDate.getYear - 1, 12, 31, 0, 0, 0, 0)) && currentDate
-      .isBefore(new DateTime(currentDate.getYear, 4, 6, 0, 0, 0, 0))
+    currentDate.isAfter(new DateTime(currentDate.getYear - 1, 12, 31, 0, 0, 0, 0)) && currentDate.isBefore(new DateTime(currentDate.getYear, 4, 6, 0, 0, 0, 0))
   }
 }

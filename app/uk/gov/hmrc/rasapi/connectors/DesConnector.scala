@@ -1,5 +1,5 @@
 /*
- * Copyright 2020 HM Revenue & Customs
+ * Copyright 2019 HM Revenue & Customs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,8 +17,8 @@
 package uk.gov.hmrc.rasapi.connectors
 
 import play.api.Mode.Mode
-import play.api.libs.json.{JsObject, JsValue, Json, Writes}
 import play.api.{Configuration, Logger, Play}
+import play.api.libs.json.{JsObject, JsValue, Json, Writes}
 import uk.gov.hmrc.http._
 import uk.gov.hmrc.play.config.ServicesConfig
 import uk.gov.hmrc.play.http.logging.MdcLoggingExecutionContext
@@ -48,6 +48,7 @@ trait DesConnector extends ServicesConfig {
   val welshRes = "welshResident"
   val otherUk = "otherUKResident"
 
+
   val error_InternalServerError: String
   val error_Deceased: String
   val error_MatchingFailed: String
@@ -62,143 +63,91 @@ trait DesConnector extends ServicesConfig {
   val retryLimit: Int
   val retryDelay: Int
 
-  lazy val nonRetryableErrors =
-    List(error_MatchingFailed, error_Deceased, error_DoNotReProcess)
+  lazy val nonRetryableErrors = List(error_MatchingFailed, error_Deceased, error_DoNotReProcess)
 
   override protected def mode: Mode = Play.current.mode
-  override protected def runModeConfiguration: Configuration =
-    Play.current.configuration
+  override protected def runModeConfiguration: Configuration = Play.current.configuration
 
-  def canRetryRequest(isBulkRequest: Boolean) =
-    isRetryEnabled || (isBulkRetryEnabled && isBulkRequest)
+  def canRetryRequest(isBulkRequest: Boolean) = isRetryEnabled || (isBulkRetryEnabled && isBulkRequest)
 
   def isCodeRetryable(code: String, isBulkRequest: Boolean): Boolean = {
     canRetryRequest(isBulkRequest) && !nonRetryableErrors.contains(code)
   }
 
-  def getResidencyStatus(member: IndividualDetails,
-                         userId: String,
-                         apiVersion: ApiVersion,
-                         isBulkRequest: Boolean = false)
-    : Future[Either[ResidencyStatus, ResidencyStatusFailure]] = {
+  def getResidencyStatus(member: IndividualDetails, userId: String, apiVersion: ApiVersion, isBulkRequest: Boolean = false):
+  Future[Either[ResidencyStatus, ResidencyStatusFailure]] = {
 
     implicit val rasHeaders = HeaderCarrier()
 
     val uri = s"${desBaseUrl}/individuals/residency-status/"
 
     val desHeaders = Seq("Environment" -> desUrlHeaderEnv,
-                         "OriginatorId" -> "DA_RAS",
-                         "Content-Type" -> "application/json",
-                         "authorization" -> s"Bearer ${desAuthToken}")
+      "OriginatorId" -> "DA_RAS",
+      "Content-Type" -> "application/json",
+      "authorization" -> s"Bearer ${desAuthToken}")
 
-    def getResultAndProcess(memberDetails: IndividualDetails,
-                            retryCount: Int = 1)
-      : Future[Either[ResidencyStatus, ResidencyStatusFailure]] = {
+    def getResultAndProcess(memberDetails: IndividualDetails, retryCount: Int = 1): Future[Either[ResidencyStatus, ResidencyStatusFailure]] = {
 
       if (retryCount > 1) {
-        Logger.warn(
-          s"[ResultsGenerator] Did not receive a result from des, retry count: $retryCount for userId ($userId).")
+        Logger.warn(s"[ResultsGenerator] Did not receive a result from des, retry count: $retryCount for userId ($userId).")
       }
 
-      sendResidencyStatusRequest(uri, member, userId, desHeaders, apiVersion)(
-        rasHeaders) flatMap {
+      sendResidencyStatusRequest(uri, member, userId, desHeaders, apiVersion)(rasHeaders) flatMap {
         case Left(result) => Future.successful(Left(result))
-        case Right(result)
-            if retryCount < retryLimit && isCodeRetryable(result.code,
-                                                          isBulkRequest) =>
+        case Right(result) if retryCount < retryLimit && isCodeRetryable(result.code, isBulkRequest) =>
           Thread.sleep(retryDelay) //Delay before sending to HoD to try to avoid transactions per second(tps) clash
           getResultAndProcess(memberDetails, retryCount + 1)
-        case Right(result)
-            if retryCount >= retryLimit || !isCodeRetryable(result.code,
-                                                            isBulkRequest) =>
-          Future.successful(
-            Right(result.copy(code = result.code
-              .replace(error_DoNotReProcess, error_InternalServerError))))
+        case Right(result) if retryCount >= retryLimit || !isCodeRetryable(result.code, isBulkRequest) =>
+          Future.successful(Right(result.copy(code = result.code.replace(error_DoNotReProcess, error_InternalServerError))))
       }
     }
 
     getResultAndProcess(member)
   }
 
-  private def sendResidencyStatusRequest(
-      uri: String,
-      member: IndividualDetails,
-      userId: String,
-      desHeaders: Seq[(String, String)],
-      apiVersion: ApiVersion)(implicit rasHeaders: HeaderCarrier)
-    : Future[Either[ResidencyStatus, ResidencyStatusFailure]] = {
+  private def sendResidencyStatusRequest(uri: String, member: IndividualDetails, userId: String,
+                                         desHeaders: Seq[(String, String)], apiVersion: ApiVersion)(implicit rasHeaders: HeaderCarrier): Future[Either[ResidencyStatus, ResidencyStatusFailure]] = {
 
-    val payload = Json.toJson(
-      Json
-        .toJson[IndividualDetails](member)
-        .as[JsObject] + ("pensionSchemeOrganisationID" -> Json.toJson(userId)))
+    val payload = Json.toJson(Json.toJson[IndividualDetails](member)
+                    .as[JsObject] + ("pensionSchemeOrganisationID" -> Json.toJson(userId)))
 
     val result = httpPost.POST[JsValue, HttpResponse](uri, payload, desHeaders)
-    (implicitly[Writes[IndividualDetails]],
-     implicitly[HttpReads[HttpResponse]],
-     rasHeaders,
-     MdcLoggingExecutionContext.fromLoggingDetails(rasHeaders))
+    (implicitly[Writes[IndividualDetails]], implicitly[HttpReads[HttpResponse]], rasHeaders,
+      MdcLoggingExecutionContext.fromLoggingDetails(rasHeaders))
 
-    result
-      .map(response =>
-        resolveResponse(response, userId, member.nino, apiVersion))
-      .recover {
-        case _: BadRequestException =>
-          Logger.error(
-            s"[DesConnector] [getResidencyStatus] Bad Request returned from des. The details sent were not " +
-              s"valid. userId ($userId).")
-          Right(
-            ResidencyStatusFailure(error_DoNotReProcess,
-                                   "Internal server error."))
-        case _: NotFoundException =>
-          Right(ResidencyStatusFailure(
-            error_MatchingFailed,
-            "Cannot provide a residency status for this pension scheme member."))
-        case Upstream4xxResponse(_, 429, _, _) =>
-          Logger.error(
-            s"[DesConnector] [getResidencyStatus] Request could not be sent 429 (Too Many Requests) was sent " +
-              s"from the HoD. userId ($userId).")
-          Right(
-            ResidencyStatusFailure(error_TooManyRequests, "Too Many Requests."))
-        case _: RequestTimeoutException =>
-          Logger.error(
-            s"[DesConnector] [getResidencyStatus] Request has timed out. userId ($userId).")
-          Right(
-            ResidencyStatusFailure(error_DoNotReProcess,
-                                   "Internal server error."))
-        case _5xx: Upstream5xxResponse =>
-          if (_5xx.upstreamResponseCode == 503) {
-            Logger.error(
-              s"[DesConnector] [getResidencyStatus] Service unavailable. userId ($userId).")
-            Right(
-              ResidencyStatusFailure(error_ServiceUnavailable,
-                                     "Service unavailable"))
-          } else {
-            Logger.error(
-              s"[DesConnector] [getResidencyStatus] ${_5xx.upstreamResponseCode} exception caught. userId ($userId).")
-            Right(
-              ResidencyStatusFailure(error_InternalServerError,
-                                     "Internal server error."))
-          }
-        case th: Throwable =>
-          Logger.error(
-            s"[DesConnector] [getResidencyStatus] Caught error occurred when calling the HoD. userId ($userId).Exception message: ${th.getMessage}.")
-          Right(
-            ResidencyStatusFailure(error_InternalServerError,
-                                   "Internal server error."))
-        case _ =>
-          Logger.error(
-            s"[DesConnector] [getResidencyStatus] Uncaught error occurred when calling the HoD. userId ($userId).")
-          Right(
-            ResidencyStatusFailure(error_InternalServerError,
-                                   "Internal server error."))
-      }
+    result.map(response => resolveResponse(response, userId, member.nino, apiVersion)).recover {
+      case badRequestEx: BadRequestException =>
+        Logger.error(s"[DesConnector] [getResidencyStatus] Bad Request returned from des. The details sent were not " +
+          s"valid. userId ($userId).")
+        Right(ResidencyStatusFailure(error_DoNotReProcess, "Internal server error."))
+      case notFoundEx: NotFoundException =>
+        Right(ResidencyStatusFailure(error_MatchingFailed, "Cannot provide a residency status for this pension scheme member."))
+      case Upstream4xxResponse(_, 429, _, _) =>
+          Logger.error(s"[DesConnector] [getResidencyStatus] Request could not be sent 429 (Too Many Requests) was sent " +
+            s"from the HoD. userId ($userId).")
+          Right(ResidencyStatusFailure(error_TooManyRequests, "Too Many Requests."))
+      case requestTimeOutEx: RequestTimeoutException =>
+        Logger.error(s"[DesConnector] [getResidencyStatus] Request has timed out. userId ($userId).")
+        Right(ResidencyStatusFailure(error_DoNotReProcess, "Internal server error."))
+      case _5xx: Upstream5xxResponse =>
+        if (_5xx.upstreamResponseCode == 503) {
+          Logger.error(s"[DesConnector] [getResidencyStatus] Service unavailable. userId ($userId).")
+          Right(ResidencyStatusFailure(error_ServiceUnavailable, "Service unavailable"))
+        } else {
+          Logger.error(s"[DesConnector] [getResidencyStatus] ${_5xx.upstreamResponseCode} exception caught. userId ($userId).")
+          Right(ResidencyStatusFailure(error_InternalServerError, "Internal server error."))
+        }
+      case th: Throwable =>
+        Logger.error(s"[DesConnector] [getResidencyStatus] Caught error occurred when calling the HoD. userId ($userId).Exception message: ${th.getMessage}.")
+        Right(ResidencyStatusFailure(error_InternalServerError, "Internal server error."))
+      case _ =>
+        Logger.error(s"[DesConnector] [getResidencyStatus] Uncaught error occurred when calling the HoD. userId ($userId).")
+        Right(ResidencyStatusFailure(error_InternalServerError, "Internal server error."))
+    }
   }
 
-  private def convertResidencyStatus(residencyStatus: String,
-                                     apiVersion: ApiVersion): String = {
-    val ukAndScotRes =
-      residencyStatus.replace(uk, otherUk).replace(scot, scotRes)
+  private def convertResidencyStatus(residencyStatus: String, apiVersion: ApiVersion): String = {
+    val ukAndScotRes = residencyStatus.replace(uk, otherUk).replace(scot, scotRes)
     apiVersion match {
       case V1_0 =>
         ukAndScotRes.replace(welsh, otherUk)
@@ -207,59 +156,37 @@ trait DesConnector extends ServicesConfig {
     }
   }
 
-  private def resolveResponse(
-      httpResponse: HttpResponse,
-      userId: String,
-      nino: NINO,
-      apiVersion: ApiVersion)(implicit hc: HeaderCarrier)
-    : Either[ResidencyStatus, ResidencyStatusFailure] = {
+  private def resolveResponse(httpResponse: HttpResponse, userId: String, nino: NINO, apiVersion: ApiVersion)(implicit hc: HeaderCarrier): Either[ResidencyStatus, ResidencyStatusFailure] = {
 
-    Try(
-      httpResponse.json.as[ResidencyStatusSuccess](
-        ResidencyStatusFormats.successFormats)) match {
+    Try(httpResponse.json.as[ResidencyStatusSuccess](ResidencyStatusFormats.successFormats)) match {
       case Success(payload) =>
         payload.deseasedIndicator match {
-          case Some(true) =>
-            Right(
-              ResidencyStatusFailure(
-                error_Deceased,
-                "Cannot provide a residency status for this pension scheme member."))
+          case Some(true) => Right(ResidencyStatusFailure(error_Deceased, "Cannot provide a residency status for this pension scheme member."))
           case _ => {
             if (payload.nextYearResidencyStatus.isEmpty && !allowNoNextYearStatus) {
               val auditDataMap = Map("userId" -> userId,
-                                     "nino" -> nino,
-                                     "nextYearResidencyStatus" -> "NOT_PRESENT")
+                "nino" -> nino,
+                "nextYearResidencyStatus" -> "NOT_PRESENT")
 
               auditService.audit(auditType = "ReliefAtSourceAudit_DES_Response",
-                                 path = "PATH_NOT_DEFINED",
-                                 auditData = auditDataMap)
+                path = "PATH_NOT_DEFINED",
+                auditData = auditDataMap
+              )
 
-              Right(
-                ResidencyStatusFailure(error_DoNotReProcess,
-                                       "Internal server error."))
+              Right(ResidencyStatusFailure(error_DoNotReProcess, "Internal server error."))
             } else {
-              val currentStatus = convertResidencyStatus(
-                payload.currentYearResidencyStatus,
-                apiVersion)
-              val nextYearStatus: Option[String] =
-                payload.nextYearResidencyStatus.map(
-                  convertResidencyStatus(_, apiVersion))
+              val currentStatus = convertResidencyStatus(payload.currentYearResidencyStatus, apiVersion)
+              val nextYearStatus: Option[String] = payload.nextYearResidencyStatus.map(convertResidencyStatus(_, apiVersion))
               Left(ResidencyStatus(currentStatus, nextYearStatus))
             }
           }
         }
       case Failure(_) =>
-        Try(
-          httpResponse.json.as[ResidencyStatusFailure](
-            ResidencyStatusFormats.failureFormats)) match {
-          case Success(data) =>
-            Logger.debug(s"DesFailureResponse from DES :${data}")
+        Try(httpResponse.json.as[ResidencyStatusFailure](ResidencyStatusFormats.failureFormats)) match {
+          case Success(data) => Logger.debug(s"DesFailureResponse from DES :${data}")
             Right(data)
-          case Failure(ex) =>
-            Logger.error(s"Error from DES :${ex.getMessage}")
-            Right(
-              ResidencyStatusFailure(error_InternalServerError,
-                                     "Internal server error."))
+          case Failure(ex) => Logger.error(s"Error from DES :${ex.getMessage}")
+            Right(ResidencyStatusFailure(error_InternalServerError, "Internal server error."))
         }
     }
   }
@@ -271,13 +198,11 @@ object DesConnector extends DesConnector {
   override val httpPost: HttpPost = WSHttp
   override val desBaseUrl = baseUrl("des")
   override val edhUrl: String = desBaseUrl + AppContext.edhUrl
-  override val error_InternalServerError: String =
-    AppContext.internalServerErrorStatus
+  override val error_InternalServerError: String = AppContext.internalServerErrorStatus
   override val error_Deceased: String = AppContext.deceasedStatus
   override val error_MatchingFailed: String = AppContext.matchingFailedStatus
   override val error_DoNotReProcess: String = AppContext.doNotReProcessStatus
-  override val error_ServiceUnavailable: String =
-    AppContext.serviceUnavailableStatus
+  override val error_ServiceUnavailable: String = AppContext.serviceUnavailableStatus
   override val allowNoNextYearStatus: Boolean = AppContext.allowNoNextYearStatus
   override val retryLimit: Int = AppContext.requestRetryLimit
   override val desUrlHeaderEnv: String = AppContext.desUrlHeaderEnv
@@ -289,6 +214,5 @@ object DesConnector extends DesConnector {
   // $COVERAGE-ON$
   override protected def mode: Mode = Play.current.mode
 
-  override protected def runModeConfiguration: Configuration =
-    Play.current.configuration
+  override protected def runModeConfiguration: Configuration = Play.current.configuration
 }

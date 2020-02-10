@@ -1,5 +1,5 @@
 /*
- * Copyright 2020 HM Revenue & Customs
+ * Copyright 2019 HM Revenue & Customs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -33,59 +33,48 @@ trait GridFsTTLIndexing {
   private lazy val OptExpireAfterSeconds = "expireAfterSeconds"
   protected lazy val UploadDate = "uploadDate"
 
-  def addAllTTLs(gfs: GridFS[BSONSerializationPack.type])(
-      implicit ec: scala.concurrent.ExecutionContext): Future[Seq[Boolean]] = {
-    Future.sequence(
-      Seq(
-        addFilesTTL(gfs),
-        addChunksTTL(gfs)
-      ))
+  def addAllTTLs(gfs : GridFS[BSONSerializationPack.type])(implicit ec: scala.concurrent.ExecutionContext): Future[Seq[Boolean]] = {
+    Future.sequence(Seq(
+      addFilesTTL(gfs),
+      addChunksTTL(gfs)
+    ))
   }
 
-  def addChunksTTL(gfs: GridFS[BSONSerializationPack.type])(
-      implicit ec: scala.concurrent.ExecutionContext): Future[Boolean] = {
+  def addChunksTTL(gfs : GridFS[BSONSerializationPack.type])(implicit ec: scala.concurrent.ExecutionContext): Future[Boolean] = {
     addTTL(gfs.chunks)
   }
 
-  def addFilesTTL(gfs: GridFS[BSONSerializationPack.type])(
-      implicit ec: scala.concurrent.ExecutionContext): Future[Boolean] = {
+  def addFilesTTL(gfs : GridFS[BSONSerializationPack.type])(implicit ec: scala.concurrent.ExecutionContext): Future[Boolean] = {
     addTTL(gfs.files)
   }
 
-  private def addTTL(collection: GenericCollection[BSONSerializationPack.type])(
-      implicit ec: scala.concurrent.ExecutionContext): Future[Boolean] = {
+  private def addTTL(collection: GenericCollection[BSONSerializationPack.type])(implicit ec: scala.concurrent.ExecutionContext): Future[Boolean] = {
     import reactivemongo.bson.DefaultBSONHandlers._
     val indexes = collection.indexesManager.list()
-    indexes.flatMap { idxs =>
-      {
-        val idxToUpdate = idxs.find(
-          index =>
-            index.eventualName == LastUpdatedIndex
-              && index.options
-                .getAs[BSONLong](OptExpireAfterSeconds)
-                .getOrElse(BSONLong(expireAfterSeconds))
-                .as[Long] != expireAfterSeconds)
+    indexes.flatMap {
+      idxs => {
+
+        val idxToUpdate = idxs.find(index =>
+          index.eventualName == LastUpdatedIndex
+            && index.options.getAs[BSONLong](OptExpireAfterSeconds).getOrElse(BSONLong(expireAfterSeconds)).as[Long] != expireAfterSeconds)
 
         if (idxToUpdate.isDefined) {
           for {
-            deleted <- collection.indexesManager.drop(
-              idxToUpdate.get.eventualName)
+            deleted <- collection.indexesManager.drop(idxToUpdate.get.eventualName)
 
             updated <- ensureLastUpdated(collection)
           } yield updated
-        } else {
+        }
+        else {
           ensureLastUpdated(collection)
         }
       }
     }
-    Logger.info(
-      s"Creating time to live for entries in ${collection.name} to $expireAfterSeconds seconds")
+    Logger.info(s"Creating time to live for entries in ${collection.name} to $expireAfterSeconds seconds")
     ensureLastUpdated(collection)
   }
 
-  private def ensureLastUpdated(
-      collection: GenericCollection[BSONSerializationPack.type])(
-      implicit ec: scala.concurrent.ExecutionContext) = {
+  private def ensureLastUpdated(collection : GenericCollection[BSONSerializationPack.type])(implicit ec: scala.concurrent.ExecutionContext) = {
     Logger.debug("Indexes ensured by creating if they doesn't exist")
     collection.indexesManager.ensure(
       Index(

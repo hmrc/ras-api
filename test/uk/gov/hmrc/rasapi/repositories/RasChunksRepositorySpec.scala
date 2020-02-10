@@ -1,5 +1,5 @@
 /*
- * Copyright 2020 HM Revenue & Customs
+ * Copyright 2019 HM Revenue & Customs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,7 +17,7 @@
 package uk.gov.hmrc.rasapi.repositories
 
 import org.scalatest.BeforeAndAfter
-import org.scalatestplus.mockito.MockitoSugar
+import org.scalatest.mockito.MockitoSugar
 import org.scalatestplus.play.OneAppPerTest
 import reactivemongo.bson.BSONObjectID
 import uk.gov.hmrc.play.test.UnitSpec
@@ -25,47 +25,37 @@ import uk.gov.hmrc.rasapi.repositories.RepositoriesHelper.rasBulkOperationsRepos
 
 import scala.concurrent.ExecutionContext.Implicits.global
 
-class RasChunksRepositorySpec
-    extends UnitSpec
-    with MockitoSugar
-    with OneAppPerTest
-    with BeforeAndAfter {
+class RasChunksRepositorySpec extends UnitSpec with MockitoSugar with OneAppPerTest
+  with BeforeAndAfter  {
 
   val userId: String = "A1234567"
 
-  before {
+  before{
     RepositoriesHelper.createTestDataForDataCleansing()
-    RepositoriesHelper.rasBulkOperationsRepository.removeAll()
+   RepositoriesHelper.rasBulkOperationsRepository.removeAll()
   }
-  after {
-    RepositoriesHelper.rasFileRepository.removeAll()
-  }
+ after{
+   RepositoriesHelper.rasFileRepository.removeAll()
+ }
 
   "RasChunksRepository" should {
 
     "get All Chunks" in {
-      val fileMetaData = await(
-        RepositoriesHelper.saveTempFile("user222", "envelope222", "file222"))
+      val fileMetaData = await(RepositoriesHelper.saveTempFile("user222","envelope222","file222"))
 
       rasBulkOperationsRepository.getAllChunks()
-      val res = await(rasBulkOperationsRepository.getAllChunks())
+      val res =  await(rasBulkOperationsRepository.getAllChunks())
       res.size shouldBe 1
     }
-
     "remove a Chunk for an ObjectId" in {
-      val fileMetaData = await(
-        RepositoriesHelper.saveTempFile("user222", "envelope222", "file222"))
+      val fileMetaData = await(RepositoriesHelper.saveTempFile("user222","envelope222","file222"))
 
-      val result = await(
-        rasBulkOperationsRepository.removeChunk(
-          fileMetaData.id.asInstanceOf[BSONObjectID]))
+     val result = await(rasBulkOperationsRepository.removeChunk(
+        fileMetaData.id.asInstanceOf[BSONObjectID]))
 
       result shouldBe true
       val res1 = await(rasBulkOperationsRepository.getAllChunks())
-      res1
-        .filter(_.files_id == fileMetaData.id)
-        .headOption
-        .isEmpty shouldBe true
+      res1.filter(_.files_id == fileMetaData.id).headOption.isEmpty shouldBe true
     }
   }
 }

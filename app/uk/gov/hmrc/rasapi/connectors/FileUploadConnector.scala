@@ -1,5 +1,5 @@
 /*
- * Copyright 2020 HM Revenue & Customs
+ * Copyright 2019 HM Revenue & Customs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -29,94 +29,70 @@ import uk.gov.hmrc.rasapi.config.WSHttp
 import uk.gov.hmrc.rasapi.models.FileMetadata
 
 import scala.concurrent.ExecutionContext.Implicits.global
-import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.Future
 
 trait FileUploadConnector extends ServicesConfig {
 
   val http: HttpPost
   val wsHttp: WSHttp
 
+
   override protected def mode: Mode = Play.current.mode
-  override protected def runModeConfiguration: Configuration =
-    Play.current.configuration
+  override protected def runModeConfiguration: Configuration = Play.current.configuration
 
   lazy val serviceUrl = baseUrl("file-upload")
   lazy val fileUploadUrlSuffix = getString("file-upload-url-suffix")
 
-  def getFile(envelopeId: String, fileId: String, userId: String)(
-      implicit hc: HeaderCarrier,
-      ex: ExecutionContext): Future[Option[InputStream]] = {
+
+  def getFile(envelopeId: String, fileId: String, userId: String)(implicit hc: HeaderCarrier): Future[Option[InputStream]] = {
     implicit val system = ActorSystem()
     implicit val materializer = ActorMaterializer()
 
-    Logger.warn(
-      s"Get to file-upload with URI : /file-upload/envelopes/${envelopeId}/files/${fileId}/content for userId ($userId).")
-    wsHttp
-      .buildRequestWithStream(
-        s"$serviceUrl/$fileUploadUrlSuffix/${envelopeId}/files/${fileId}/content")
-      .map { res =>
-        Some(res.body.runWith(StreamConverters.asInputStream()))
-      } recover {
+    Logger.warn(s"Get to file-upload with URI : /file-upload/envelopes/${envelopeId}/files/${fileId}/content for userId ($userId).")
+    wsHttp.buildRequestWithStream(s"$serviceUrl/$fileUploadUrlSuffix/${envelopeId}/files/${fileId}/content").map { res =>
+      Some(res.body.runWith(StreamConverters.asInputStream()))
+    } recover {
       case ex: Throwable => {
-        Logger.error(
-          s"Exception thrown while retrieving file / converting to InputStream for userId ($userId).",
-          ex)
-        throw new RuntimeException(
-          "Error Streaming file from file-upload service")
+        Logger.error(s"Exception thrown while retrieving file / converting to InputStream for userId ($userId).", ex)
+        throw new RuntimeException("Error Streaming file from file-upload service")
       }
     }
   }
 
-  def getFileMetadata(envelopeId: String, fileId: String, userId: String)(
-      implicit hc: HeaderCarrier): Future[Option[FileMetadata]] = {
+  def getFileMetadata(envelopeId: String, fileId: String, userId: String)(implicit hc: HeaderCarrier): Future[Option[FileMetadata]] = {
 
-    Logger.warn(
-      s"Get to file-upload with URI : /file-upload/envelopes/${envelopeId}/files/${fileId}/metadata for userId ($userId).")
-    wsHttp
-      .doGet(
-        s"$serviceUrl/$fileUploadUrlSuffix/${envelopeId}/files/${fileId}/metadata")
-      .map { res =>
-        if (res.status == 200) {
-          Logger.warn(
-            s"File metadata successfully retrieved from file-upload for userId ($userId).")
-          Some(res.json.as[FileMetadata])
-        } else {
-          Logger.error(
-            s"Failed to retrieve file metadata for userId ($userId). Status ${res.status}.")
-          None
-        }
-      } recover {
+    Logger.warn(s"Get to file-upload with URI : /file-upload/envelopes/${envelopeId}/files/${fileId}/metadata for userId ($userId).")
+    wsHttp.doGet(s"$serviceUrl/$fileUploadUrlSuffix/${envelopeId}/files/${fileId}/metadata").map { res =>
+      if (res.status == 200) {
+        Logger.warn(s"File metadata successfully retrieved from file-upload for userId ($userId).")
+        Some(res.json.as[FileMetadata])
+      }
+      else {
+        Logger.error(s"Failed to retrieve file metadata for userId ($userId). Status ${res.status}.")
+        None
+      }
+    } recover {
       case ex: Throwable =>
-        Logger.error(
-          s"Exception thrown while retrieving file metadata for userId ($userId). Session will continue with a default filename.",
-          ex)
+        Logger.error(s"Exception thrown while retrieving file metadata for userId ($userId). Session will continue with a default filename.", ex)
         None
     }
   }
 
-  def deleteUploadedFile(envelopeId: String, fileId: String, userId: String)(
-      implicit hc: HeaderCarrier): Future[Boolean] = {
+  def deleteUploadedFile(envelopeId: String, fileId: String, userId: String)(implicit hc: HeaderCarrier): Future[Boolean] = {
 
-    wsHttp
-      .doDelete(
-        s"$serviceUrl/$fileUploadUrlSuffix/${envelopeId}/files/${fileId}")
-      .map { res =>
-        if (res.status == 200) {
-          Logger.warn(
-            s"user file deleted successfully from file-upload for userId ($userId).")
-          true
-        } else {
-          Logger.error(
-            s"Failed to delete user file => envelopeID: ${envelopeId}/files/${fileId} for userId ($userId).")
-          false
-        }
-      }
-      .recover {
-        case _ =>
-          Logger.error(
-            s"Failed to execute delete user file => envelopeID : ${envelopeId}/files/${fileId} for userId ($userId).")
-          false
-      }
+    wsHttp.doDelete(s"$serviceUrl/$fileUploadUrlSuffix/${envelopeId}/files/${fileId}").map { res =>
+       if(res.status == 200) {
+         Logger.warn(s"user file deleted successfully from file-upload for userId ($userId).")
+         true
+       }
+       else {
+         Logger.error(s"Failed to delete user file => envelopeID: ${envelopeId}/files/${fileId} for userId ($userId)." )
+        false
+       }
+    }.recover{
+      case _ => Logger.error(s"Failed to execute delete user file => envelopeID : ${envelopeId}/files/${fileId} for userId ($userId).")
+        false
+    }
   }
 }
 
@@ -125,3 +101,7 @@ object FileUploadConnector extends FileUploadConnector {
   override val http: HttpPost = WSHttp
   override val wsHttp: WSHttp = WSHttp
 }
+
+
+
+

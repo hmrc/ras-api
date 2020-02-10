@@ -1,5 +1,5 @@
 /*
- * Copyright 2020 HM Revenue & Customs
+ * Copyright 2019 HM Revenue & Customs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,17 +18,11 @@ package uk.gov.hmrc.rasapi.services
 
 import play.api.Logger
 import uk.gov.hmrc.http.HeaderCarrier
-import uk.gov.hmrc.http.cache.client.{CacheMap, ShortLivedHttpCaching}
+import uk.gov.hmrc.http.cache.client.ShortLivedHttpCaching
 import uk.gov.hmrc.rasapi.config.RasShortLivedHttpCaching
-import uk.gov.hmrc.rasapi.models.{
-  CallbackData,
-  FileMetadata,
-  FileSession,
-  ResultsFileMetaData
-}
+import uk.gov.hmrc.rasapi.models.{CallbackData, FileMetadata, FileSession, ResultsFileMetaData}
 
 import scala.concurrent.ExecutionContext.Implicits.global
-import scala.concurrent.Future
 
 trait SessionCacheService {
 
@@ -37,41 +31,27 @@ trait SessionCacheService {
   private val formId = "fileSession"
   private val fileMetadata = "fileMetadata"
 
-  def updateFileSession(userId: String,
-                        userFile: CallbackData,
-                        resultsFile: Option[ResultsFileMetaData],
-                        fileMetadata: Option[FileMetadata])(
-      implicit hc: HeaderCarrier): Future[CacheMap] = {
+  def updateFileSession(userId : String, userFile:CallbackData, resultsFile:Option[ResultsFileMetaData], fileMetadata: Option[FileMetadata])(implicit hc: HeaderCarrier) = {
 
-    sessionCache
-      .fetchAndGetEntry[FileSession](source, userId, formId)
-      .flatMap { session =>
-        sessionCache
-          .cache[FileSession](source,
-                              userId,
-                              formId,
-                              FileSession(Some(userFile),
-                                          resultsFile,
-                                          userId,
-                                          session.get.uploadTimeStamp,
-                                          fileMetadata))
-          .recover {
-            case ex: Throwable =>
-              Logger.error(s"unable to save FileSession to cache => " +
-                s"userId ($userId) , userFile : ${userFile.toString} , resultsFile id : " +
-                s"${if (resultsFile.isDefined) resultsFile.get.id}, \n Exception is ${ex.getMessage}")
-              throw new RuntimeException(
-                "Error in saving sessionCache" + ex.getMessage)
-          }
+    sessionCache.fetchAndGetEntry[FileSession](source,userId,formId).flatMap{ session =>
+    sessionCache.cache[FileSession](source,userId,formId,
+      FileSession(Some(userFile), resultsFile, userId, session.get.uploadTimeStamp, fileMetadata) ).recover {
+        case ex: Throwable => Logger.error(s"unable to save FileSession to cache => " +
+          s"userId ($userId) , userFile : ${userFile.toString} , resultsFile id : " +
+          s"${if(resultsFile.isDefined) resultsFile.get.id}, \n Exception is ${ex.getMessage}" )
+          throw new RuntimeException("Error in saving sessionCache" + ex.getMessage)
+        /*
+                Logger.warn("retrying to save cache")
+                updateRasSession(envelopeId,userFile,resultsFile)
+        */
       }
-      .recover {
-        case ex: Throwable =>
-          Logger.error(s"cannot fetch  data to cache for FileSession => " +
-            s"userId ($userId) , userFile : ${userFile.toString} , resultsFile id : " +
-            s"${if (resultsFile.isDefined) resultsFile.get.id}, \n Exception is ${ex.getMessage}")
-          throw new RuntimeException(
-            s"Error in saving sessionCache ${ex.getMessage}")
-      }
+    }.recover {
+      case ex: Throwable => Logger.error(s"cannot fetch  data to cache for FileSession => " +
+        s"userId ($userId) , userFile : ${userFile.toString} , resultsFile id : " +
+        s"${if(resultsFile.isDefined) resultsFile.get.id}, \n Exception is ${ex.getMessage}" )
+        throw new RuntimeException(s"Error in saving sessionCache ${ex.getMessage}")
+    }
+
   }
 }
 

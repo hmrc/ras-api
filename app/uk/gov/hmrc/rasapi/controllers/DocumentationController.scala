@@ -1,5 +1,5 @@
 /*
- * Copyright 2020 HM Revenue & Customs
+ * Copyright 2019 HM Revenue & Customs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,21 +22,15 @@ import uk.gov.hmrc.api.controllers.DocumentationController
 import uk.gov.hmrc.rasapi.config.AppContext
 import uk.gov.hmrc.rasapi.views._
 
-class Documentation(httpErrorHandler: HttpErrorHandler)
-    extends DocumentationController(httpErrorHandler) {
 
-  override def documentation(version: String,
-                             endpointName: String): Action[AnyContent] = {
-    super.at(s"/public/api/documentation/$version",
-             s"${endpointName.replaceAll(" ", "-")}.xml")
+class  Documentation(httpErrorHandler: HttpErrorHandler) extends DocumentationController(httpErrorHandler) {
+
+  override def documentation(version: String, endpointName: String): Action[AnyContent] = {
+    super.at(s"/public/api/documentation/$version", s"${endpointName.replaceAll(" ", "-")}.xml")
   }
 
   override def definition(): Action[AnyContent] = Action {
-    Ok(
-      txt.definition(AppContext.apiContext,
-                     AppContext.apiStatus,
-                     AppContext.endpointsEnabled,
-                     AppContext.apiV2_0Enabled))
+    Ok(txt.definition(AppContext.apiContext,AppContext.apiStatus,AppContext.endpointsEnabled,AppContext.apiV2_0Enabled))
   }
 
   def raml(version: String, file: String): Action[AnyContent] = {

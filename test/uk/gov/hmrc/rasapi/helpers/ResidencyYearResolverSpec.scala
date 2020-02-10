@@ -1,5 +1,5 @@
 /*
- * Copyright 2020 HM Revenue & Customs
+ * Copyright 2019 HM Revenue & Customs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,21 +18,18 @@ package uk.gov.hmrc.rasapi.helpers
 
 import org.joda.time.DateTime
 import org.scalatest.BeforeAndAfter
-import org.scalatestplus.mockito.MockitoSugar
+import org.scalatest.mockito.MockitoSugar
 import org.scalatestplus.play.OneAppPerTest
 import uk.gov.hmrc.play.test.UnitSpec
 
-class ResidencyYearResolverSpec
-    extends UnitSpec
-    with MockitoSugar
-    with OneAppPerTest
-    with BeforeAndAfter {
+class ResidencyYearResolverSpec extends UnitSpec with MockitoSugar with OneAppPerTest with BeforeAndAfter {
 
   "isBetweenJanAndApril" should {
 
     "return false" when {
 
       "the date is on 6th April" in {
+
         val SUT = new ResidencyYearResolver {
           override def currentDateTime = new DateTime(2017, 4, 6, 0, 0)
         }
@@ -41,6 +38,7 @@ class ResidencyYearResolverSpec
       }
 
       "the date is on 31st December" in {
+
         val SUT = new ResidencyYearResolver {
           override def currentDateTime = new DateTime(2017, 12, 31, 0, 0)
         }
@@ -49,6 +47,7 @@ class ResidencyYearResolverSpec
       }
 
       "the date is after 6th April but before 31st December" in {
+
         val SUT = new ResidencyYearResolver {
           override def currentDateTime = new DateTime(2017, 8, 22, 0, 0)
         }
@@ -58,8 +57,8 @@ class ResidencyYearResolverSpec
     }
 
     "return true" when {
-
       "the date is on 1st January" in {
+
         val SUT = new ResidencyYearResolver {
           override def currentDateTime = new DateTime(2017, 1, 22, 0, 0)
         }
@@ -68,6 +67,7 @@ class ResidencyYearResolverSpec
       }
 
       "the date is on 5th April" in {
+
         val SUT = new ResidencyYearResolver {
           override def currentDateTime = new DateTime(2017, 4, 5, 0, 0)
         }
@@ -76,6 +76,7 @@ class ResidencyYearResolverSpec
       }
 
       "the date is between 1st Jan and 5th April" in {
+
         val SUT = new ResidencyYearResolver {
           override def currentDateTime = new DateTime(2017, 2, 25, 0, 0)
         }
