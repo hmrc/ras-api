@@ -24,12 +24,16 @@ import uk.gov.hmrc.play.test.UnitSpec
 
 import scala.collection.mutable.ListBuffer
 import scala.concurrent.ExecutionContext.Implicits.global
-import RepositoriesHelper.{createFile}
-import reactivemongo.bson.BSONObjectID
+import RepositoriesHelper.createFile
+import org.scalatest.concurrent.Eventually
+import org.scalatest.concurrent.PatienceConfiguration.{Interval, Timeout}
+import reactivemongo.bson.{BSONDocument, BSONObjectID}
 import uk.gov.hmrc.rasapi.repository.RasFilesRepository
 
+import scala.concurrent.duration._
+
 class RasFileRepositorySpec extends UnitSpec with MockitoSugar with OneAppPerSuite
-  with BeforeAndAfter  {
+  with BeforeAndAfter with Eventually {
 
   val userId: String = "A1234567"
 
@@ -37,10 +41,12 @@ class RasFileRepositorySpec extends UnitSpec with MockitoSugar with OneAppPerSui
   val rasFileRepository: RepositoriesHelper.RasFileRepositoryTest = RepositoriesHelper.rasFileRepository(rasFilesRepository)
 
   before{
-    rasFileRepository.removeAll()
+    await(rasFileRepository.gridFSG.files.delete().one(BSONDocument()))
+    await(rasFileRepository.gridFSG.chunks.delete().one(BSONDocument()))
   }
   after{
-    rasFileRepository.removeAll()
+    await(rasFileRepository.gridFSG.files.delete().one(BSONDocument()))
+    await(rasFileRepository.gridFSG.chunks.delete().one(BSONDocument()))
   }
 
 
@@ -67,12 +73,16 @@ class RasFileRepositorySpec extends UnitSpec with MockitoSugar with OneAppPerSui
 
     "removeFile" in {
       val resultFile = await(RepositoriesHelper.saveTempFile("user222","envelope222","file222"))
-      Logger.debug(s"file to remove ---> name : ${resultFile.filename.get} id = ${resultFile.id}  " )
+      Logger.info(s"file to remove ---> name : ${resultFile.filename.get} id = ${resultFile.id}  " )
 
       val res = await(rasFileRepository.removeFile(resultFile.filename.get,resultFile.id.toString, userId))
       res shouldBe true
-      val fileData = await(rasFileRepository.fetchFile(resultFile.filename.get, userId))
-      fileData.isDefined shouldBe false
+
+      eventually(Timeout(5 seconds), Interval(1 second)){
+        val fileData = await(rasFileRepository.fetchFile(resultFile.filename.get, userId))
+        fileData.isDefined shouldBe false
+      }
+
     }
 
     "check if File exists" in {

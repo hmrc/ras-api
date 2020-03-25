@@ -150,6 +150,7 @@ class FileController @Inject()(
 
   def getFile(name:String, userId: String): Future[Option[FileData]] = fileRepo.fetchFile(name, userId)
 
+  //TODO: name and fileid are the same so might want to refactor it
   def deleteFile(name:String, fileId:String, userId: String):Future[Boolean] = fileRepo.removeFile(name,fileId,userId)
   // $COVERAGE-ON$
 

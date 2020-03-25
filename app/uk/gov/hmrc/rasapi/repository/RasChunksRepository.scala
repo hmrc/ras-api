@@ -19,7 +19,7 @@ package uk.gov.hmrc.rasapi.repository
 import javax.inject.Inject
 import play.api.Logger
 import play.modules.reactivemongo.ReactiveMongoComponent
-import reactivemongo.api.{DB, DBMetaCommands}
+import reactivemongo.api.{Cursor, DB, DBMetaCommands}
 import reactivemongo.bson.{BSONDocument, BSONObjectID}
 import reactivemongo.play.json.ImplicitBSONHandlers._
 import uk.gov.hmrc.mongo.ReactiveRepository
@@ -40,8 +40,8 @@ class RasChunksRepository @Inject()(
     Logger.debug("********Remove chunks :Started*********")
 
     // only fetch the id and files-id field for the result documents
-    val projection = BSONDocument("_id"-> 1,"files_id" -> 2)
-    collection.find(query,projection).cursor[Chunks]().collect[Seq]().recover {
+    val projection = BSONDocument("_id" -> 1, "files_id" -> 2)
+    collection.find(query,projection).cursor[Chunks]().collect[Seq](Int.MaxValue, Cursor.FailOnError()).recover {
       case ex: Throwable =>
         Logger.error(s"[RasChunksRepository][getAllChunks] Error fetching chunks  ${ex.getMessage}.", ex)
         Seq.empty

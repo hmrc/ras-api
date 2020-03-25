@@ -20,12 +20,14 @@ import java.io.FileInputStream
 import java.nio.file.Path
 
 import javax.inject.Inject
+import org.joda.time.DateTime
 import play.api.libs.iteratee.Enumerator
-import play.modules.reactivemongo.{MongoDbConnection, ReactiveMongoComponent}
+import play.modules.reactivemongo.ReactiveMongoComponent
+import reactivemongo.api.BSONSerializationPack
+import reactivemongo.api.gridfs.DefaultFileToSave.FileName.SomeFileName
 import reactivemongo.api.gridfs.Implicits._
 import reactivemongo.api.gridfs._
-import reactivemongo.api.{BSONSerializationPack, DB, DBMetaCommands}
-import reactivemongo.bson.{BSONDocument, BSONObjectID}
+import reactivemongo.bson.{BSONDocument, BSONObjectID, BSONValue}
 import uk.gov.hmrc.mongo.ReactiveRepository
 import uk.gov.hmrc.rasapi.config.AppContext
 import uk.gov.hmrc.rasapi.models.{Chunks, ResultsFile}
@@ -44,19 +46,26 @@ class RasFilesRepository @Inject()(
   domainFormat = Chunks.format
 ) with GridFsTTLIndexing {
 
-  override val expireAfterSeconds: Long = appContext.resultsExpriyTime
+  override lazy val expireAfterSeconds: Long = appContext.resultsExpriyTime
   private val contentType =  "text/csv"
 
-  val gridFSG = new GridFS[BSONSerializationPack.type](mongoComponent.mongoConnector.db(), "resultsFiles")
+  val gridFSG: GridFS[BSONSerializationPack.type] =
+    GridFS[BSONSerializationPack.type](mongoComponent.mongoConnector.db(), "resultsFiles")
 
   addAllTTLs(gridFSG)
 
+  def generateFileToSave(fileId: String, contentType: String, envelopeId: String, userId: String): FileToSave[BSONSerializationPack.type, BSONValue] =
+    DefaultFileToSave(
+      filename = Some(fileId),
+      contentType = Some(contentType),
+      uploadDate = Some(DateTime.now().getMillis),
+      metadata = BSONDocument("envelopeId" -> envelopeId, "fileId" -> fileId, "userId" -> userId)
+    )
+
   def saveFile(userId:String, envelopeId: String, filePath: Path, fileId: String): Future[ResultsFile] = {
     logger.info("[RasFileRepository][saveFile] Starting to save file")
-    val fileToSave = DefaultFileToSave(s"${fileId}", Some(contentType),
-      metadata = BSONDocument("envelopeId" -> envelopeId, "fileId" -> fileId, "userId" -> userId))
 
-    gridFSG.writeFromInputStream(fileToSave,new FileInputStream(filePath.toFile)).map{ res=>
+    gridFSG.writeFromInputStream(generateFileToSave(fileId, contentType, envelopeId, userId), new FileInputStream(filePath.toFile)).map{ res =>
       logger.warn(s"Saved File id is ${res.id} for userId ($userId)")
       res
     }.recover{case ex:Throwable =>
@@ -66,9 +75,10 @@ class RasFilesRepository @Inject()(
   }
 
   def fetchFile(_fileName: String, userId: String)(implicit ec: ExecutionContext): Future[Option[FileData]] = {
-      logger.debug(s"id in repo input is ${_fileName} for userId ($userId).")
+      logger.info(s"id in repo input is ${_fileName} for userId ($userId).")
+
       gridFSG.find[BSONDocument, ResultsFile](BSONDocument("filename" -> _fileName)).headOption.map {
-      case Some(file) =>   logger.warn(s"file fetched ${file.id} file size = ${file.length}")
+      case Some(file) =>   logger.info(s"file fetched ${file.id} file size = ${file.length}")
         Some(FileData(file.length, gridFSG.enumerate(file)))
       case None => logger.warn(s"file not found for userId ($userId).")
         None
@@ -88,22 +98,32 @@ class RasFilesRepository @Inject()(
     }
   }
 
+  private def getBsonObjectIdFromFileName(filename: String): Future[Option[BSONObjectID]] =
+    gridFSG.files.find(BSONDocument("filename" -> filename), Some(BSONDocument("_id" -> 1))).one[BSONDocument].map {
+      optionalDocument => optionalDocument.flatMap { document =>
+        document.getAs[BSONObjectID]("_id")
+      }
+    }
+
+  // TODO: fileName and fileId are the same thing
   def removeFile(fileName:String, fileId:String, userId: String): Future[Boolean] = {
     logger.debug(s"file to remove => fileName: $fileName, file Id: $fileId for userId ($userId).")
-    gridFSG.find[BSONDocument, ResultsFile](BSONDocument("filename" -> fileName)).headOption.map {
-      metaData =>
-        if(metaData.isDefined)
-          gridFSG.chunks.remove[BSONDocument](BSONDocument("files_id"-> metaData.get.id ))
-    }
-    gridFSG.files.remove[BSONDocument](BSONDocument("filename"-> fileName)).map{
-      res =>  res.writeErrors.isEmpty match {
-        case true =>
-          logger.warn(s"Results file removed successfully for userId ($userId) with the file named $fileName" )
-          true
-        case false =>  logger.error(s"error while removing file ${res.writeErrors.toString} for userId ($userId).")
-          false
-      }
-    }.recover {
+    getBsonObjectIdFromFileName(fileName).flatMap {
+      case Some(bsonObjectId) =>
+        logger.info(s"[RasFileRepository][removeFile] successfully got id for file. BSONObjectId: ${bsonObjectId.stringify}")
+        gridFSG.remove(bsonObjectId).map {
+          res =>
+            if(res.writeErrors.isEmpty){
+              logger.info(s"Results file removed successfully for userId ($userId) with the file named $fileName")
+            } else {
+              logger.error(s"error while removing file ${res.writeErrors.toString} for userId ($userId).")
+            }
+            res.writeErrors.isEmpty
+        }
+      case None =>
+        logger.error(s"[RasFileRepository][removeFile] no id found for filename $fileName and userId $userId")
+        Future.successful(false)
+    } recover {
       case ex: Throwable =>
         logger.error(s"error trying to remove file ${fileName} ${ex.getMessage} for userId ($userId).")
         throw new RuntimeException("failed to remove file due to error" + ex.getMessage)

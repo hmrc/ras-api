@@ -19,10 +19,13 @@ package uk.gov.hmrc.rasapi.repositories
 import org.scalatest.BeforeAndAfter
 import org.scalatest.mockito.MockitoSugar
 import org.scalatestplus.play.{OneAppPerSuite, OneAppPerTest}
+import play.modules.reactivemongo.ReactiveMongoComponent
 import reactivemongo.bson.BSONLong
 import uk.gov.hmrc.play.test.UnitSpec
+import uk.gov.hmrc.rasapi.config.AppContext
 import uk.gov.hmrc.rasapi.repository.{GridFsTTLIndexing, RasFilesRepository}
 
+import scala.concurrent.ExecutionContext
 import scala.concurrent.ExecutionContext.Implicits.global
 
 class GridFsTTLIndexingSpec extends UnitSpec with MockitoSugar with OneAppPerSuite
@@ -34,19 +37,13 @@ class GridFsTTLIndexingSpec extends UnitSpec with MockitoSugar with OneAppPerSui
     rasFileRepository.removeAll()
   }
 
-
   "GridFsTTLIndexingSpec" should {
   "ensure indexes and create if not available" in {
-    object GridFsRepo extends GridFsTTLIndexing
-    {
-      override lazy val expireAfterSeconds: Long = 259200
-    }
+    val defaultTTL: Long = 3600
+    val res =  await(rasFileRepository.gridFSG.files.indexesManager.list())
 
-    val update = await(GridFsRepo.addAllTTLs(rasFileRepository.gridFSG))
-    Thread.sleep(2000)
-   val res =  await(rasFileRepository.gridFSG.files.indexesManager.list())
-    res.filter(_.name.get == "lastUpdatedIndex").head.options.get("expireAfterSeconds").get shouldBe BSONLong(259200)
-
+    res.filter(_.name.get == "lastUpdatedIndex")
+      .head.expireAfterSeconds shouldBe Some(defaultTTL)
   }
 }
 }
