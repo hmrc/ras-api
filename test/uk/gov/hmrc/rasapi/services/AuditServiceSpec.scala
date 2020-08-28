@@ -17,25 +17,27 @@
 package uk.gov.hmrc.rasapi.services
 
 import org.mockito.ArgumentCaptor
-import org.mockito.Matchers._
+import org.mockito.ArgumentMatchers._
 import org.mockito.Mockito._
 import org.scalatest.BeforeAndAfter
 import org.scalatest.mockito.MockitoSugar
-import org.scalatestplus.play.OneAppPerTest
+import org.scalatestplus.play.guice.GuiceOneAppPerSuite
 import play.api.Configuration
 import uk.gov.hmrc.play.audit.http.connector.AuditConnector
 import uk.gov.hmrc.play.audit.model.DataEvent
 import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.play.test.UnitSpec
+import uk.gov.hmrc.rasapi.config.AppContext
 
 import scala.concurrent.ExecutionContext
 
-trait AuditServiceSpec extends UnitSpec with MockitoSugar with OneAppPerTest with BeforeAndAfter {
+trait AuditServiceSpec extends UnitSpec with MockitoSugar with GuiceOneAppPerSuite with BeforeAndAfter {
 
   implicit val hc:HeaderCarrier = HeaderCarrier()
   val mockAuditConnector = mock[AuditConnector]
+  val mockAppContext = app.injector.instanceOf[AppContext]
 
-  val SUT = new AuditService(mockAuditConnector, app.injector.instanceOf[Configuration], ExecutionContext.global)
+  val SUT = new AuditService(mockAuditConnector, app.injector.instanceOf[Configuration], mockAppContext, ExecutionContext.global)
 
   before {
     reset(mockAuditConnector)

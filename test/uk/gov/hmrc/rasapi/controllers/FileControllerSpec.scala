@@ -18,14 +18,17 @@ package uk.gov.hmrc.rasapi.controllers
 
 import akka.actor.ActorSystem
 import akka.stream.ActorMaterializer
-import org.mockito.Matchers.{any, eq => Meq}
+import org.mockito.ArgumentMatchers.{any, eq => Meq}
 import org.mockito.Mockito.{reset, verify, when}
 import org.scalatest.BeforeAndAfter
 import org.scalatest.mockito.MockitoSugar
-import org.scalatestplus.play.OneAppPerSuite
+import org.scalatestplus.play.guice.GuiceOneAppPerSuite
+import play.api.Application
 import play.api.http.Status
 import play.api.http.Status.UNAUTHORIZED
+import play.api.inject.guice.GuiceApplicationBuilder
 import play.api.libs.iteratee.Enumerator
+import play.api.mvc.ControllerComponents
 import play.api.test.{FakeRequest, Helpers}
 import reactivemongo.bson.BSONObjectID
 import uk.gov.hmrc.auth.core._
@@ -39,7 +42,7 @@ import uk.gov.hmrc.rasapi.services.AuditService
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.{Failure, Try}
 
-class FileControllerSpec  extends UnitSpec with MockitoSugar with OneAppPerSuite with BeforeAndAfter {
+class FileControllerSpec  extends UnitSpec with MockitoSugar with GuiceOneAppPerSuite with BeforeAndAfter {
 
   implicit val hc = HeaderCarrier()
 
@@ -55,6 +58,7 @@ class FileControllerSpec  extends UnitSpec with MockitoSugar with OneAppPerSuite
   val mockRasChunksRepository = mock[RasChunksRepository]
   val mockRasFileRepository = mock[RasFilesRepository]
   val mockMetrics = app.injector.instanceOf[Metrics]
+  val mockCC = app.injector.instanceOf[ControllerComponents]
 
   val fileData = FileData(length = 124L,Enumerator("TEST START ".getBytes))
 
@@ -64,11 +68,17 @@ class FileControllerSpec  extends UnitSpec with MockitoSugar with OneAppPerSuite
     mockMetrics,
     mockAuditService,
     mockAuthConnector,
+    mockCC,
     ExecutionContext.global
   ) {
     override def getFile(name: String, userId: String): Future[Option[FileData]] = Some(fileData)
     override def deleteFile(name: String,id:String, userId: String): Future[Boolean] = true
   }
+
+  override def fakeApplication(): Application =
+    GuiceApplicationBuilder()
+      .disable[com.kenshoo.play.metrics.PlayModule]
+      .build()
 
   implicit val actorSystem = ActorSystem()
   implicit val materializer = ActorMaterializer()
@@ -105,6 +115,7 @@ class FileControllerSpec  extends UnitSpec with MockitoSugar with OneAppPerSuite
         mockMetrics,
         mockAuditService,
         mockAuthConnector,
+        mockCC,
         ExecutionContext.global
       ) {
         override def getFile(name: String, userId: String): Future[Option[FileData]] = None
@@ -137,6 +148,7 @@ class FileControllerSpec  extends UnitSpec with MockitoSugar with OneAppPerSuite
           mockMetrics,
           mockAuditService,
           mockAuthConnector,
+          mockCC,
           ExecutionContext.global
         ){
           override def getFile(name: String, userId: String): Future[Option[FileData]] = Some(fileData)
@@ -163,6 +175,7 @@ class FileControllerSpec  extends UnitSpec with MockitoSugar with OneAppPerSuite
           mockMetrics,
           mockAuditService,
           mockAuthConnector,
+          mockCC,
           ExecutionContext.global
         ){
           override def getFile(name: String, userId: String): Future[Option[FileData]] = Some(fileData)
@@ -194,6 +207,7 @@ class FileControllerSpec  extends UnitSpec with MockitoSugar with OneAppPerSuite
           mockMetrics,
           mockAuditService,
           mockAuthConnector,
+          mockCC,
           ExecutionContext.global
         ){
           override def getFile(name: String, userId: String): Future[Option[FileData]] = Some(fileData)
@@ -215,6 +229,7 @@ class FileControllerSpec  extends UnitSpec with MockitoSugar with OneAppPerSuite
           mockMetrics,
           mockAuditService,
           mockAuthConnector,
+          mockCC,
           ExecutionContext.global
         )
 

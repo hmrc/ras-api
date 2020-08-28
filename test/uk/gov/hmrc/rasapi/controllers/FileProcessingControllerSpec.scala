@@ -16,13 +16,16 @@
 
 package uk.gov.hmrc.rasapi.controllers
 
-import org.mockito.Matchers.{any, eq => Meq}
+import org.mockito.ArgumentMatchers.{any, eq => Meq}
 import org.mockito.Mockito._
 import org.scalatest.BeforeAndAfter
-import org.scalatest.mockito.MockitoSugar
+import org.scalatestplus.mockito.MockitoSugar
 import org.scalatestplus.play.guice.GuiceOneAppPerSuite
+import play.api.Application
 import play.api.http.Status.OK
+import play.api.inject.guice.GuiceApplicationBuilder
 import play.api.libs.json.Json
+import play.api.mvc.ControllerComponents
 import play.api.test.FakeRequest
 import uk.gov.hmrc.play.test.UnitSpec
 import uk.gov.hmrc.rasapi.models.{CallbackData, ResultsFileMetaData, V2_0}
@@ -43,13 +46,19 @@ class FileProcessingControllerSpec extends UnitSpec with MockitoSugar with Guice
 
   val mockFileProcessingService = mock[FileProcessingService]
   val mockSessionCacheService = mock[SessionCacheService]
+  val mockCC = app.injector.instanceOf[ControllerComponents]
 
-  val SUT = new FileProcessingController(mockSessionCacheService, mockFileProcessingService, ExecutionContext.global)
+  val SUT = new FileProcessingController(mockSessionCacheService, mockFileProcessingService, mockCC, ExecutionContext.global)
 
   before {
     reset(mockFileProcessingService)
     reset(mockSessionCacheService)
   }
+
+  override def fakeApplication(): Application =
+    GuiceApplicationBuilder()
+      .disable[com.kenshoo.play.metrics.PlayModule]
+      .build()
 
   lazy val fakeRequest = FakeRequest()
 

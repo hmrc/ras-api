@@ -24,9 +24,9 @@ import uk.gov.hmrc.crypto.ApplicationCrypto
 import uk.gov.hmrc.http.cache.client.{SessionCache, ShortLivedCache, ShortLivedHttpCaching}
 import uk.gov.hmrc.play.audit.http.connector.AuditConnector
 import uk.gov.hmrc.play.bootstrap.http.{DefaultHttpClient, JsonErrorHandler}
-import uk.gov.hmrc.play.config.{AppName, ServicesConfig}
-import play.api.mvc.Results.{BadRequest, NotFound, Unauthorized, InternalServerError}
+import play.api.mvc.Results.{BadRequest, InternalServerError, NotFound, Unauthorized}
 import play.api.http.Status.{BAD_REQUEST, NOT_FOUND, UNAUTHORIZED}
+import uk.gov.hmrc.play.bootstrap.config.HttpAuditEvent
 import uk.gov.hmrc.rasapi.controllers.{BadRequestResponse, ErrorInternalServerError, ErrorNotFound, Unauthorised}
 
 import scala.concurrent.{ExecutionContext, Future}
@@ -37,11 +37,11 @@ class RasShortLivedHttpCaching @Inject()(
                                           val appNameConfiguration: Configuration,
                                           val appContext: AppContext,
                                           val http: DefaultHttpClient
-                                        ) extends ShortLivedHttpCaching with AppName {
+                                        ) extends ShortLivedHttpCaching {
   val mode: Mode.Mode = environment.mode
-  override lazy val defaultSource = appName
-  override lazy val baseUri = appContext.baseUrl("cachable.short-lived-cache")
-  override lazy val domain = appContext.getConfString("cachable.short-lived-cache.domain",
+  override lazy val defaultSource = appContext.appName
+  override lazy val baseUri = appContext.servicesConfig.baseUrl("cachable.short-lived-cache")
+  override lazy val domain = appContext.servicesConfig.getConfString("cachable.short-lived-cache.domain",
     throw new Exception(s"Could not find config 'cachable.short-lived-cache.domain'"))
 }
 
@@ -55,19 +55,20 @@ class RasSessionCache @Inject()(
                                  val appNameConfiguration: Configuration,
                                  val appContext: AppContext,
                                  val http: DefaultHttpClient
-                               ) extends SessionCache with AppName {
+                               ) extends SessionCache {
   val mode: Mode.Mode = environment.mode
-  override lazy val defaultSource: String = appName
-  override lazy val baseUri: String = appContext.baseUrl("cachable.session-cache")
+  override lazy val defaultSource: String = appContext.appName
+  override lazy val baseUri: String = appContext.servicesConfig.baseUrl("cachable.session-cache")
   override lazy val domain: String =
-    appContext.getConfString("cachable.session-cache.domain", throw new Exception(s"Could not find config 'cachable.session-cache.domain'"))
+    appContext.servicesConfig.getConfString("cachable.session-cache.domain", throw new Exception(s"Could not find config 'cachable.session-cache.domain'"))
 }
 
 class RasErrorHandler @Inject()(
                               configuration: Configuration,
                               auditConnector: AuditConnector,
+                              httpAuditEvent: HttpAuditEvent,
                               implicit val ec: ExecutionContext
-                            ) extends JsonErrorHandler(configuration, auditConnector) {
+                            ) extends JsonErrorHandler(auditConnector, httpAuditEvent, configuration) {
 
   override def onClientError(request: RequestHeader, statusCode: Int, message: String): Future[Result] = super.onClientError(request, statusCode, message).map(
     result => statusCode match {

@@ -21,15 +21,14 @@ import org.joda.time.DateTime
 import play.api.Logger
 import play.api.data.validation.ValidationError
 import play.api.libs.json.Json._
-import play.api.libs.json.{JsError, JsPath, JsSuccess, Json}
-import play.api.mvc.{Action, AnyContent, Request, Result}
+import play.api.libs.json.{JsError, JsPath, JsSuccess, Json, JsonValidationError}
+import play.api.mvc.{Action, AnyContent, BodyParser, BodyParsers, ControllerComponents, Request, Result}
 import uk.gov.hmrc.api.controllers.{ErrorAcceptHeaderInvalid, HeaderValidator}
 import uk.gov.hmrc.auth.core.AuthProvider.GovernmentGateway
 import uk.gov.hmrc.auth.core._
 import uk.gov.hmrc.auth.core.retrieve.Retrievals._
 import uk.gov.hmrc.http.{BadRequestException, HeaderCarrier}
-import uk.gov.hmrc.play.bootstrap.controller.BaseController
-import uk.gov.hmrc.play.config.RunMode
+import uk.gov.hmrc.play.bootstrap.controller.{BackendController, BaseController}
 import uk.gov.hmrc.rasapi.config.AppContext
 import uk.gov.hmrc.rasapi.connectors.DesConnector
 import uk.gov.hmrc.rasapi.helpers.ResidencyYearResolver
@@ -49,8 +48,9 @@ class LookupController @Inject()(
                                 val residencyYearResolver: ResidencyYearResolver,
                                 val appContext: AppContext,
                                 val errorConverter: ErrorConverter,
+                                cc: ControllerComponents,
                                 implicit val ec: ExecutionContext
-                                ) extends BaseController with HeaderValidator with AuthorisedFunctions {
+                                ) extends BackendController(cc) with HeaderValidator with AuthorisedFunctions {
 
   def getCurrentDate: DateTime = DateTime.now()
   lazy val allowDefaultRUK: Boolean = appContext.allowDefaultRUK
@@ -59,7 +59,8 @@ class LookupController @Inject()(
   lazy val STATUS_TOO_MANY_REQUESTS: String = appContext.tooManyRequestsStatus
   lazy val STATUS_SERVICE_UNAVAILABLE: String = appContext.serviceUnavailableStatus
   lazy val apiV2_0Enabled : Boolean = appContext.apiV2_0Enabled
-
+  override def parser: BodyParser[AnyContent] = BodyParsers.parse.default
+  override protected def executionContext: ExecutionContext = ec
 
   override val validateVersion: String => Boolean = (version: String) => version == "1.0" || (apiV2_0Enabled && version == "2.0")
 
@@ -181,7 +182,7 @@ class LookupController @Inject()(
   }
 
   private def withValidJson (userId: String, onSuccess: (IndividualDetails) => Future[Result],
-                             invalidCallback: (Seq[(JsPath, Seq[ValidationError])]) => Future[Result])
+                             invalidCallback: (Seq[(JsPath, Seq[JsonValidationError])]) => Future[Result])
                             (implicit request: Request[AnyContent]): Future[Result] = {
 
     request.body.asJson match {

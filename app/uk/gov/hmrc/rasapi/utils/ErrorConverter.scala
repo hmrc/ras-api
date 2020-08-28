@@ -18,12 +18,12 @@ package uk.gov.hmrc.rasapi.utils
 
 import javax.inject.Inject
 import play.api.data.validation.ValidationError
-import play.api.libs.json.JsPath
+import play.api.libs.json.{JsPath, JsonValidationError}
 import uk.gov.hmrc.rasapi.controllers.ErrorValidation
 
 class ErrorConverter @Inject()() {
 
-  def convert(error: Seq[(JsPath, Seq[ValidationError])]):List[ErrorValidation] = {
+  def convert(error: Seq[(JsPath, Seq[JsonValidationError])]):List[ErrorValidation] = {
     error.map(e => {
       val details = getErrorDetails(e._2.head.message)
 

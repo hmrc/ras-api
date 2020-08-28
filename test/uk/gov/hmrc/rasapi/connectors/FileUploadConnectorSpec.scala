@@ -22,16 +22,15 @@ import akka.actor.ActorSystem
 import akka.stream.ActorMaterializer
 import akka.stream.scaladsl.Source
 import akka.util.ByteString
-import org.mockito.Matchers._
+import org.mockito.ArgumentMatchers._
 import org.mockito.Mockito._
-import org.scalatest.mockito.MockitoSugar
-import org.scalatestplus.play.OneAppPerSuite
-import play.api.{Configuration, Play}
-import play.api.Mode.Mode
-import play.api.libs.ws.{DefaultWSResponseHeaders, StreamedResponse}
+import org.mockito.invocation.InvocationOnMock
+import org.mockito.stubbing.Answer
+import org.scalatestplus.mockito.MockitoSugar
+import org.scalatestplus.play.guice.GuiceOneAppPerSuite
 import play.api.libs.json.Json
-import uk.gov.hmrc.http.{HeaderCarrier, HttpPost, HttpResponse, RequestTimeoutException}
-import uk.gov.hmrc.play.config.ServicesConfig
+import play.api.libs.ws.WSResponse
+import uk.gov.hmrc.http.{HeaderCarrier, HttpResponse, RequestTimeoutException}
 import uk.gov.hmrc.play.test.UnitSpec
 import uk.gov.hmrc.rasapi.config.{AppContext, WSHttp}
 import uk.gov.hmrc.rasapi.models.FileMetadata
@@ -39,12 +38,28 @@ import uk.gov.hmrc.rasapi.services.RASWsHelpers
 
 import scala.concurrent.{ExecutionContext, Future}
 
-class FileUploadConnectorSpec extends UnitSpec with RASWsHelpers with OneAppPerSuite with MockitoSugar {
+class FileUploadConnectorSpec extends UnitSpec with RASWsHelpers with GuiceOneAppPerSuite with MockitoSugar {
 
   implicit val hc: HeaderCarrier = HeaderCarrier()
 
   val mockWsHttp: WSHttp = mock[WSHttp]
   val appContext: AppContext = app.injector.instanceOf[AppContext]
+  val wsResponseMock = mock[WSResponse]
+
+  val bodyAsSource: Source[ByteString, _] = Source(Seq(ByteString("Test"),  ByteString("\r\n"), ByteString("Passed")).to[scala.collection.immutable.Iterable])
+  val headers = Map("CONTENT_TYPE" -> Seq("application/octet-stream"))
+
+
+  private def createMockResponse(status: Int, bodyAsSource: Source[ByteString, _], headers: Map[String, Seq[String]]): WSResponse = {
+    when(wsResponseMock.status).thenReturn(status)
+    when(wsResponseMock.bodyAsSource).thenAnswer(
+      new Answer[Source[ByteString, _]] {
+        override def answer(invocation: InvocationOnMock): Source[ByteString, _] = bodyAsSource
+      }
+    )
+    when(wsResponseMock.headers).thenReturn(headers)
+    wsResponseMock
+  }
 
   object TestConnector extends FileUploadConnector(mockWsHttp, appContext, ExecutionContext.global)
 
@@ -61,11 +76,10 @@ class FileUploadConnectorSpec extends UnitSpec with RASWsHelpers with OneAppPerS
     implicit val system = ActorSystem()
     implicit val materializer = ActorMaterializer()
 
-    val streamResponse:StreamedResponse = StreamedResponse(DefaultWSResponseHeaders(200, Map("CONTENT_TYPE" -> Seq("application/octet-stream"))),
-      Source.apply[ByteString](Seq(ByteString("Test"),  ByteString("\r\n"), ByteString("Passed")).to[scala.collection.immutable.Iterable]) )
+    val wsResponse: WSResponse = createMockResponse(200, bodyAsSource, headers)
 
     "return an StreamedResponse from File-Upload service" in {
-      when(mockWsHttp.buildRequestWithStream(any())(any())).thenReturn(Future.successful(streamResponse))
+      when(mockWsHttp.buildRequestWithStream(any())(any())).thenReturn(Future.successful(wsResponse))
 
       val values = List("Test", "Passed")
       val result = await(TestConnector.getFile(envelopeId, fileId, userId))

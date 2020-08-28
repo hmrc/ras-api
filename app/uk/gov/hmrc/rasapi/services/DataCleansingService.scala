@@ -27,9 +27,8 @@ import scala.concurrent.{ExecutionContext, Future}
 class DataCleansingService @Inject()(
                                       appContext: AppContext,
                                       chunksRepo: RasChunksRepository,
-                                      fileRepo: RasFilesRepository,
-                                      implicit val ec: ExecutionContext
-                                    ) {
+                                      fileRepo: RasFilesRepository)
+                                    (implicit val ec: ExecutionContext) {
 
   def removeOrphanedChunks(): Future[Seq[BSONObjectID]] = if(appContext.removeChunksDataExerciseEnabled){
     Logger.info("[data-cleansing-exercise][removeOrphanedChunks] Starting data exercise for removing of chunks")

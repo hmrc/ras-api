@@ -17,8 +17,8 @@
 package uk.gov.hmrc.rasapi.controllers
 
 import org.joda.time.DateTime
-import org.mockito.Matchers
-import org.mockito.Matchers.{eq => Meq, _}
+import org.mockito.ArgumentMatchers
+import org.mockito.ArgumentMatchers.{eq => Meq, _}
 import org.mockito.Mockito._
 import org.scalatest.BeforeAndAfter
 import org.scalatest.mockito.MockitoSugar
@@ -26,6 +26,7 @@ import org.scalatestplus.play.guice.GuiceOneAppPerSuite
 import play.api.inject.guice.GuiceApplicationBuilder
 import play.api.libs.functional.syntax.{unlift, _}
 import play.api.libs.json.{JsPath, Json, Writes}
+import play.api.mvc.ControllerComponents
 import play.api.test.Helpers._
 import play.api.test.{FakeRequest, Helpers}
 import play.mvc.Http.HeaderNames
@@ -61,6 +62,7 @@ class LookupControllerSpec extends UnitSpec with MockitoSugar with GuiceOneAppPe
   val mockMetrics = app.injector.instanceOf[Metrics]
   val appContext = app.injector.instanceOf[AppContext]
   val errorConverer = app.injector.instanceOf[ErrorConverter]
+  val mockCC = mock[ControllerComponents]
 
   val expectedNino = uk.gov.hmrc.rasapi.models.Nino("LE241131B")
 
@@ -95,6 +97,7 @@ class LookupControllerSpec extends UnitSpec with MockitoSugar with GuiceOneAppPe
     mockResidencyYearResolver,
     appContext,
     errorConverer,
+    mockCC,
     ExecutionContext.global
   ) {
 
@@ -116,6 +119,7 @@ class LookupControllerSpec extends UnitSpec with MockitoSugar with GuiceOneAppPe
     mockResidencyYearResolver,
     appContext,
     errorConverer,
+    mockCC,
     ExecutionContext.global
   ) {
     override def getCurrentDate: DateTime = new DateTime(2018, 2, 15, 0, 0, 0, 0)
@@ -136,6 +140,7 @@ class LookupControllerSpec extends UnitSpec with MockitoSugar with GuiceOneAppPe
     mockResidencyYearResolver,
     appContext,
     errorConverer,
+    mockCC,
     ExecutionContext.global
   ) {
     override def getCurrentDate: DateTime = new DateTime(2019, 2, 15, 0, 0, 0, 0)
@@ -156,6 +161,7 @@ class LookupControllerSpec extends UnitSpec with MockitoSugar with GuiceOneAppPe
     mockResidencyYearResolver,
     appContext,
     errorConverer,
+    mockCC,
     ExecutionContext.global
   ) {
     override def getCurrentDate: DateTime = new DateTime(2019, 1, 1, 0, 0, 0, 0)
@@ -354,7 +360,7 @@ class LookupControllerSpec extends UnitSpec with MockitoSugar with GuiceOneAppPe
               }
             """.stripMargin)
 
-          when(mockDesConnector.getResidencyStatus(any(), any(), Matchers.eq(V1_0), any())).thenReturn(Future.successful(Left(residencyStatus)))
+          when(mockDesConnector.getResidencyStatus(any(), any(), ArgumentMatchers.eq(V1_0), any())).thenReturn(Future.successful(Left(residencyStatus)))
 
           val result = TestLookupControllerVersion1.getResidencyStatus().apply(FakeRequest(Helpers.GET, "/").withHeaders(acceptHeaderV1)
             .withJsonBody(Json.toJson(individualDetails)(individualDetailssWrites)))
@@ -419,7 +425,7 @@ class LookupControllerSpec extends UnitSpec with MockitoSugar with GuiceOneAppPe
             }
           """.stripMargin)
 
-          when(mockDesConnector.getResidencyStatus(any(), any(), Matchers.eq(V1_0), any())).thenReturn(Future.successful(Left(residencyStatus)))
+          when(mockDesConnector.getResidencyStatus(any(), any(), ArgumentMatchers.eq(V1_0), any())).thenReturn(Future.successful(Left(residencyStatus)))
 
           val result = TestLookupControllerFeb18.getResidencyStatus().apply(FakeRequest(Helpers.GET, "/").withHeaders(acceptHeaderV1)
             .withJsonBody(Json.toJson(individualDetails)(individualDetailssWrites)))
@@ -443,7 +449,7 @@ class LookupControllerSpec extends UnitSpec with MockitoSugar with GuiceOneAppPe
             }
           """.stripMargin)
 
-          when(mockDesConnector.getResidencyStatus(any(), any(), Matchers.eq(V2_0), any())).thenReturn(Future.successful(Left(residencyStatus)))
+          when(mockDesConnector.getResidencyStatus(any(), any(), ArgumentMatchers.eq(V2_0), any())).thenReturn(Future.successful(Left(residencyStatus)))
 
           val result = TestLookupControllerFeb18.getResidencyStatus().apply(FakeRequest(Helpers.GET, "/").withHeaders(acceptHeader)
             .withJsonBody(Json.toJson(individualDetails)(individualDetailssWrites)))

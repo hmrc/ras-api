@@ -13,7 +13,6 @@ import org.scalatestplus.play.PlaySpec
 import org.scalatestplus.play.guice.GuiceOneAppPerSuite
 import play.api.libs.iteratee.Iteratee
 import play.api.libs.json.Json
-import play.api.libs.streams.Streams
 import play.api.test.{DefaultAwaitTimeout, FutureAwaits}
 import reactivemongo.api.ReadPreference
 import reactivemongo.bson.BSONDocument

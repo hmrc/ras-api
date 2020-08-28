@@ -22,16 +22,16 @@ import javax.inject.Inject
 import play.api.Logger
 import play.api.http.HttpEntity
 import play.api.libs.json.Json.toJson
-import play.api.libs.streams.Streams
-import play.api.mvc.{Action, AnyContent, Request, Result}
+import play.api.mvc.{Action, AnyContent, ControllerComponents, Request, Result}
 import reactivemongo.bson.BSONObjectID
 import uk.gov.hmrc.auth.core.AuthProvider.GovernmentGateway
 import uk.gov.hmrc.auth.core._
 import uk.gov.hmrc.auth.core.retrieve.Retrievals.authorisedEnrolments
-import uk.gov.hmrc.play.bootstrap.controller.BaseController
+import uk.gov.hmrc.play.bootstrap.controller.BackendController
 import uk.gov.hmrc.rasapi.metrics.Metrics
 import uk.gov.hmrc.rasapi.repository.{FileData, RasChunksRepository, RasFilesRepository}
 import uk.gov.hmrc.rasapi.services.AuditService
+import play.api.libs.iteratee.streams.IterateeStreams
 
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.{Failure, Success, Try}
@@ -42,8 +42,9 @@ class FileController @Inject()(
                                 metrics: Metrics,
                                 val auditService: AuditService,
                                 val authConnector: AuthConnector,
+                                cc: ControllerComponents,
                                 implicit val ec: ExecutionContext
-                              ) extends BaseController with AuthorisedFunctions {
+                              ) extends BackendController(cc) with AuthorisedFunctions {
 
   val fileRemove: String = "File-Remove"
   val fileServe: String = "File-Read"
@@ -51,7 +52,7 @@ class FileController @Inject()(
 
   def parseStringIdToBSONObjectId(id: String): Try[BSONObjectID] = BSONObjectID.parse(id)
 
-  def serveFile(fileName:String):  Action[AnyContent] = Action.async {
+  def serveFile(fileName:String): Action[AnyContent] = Action.async {
     implicit request =>
       val apiMetrics = metrics.register(fileServe).time
       authorised(AuthProviders(GovernmentGateway) and (Enrolment(PSA_ENROLMENT) or Enrolment(PP_ENROLMENT))).retrieve(authorisedEnrolments) {
@@ -60,7 +61,7 @@ class FileController @Inject()(
           getFile(fileName, id).map { fileData =>
             if (fileData.isDefined) {
               Logger.debug("[FileController][serverFile] File repo enumerator received")
-              val byteArray = Source.fromPublisher(Streams.enumeratorToPublisher(fileData.get.data.map(ByteString.fromArray)))
+              val byteArray = Source.fromPublisher(IterateeStreams.enumeratorToPublisher(fileData.get.data.map(ByteString.fromArray)))
               apiMetrics.stop()
               Ok.sendEntity(HttpEntity.Streamed(byteArray, Some(fileData.get.length), Some(_contentType)))
                 .withHeaders(CONTENT_DISPOSITION -> s"""attachment; filename="${fileName}"""",

@@ -17,37 +17,33 @@
 package uk.gov.hmrc.rasapi.config
 
 import javax.inject.Inject
-import play.api.{Configuration, Environment}
-import play.api.Mode.Mode
-import play.api.Play._
-import uk.gov.hmrc.play.config.ServicesConfig
+import uk.gov.hmrc.play.bootstrap.config.ServicesConfig
 
-class AppContext @Inject()(val runModeConfiguration: Configuration, val environment: Environment) extends ServicesConfig {
-  lazy val mode: Mode = environment.mode
-  lazy val appName = runModeConfiguration.getString("appName").getOrElse(throw new RuntimeException("appName is not configured"))
-  lazy val appUrl = runModeConfiguration.getString("appUrl").getOrElse(throw new RuntimeException("appUrl is not configured"))
-  lazy val apiContext = runModeConfiguration.getString(s"api.context").getOrElse(throw new RuntimeException(s"Missing Key api.context"))
-  lazy val baseUrl = runModeConfiguration.getString("baseUrl").getOrElse(throw new RuntimeException("Missing Key baseUrl"))
-  lazy val apiStatus = runModeConfiguration.getString("api.status").getOrElse(throw new RuntimeException(s"Missing Key api.status"))
-  lazy val endpointsEnabled = runModeConfiguration.getBoolean("api.endpointsEnabled").getOrElse(throw new RuntimeException(s"Missing key api.endpointsEnabled"))
-  lazy val desAuthToken = runModeConfiguration.getString("desauthtoken").getOrElse(throw new RuntimeException(s"Missing Key desauthtoken"))
-  lazy val desUrlHeaderEnv: String =  runModeConfiguration.getString("environment").getOrElse(throw new RuntimeException(s"Missing Key environment"))
-  lazy val edhUrl: String = runModeConfiguration.getString("endpoints.edh.url").getOrElse(throw new RuntimeException(s"Missing Key edhUrl"))
-  lazy val resultsExpriyTime: Long = runModeConfiguration.getLong("results.expiry.time").getOrElse(259200)
-  lazy val allowNoNextYearStatus: Boolean = runModeConfiguration.getBoolean("toggle-feature.allow-no-next-year-status").getOrElse(false)
-  lazy val allowDefaultRUK: Boolean = runModeConfiguration.getBoolean("toggle-feature.allow-default-ruk").getOrElse(false)
-  lazy val retryEnabled: Boolean = runModeConfiguration.getBoolean("toggle-feature.retry-enabled").getOrElse(false)
-  lazy val bulkRetryEnabled: Boolean = runModeConfiguration.getBoolean("toggle-feature.bulk-retry-enabled").getOrElse(false)
-  lazy val requestRetryLimit: Int = runModeConfiguration.getInt("request-retry-limit").getOrElse(3)
-  lazy val retryDelay: Int = runModeConfiguration.getInt("retry-delay").getOrElse(500)
-  lazy val deceasedStatus: String = runModeConfiguration.getString("status.deceased").getOrElse("DECEASED")
-  lazy val tooManyRequestsStatus: String = runModeConfiguration.getString("status.too-many-requests").getOrElse("TOO_MANY_REQUESTS")
-  lazy val matchingFailedStatus: String = runModeConfiguration.getString("status.matching-failed.api").getOrElse("STATUS_UNAVAILABLE")
-  lazy val serviceUnavailableStatus: String = runModeConfiguration.getString("status.service-unavailable").getOrElse("SERVICE_UNAVAILABLE")
-  lazy val doNotReProcessStatus: String = runModeConfiguration.getString("status.do-not-re-process").getOrElse("DO_NOT_RE_PROCESS")
-  lazy val fileProcessingMatchingFailedStatus: String = runModeConfiguration.getString("status.matching-failed.csv").getOrElse("cannot_provide_status")
-  lazy val fileProcessingInternalServerErrorStatus: String = runModeConfiguration.getString("status.internal-server-error.csv").getOrElse("problem-getting-status")
-  lazy val internalServerErrorStatus: String = runModeConfiguration.getString("status.internal-server-error.api").getOrElse("INTERNAL_SERVER_ERROR")
-  lazy val removeChunksDataExerciseEnabled: Boolean = runModeConfiguration.getBoolean("remove-chunks-data-exercise.enabled").getOrElse(false)
-  lazy val apiV2_0Enabled: Boolean = runModeConfiguration.getBoolean("api-v2_0.enabled").getOrElse(false)
+class AppContext @Inject()(val servicesConfig: ServicesConfig) {
+  lazy val appName = servicesConfig.getString("appName")
+  lazy val appUrl = servicesConfig.getString("appUrl")
+  lazy val apiContext = servicesConfig.getString(s"api.context")
+  lazy val baseUrl = servicesConfig.getString("baseUrl")
+  lazy val apiStatus = servicesConfig.getString("api.status")
+  lazy val endpointsEnabled = servicesConfig.getBoolean("api.endpointsEnabled")
+  lazy val desAuthToken = servicesConfig.getString("desauthtoken")
+  lazy val desUrlHeaderEnv: String =  servicesConfig.getString("environment")
+  lazy val edhUrl: String = servicesConfig.getString("endpoints.edh.url")
+  lazy val resultsExpriyTime: Int = servicesConfig.getInt("results.expiry.time")
+  lazy val allowNoNextYearStatus: Boolean = servicesConfig.getBoolean("toggle-feature.allow-no-next-year-status")
+  lazy val allowDefaultRUK: Boolean = servicesConfig.getBoolean("toggle-feature.allow-default-ruk")
+  lazy val retryEnabled: Boolean = servicesConfig.getBoolean("toggle-feature.retry-enabled")
+  lazy val bulkRetryEnabled: Boolean = servicesConfig.getBoolean("toggle-feature.bulk-retry-enabled")
+  lazy val requestRetryLimit: Int = servicesConfig.getInt("request-retry-limit")
+  lazy val retryDelay: Int = servicesConfig.getInt("retry-delay")
+  lazy val deceasedStatus: String = servicesConfig.getString("status.deceased")
+  lazy val tooManyRequestsStatus: String = servicesConfig.getString("status.too-many-requests")
+  lazy val matchingFailedStatus: String = servicesConfig.getString("status.matching-failed.api")
+  lazy val serviceUnavailableStatus: String = servicesConfig.getString("status.service-unavailable")
+  lazy val doNotReProcessStatus: String = servicesConfig.getString("status.do-not-re-process")
+  lazy val fileProcessingMatchingFailedStatus: String = servicesConfig.getString("status.matching-failed.csv")
+  lazy val fileProcessingInternalServerErrorStatus: String = servicesConfig.getString("status.internal-server-error.csv")
+  lazy val internalServerErrorStatus: String = servicesConfig.getString("status.internal-server-error.api")
+  lazy val removeChunksDataExerciseEnabled: Boolean = servicesConfig.getBoolean("remove-chunks-data-exercise.enabled")
+  lazy val apiV2_0Enabled: Boolean = servicesConfig.getBoolean("api-v2_0.enabled")
 }

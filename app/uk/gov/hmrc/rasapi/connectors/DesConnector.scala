@@ -17,12 +17,10 @@
 package uk.gov.hmrc.rasapi.connectors
 
 import javax.inject.Inject
-import play.api.Mode.Mode
 import play.api.{Configuration, Logger, Play}
 import play.api.libs.json.{JsObject, JsValue, Json, Writes}
 import uk.gov.hmrc.http._
 import uk.gov.hmrc.play.bootstrap.http.DefaultHttpClient
-import uk.gov.hmrc.play.config.ServicesConfig
 import uk.gov.hmrc.play.http.logging.MdcLoggingExecutionContext
 import uk.gov.hmrc.rasapi.config.{AppContext, WSHttp}
 import uk.gov.hmrc.rasapi.models._
@@ -46,7 +44,7 @@ class DesConnector @Inject()(
   val otherUk = "otherUKResident"
 
 
-  lazy val desBaseUrl: String = appContext.baseUrl("des")
+  lazy val desBaseUrl: String = appContext.servicesConfig.baseUrl("des")
   lazy val edhUrl: String = desBaseUrl + appContext.edhUrl
   lazy val error_InternalServerError: String = appContext.internalServerErrorStatus
   lazy val error_Deceased: String = appContext.deceasedStatus

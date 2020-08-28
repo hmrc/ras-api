@@ -31,6 +31,7 @@ import reactivemongo.bson.{BSONDocument, BSONObjectID, BSONValue}
 import uk.gov.hmrc.mongo.ReactiveRepository
 import uk.gov.hmrc.rasapi.config.AppContext
 import uk.gov.hmrc.rasapi.models.{Chunks, ResultsFile}
+import play.api.libs.iteratee.streams.IterateeStreams
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -38,9 +39,8 @@ case class FileData(length: Long = 0, data: Enumerator[Array[Byte]] = null)
 
 class RasFilesRepository @Inject()(
                                    val mongoComponent: ReactiveMongoComponent,
-                                   val appContext: AppContext,
-                                   implicit val ec: ExecutionContext
-                             ) extends ReactiveRepository[Chunks, BSONObjectID](
+                                   val appContext: AppContext)
+                                   (implicit val ec: ExecutionContext) extends ReactiveRepository[Chunks, BSONObjectID](
   collectionName = "rasFileStore",
   mongo = mongoComponent.mongoConnector.db,
   domainFormat = Chunks.format

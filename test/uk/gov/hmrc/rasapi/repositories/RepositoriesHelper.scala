@@ -21,7 +21,6 @@ import java.nio.file.{Files, Path}
 
 import play.api.{Application, Logger}
 import play.api.libs.iteratee.{Enumerator, Iteratee}
-import play.api.test.FakeApplication
 import play.modules.reactivemongo.ReactiveMongoComponent
 import reactivemongo.api.DefaultDB
 import reactivemongo.api.commands.WriteResult
@@ -91,8 +90,7 @@ object RepositoriesHelper extends MongoSpecSupport with UnitSpec {
   class RasFileRepositoryTest(rfr: RasFilesRepository)(implicit ec: ExecutionContext)
     extends RasFilesRepository(
       rfr.mongoComponent,
-      rfr.appContext,
-      ExecutionContext.global) with MongoSpecSupport {
+      rfr.appContext) with MongoSpecSupport {
 
     override implicit val mongo: () => DefaultDB = mongoConnectorForTest.db
 

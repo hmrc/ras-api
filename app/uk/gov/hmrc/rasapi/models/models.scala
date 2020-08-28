@@ -60,11 +60,11 @@ package object models {
       def reads(json: JsValue): JsResult[NINO] = {
         json match {
           case JsString(data) => data match {
-            case strValue if strValue.isEmpty => JsError(Seq(JsPath() -> Seq(ValidationError(missing))))
-            case strValue if !strValue.toUpperCase.matches(ninoRegex) => JsError(Seq(JsPath() -> Seq(ValidationError(invalidFormat))))
+            case strValue if strValue.isEmpty => JsError(Seq(JsPath() -> Seq(JsonValidationError(missing))))
+            case strValue if !strValue.toUpperCase.matches(ninoRegex) => JsError(Seq(JsPath() -> Seq(JsonValidationError(invalidFormat))))
             case strValue => JsSuccess(strValue)
           }
-          case _ => JsError(Seq(JsPath() -> Seq(ValidationError(invalidDataType))))
+          case _ => JsError(Seq(JsPath() -> Seq(JsonValidationError(invalidDataType))))
         }
       }
     }
@@ -81,11 +81,11 @@ package object models {
 
         json match {
           case JsString(data) => data match {
-            case strValue if strValue.trim.isEmpty => JsError(Seq(JsPath() -> Seq(ValidationError(missing))))
-            case strValue if !strValue.matches("^[a-zA-Z &`\\-\\'^]{1,35}$") => JsError(Seq(JsPath() -> Seq(ValidationError(invalidFormat))))
+            case strValue if strValue.trim.isEmpty => JsError(Seq(JsPath() -> Seq(JsonValidationError(missing))))
+            case strValue if !strValue.matches("^[a-zA-Z &`\\-\\'^]{1,35}$") => JsError(Seq(JsPath() -> Seq(JsonValidationError(invalidFormat))))
             case strValue => JsSuccess(strValue)
           }
-          case _ => JsError(Seq(JsPath() -> Seq(ValidationError(invalidDataType))))
+          case _ => JsError(Seq(JsPath() -> Seq(JsonValidationError(invalidDataType))))
         }
       }
     }
@@ -103,12 +103,12 @@ package object models {
             case Some(format) =>
               s.toDateTime(format) match {
                 case Some(d: DateTime) if !d.isAfterNow => JsSuccess(d)
-                case _ => JsError(Seq(JsPath() -> Seq(ValidationError(invalidDateValidation))))
+                case _ => JsError(Seq(JsPath() -> Seq(JsonValidationError(invalidDateValidation))))
               }
-            case None => JsError(Seq(JsPath() -> Seq(ValidationError(invalidFormat))))
+            case None => JsError(Seq(JsPath() -> Seq(JsonValidationError(invalidFormat))))
           }
-        case JsString(s) if s.trim.isEmpty => JsError(Seq(JsPath() -> Seq(ValidationError(missing))))
-        case _ => JsError(Seq(JsPath() -> Seq(ValidationError(invalidDataType))))
+        case JsString(s) if s.trim.isEmpty => JsError(Seq(JsPath() -> Seq(JsonValidationError(missing))))
+        case _ => JsError(Seq(JsPath() -> Seq(JsonValidationError(invalidDataType))))
       }
     }
   }

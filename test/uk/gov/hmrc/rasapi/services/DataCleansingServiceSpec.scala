@@ -17,8 +17,8 @@
 package uk.gov.hmrc.rasapi.services
 
 import org.scalatest.BeforeAndAfter
-import org.scalatest.mockito.MockitoSugar
-import org.scalatestplus.play.OneAppPerSuite
+import org.scalatestplus.mockito.MockitoSugar
+import org.scalatestplus.play.guice.GuiceOneAppPerSuite
 import play.api.inject.guice.GuiceApplicationBuilder
 import play.api.{Application, Logger}
 import reactivemongo.bson.BSONObjectID
@@ -28,7 +28,7 @@ import uk.gov.hmrc.rasapi.repository.RasFilesRepository
 
 import scala.concurrent.ExecutionContext.Implicits.global
 
-class DataCleansingServiceSpec extends UnitSpec with MockitoSugar with OneAppPerSuite
+class DataCleansingServiceSpec extends UnitSpec with MockitoSugar with GuiceOneAppPerSuite
 with BeforeAndAfter  {
 
   override implicit lazy val app: Application = new GuiceApplicationBuilder()

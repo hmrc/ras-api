@@ -17,17 +17,15 @@
 package uk.gov.hmrc.rasapi.repositories
 
 import org.scalatest.BeforeAndAfter
-import org.scalatest.mockito.MockitoSugar
-import org.scalatestplus.play.{OneAppPerSuite, OneAppPerTest}
-import play.api.Application
+import org.scalatestplus.mockito.MockitoSugar
+import org.scalatestplus.play.guice.GuiceOneAppPerSuite
 import reactivemongo.bson.BSONObjectID
 import uk.gov.hmrc.play.test.UnitSpec
-import uk.gov.hmrc.rasapi.repositories.RepositoriesHelper.rasBulkOperationsRepository
 import uk.gov.hmrc.rasapi.repository.{RasChunksRepository, RasFilesRepository}
 
 import scala.concurrent.ExecutionContext.Implicits.global
 
-class RasChunksRepositorySpec extends UnitSpec with MockitoSugar with OneAppPerSuite
+class RasChunksRepositorySpec extends UnitSpec with MockitoSugar with GuiceOneAppPerSuite
   with BeforeAndAfter  {
 
     val userId: String = "A1234567"

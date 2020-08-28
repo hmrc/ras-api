@@ -17,12 +17,12 @@
 package uk.gov.hmrc.rasapi.connectors
 
 import org.joda.time.DateTime
-import org.mockito.Matchers._
-import org.mockito.Matchers.{eq => Meq}
+import org.mockito.ArgumentMatchers._
+import org.mockito.ArgumentMatchers.{eq => Meq}
 import org.mockito.Mockito.{reset, times, verify, when}
 import org.scalatest.BeforeAndAfter
 import org.scalatest.mockito.MockitoSugar
-import org.scalatestplus.play.OneAppPerSuite
+import org.scalatestplus.play.guice.GuiceOneAppPerSuite
 import play.api.libs.json.{JsValue, Json, OFormat}
 import uk.gov.hmrc.http._
 import uk.gov.hmrc.play.bootstrap.http.DefaultHttpClient
@@ -33,7 +33,7 @@ import uk.gov.hmrc.rasapi.services.AuditService
 
 import scala.concurrent.{ExecutionContext, Future}
 
-class DesConnectorSpec extends UnitSpec with OneAppPerSuite with BeforeAndAfter with MockitoSugar {
+class DesConnectorSpec extends UnitSpec with GuiceOneAppPerSuite with BeforeAndAfter with MockitoSugar {
 
   implicit val hc = HeaderCarrier()
 

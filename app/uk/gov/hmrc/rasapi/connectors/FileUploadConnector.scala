@@ -16,16 +16,14 @@
 
 package uk.gov.hmrc.rasapi.connectors
 
-import java.io.InputStream
+import java.io.{ByteArrayInputStream, InputStream}
 
 import akka.actor.ActorSystem
 import akka.stream.ActorMaterializer
 import akka.stream.scaladsl.StreamConverters
 import javax.inject.Inject
-import play.api.Mode.Mode
 import play.api.{Configuration, Logger, Play}
 import uk.gov.hmrc.http.HeaderCarrier
-import uk.gov.hmrc.play.config.ServicesConfig
 import uk.gov.hmrc.rasapi.config.{AppContext, WSHttp}
 import uk.gov.hmrc.rasapi.models.FileMetadata
 
@@ -37,8 +35,8 @@ class FileUploadConnector @Inject()(
                                      implicit val ec: ExecutionContext
                                    ) {
 
-  lazy val serviceUrl: String = appContext.baseUrl("file-upload")
-  lazy val fileUploadUrlSuffix: String = appContext.getString("file-upload-url-suffix")
+  lazy val serviceUrl: String = appContext.servicesConfig.baseUrl("file-upload")
+  lazy val fileUploadUrlSuffix: String = appContext.servicesConfig.getString("file-upload-url-suffix")
 
 
   def getFile(envelopeId: String, fileId: String, userId: String)(implicit hc: HeaderCarrier): Future[Option[InputStream]] = {
@@ -47,7 +45,7 @@ class FileUploadConnector @Inject()(
 
     Logger.info(s"[FileUploadConnector][getFile] Get to file-upload with URI : /file-upload/envelopes/${envelopeId}/files/${fileId}/content for userId ($userId).")
     wsHttp.buildRequestWithStream(s"$serviceUrl/$fileUploadUrlSuffix/${envelopeId}/files/${fileId}/content").map { res =>
-      Some(res.body.runWith(StreamConverters.asInputStream()))
+      Some(res.bodyAsSource.runWith(StreamConverters.asInputStream()))
     } recover {
       case ex: Throwable => {
         Logger.error(s"[FileUploadConnector][getFile] Exception thrown while retrieving file / converting to InputStream for userId ($userId). ${ex.getMessage}}.", ex)

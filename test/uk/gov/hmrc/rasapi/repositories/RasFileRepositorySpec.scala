@@ -17,8 +17,7 @@
 package uk.gov.hmrc.rasapi.repositories
 
 import org.scalatest.BeforeAndAfter
-import org.scalatest.mockito.MockitoSugar
-import org.scalatestplus.play.{OneAppPerSuite, OneAppPerTest}
+import org.scalatestplus.mockito.MockitoSugar
 import play.api.Logger
 import uk.gov.hmrc.play.test.UnitSpec
 
@@ -27,12 +26,13 @@ import scala.concurrent.ExecutionContext.Implicits.global
 import RepositoriesHelper.createFile
 import org.scalatest.concurrent.Eventually
 import org.scalatest.concurrent.PatienceConfiguration.{Interval, Timeout}
+import org.scalatestplus.play.guice.GuiceOneAppPerSuite
 import reactivemongo.bson.{BSONDocument, BSONObjectID}
 import uk.gov.hmrc.rasapi.repository.RasFilesRepository
 
 import scala.concurrent.duration._
 
-class RasFileRepositorySpec extends UnitSpec with MockitoSugar with OneAppPerSuite
+class RasFileRepositorySpec extends UnitSpec with MockitoSugar with GuiceOneAppPerSuite
   with BeforeAndAfter with Eventually {
 
   val userId: String = "A1234567"

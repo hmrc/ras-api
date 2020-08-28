@@ -17,18 +17,25 @@
 package uk.gov.hmrc.rasapi.repositories
 
 import org.scalatest.BeforeAndAfter
-import org.scalatest.mockito.MockitoSugar
-import org.scalatestplus.play.OneAppPerSuite
+import org.scalatestplus.mockito.MockitoSugar
+import org.scalatestplus.play.guice.GuiceOneAppPerSuite
+import play.modules.reactivemongo.ReactiveMongoComponent
 import reactivemongo.bson.BSONLong
 import uk.gov.hmrc.play.test.UnitSpec
+import uk.gov.hmrc.rasapi.config.AppContext
 import uk.gov.hmrc.rasapi.repository.RasFilesRepository
 
 import scala.concurrent.ExecutionContext.Implicits.global
 
-class GridFsTTLIndexingSpec extends UnitSpec with MockitoSugar with OneAppPerSuite
+class GridFsTTLIndexingSpec extends UnitSpec with MockitoSugar with GuiceOneAppPerSuite
   with BeforeAndAfter {
+  val mockMongo = app.injector.instanceOf[ReactiveMongoComponent]
+  val mockAppContext = app.injector.instanceOf[AppContext]
 
-  lazy val rasFileRepository: RasFilesRepository = app.injector.instanceOf[RasFilesRepository]
+  val rasFileRepository: RasFilesRepository = new RasFilesRepository (
+    mockMongo,
+    mockAppContext
+  )
 
   before{
     rasFileRepository.removeAll()
@@ -41,6 +48,6 @@ class GridFsTTLIndexingSpec extends UnitSpec with MockitoSugar with OneAppPerSui
 
     res.filter(_.name.get == "lastUpdatedIndex")
       .head.options.get("expireAfterSeconds").get shouldBe defaultTTL
+    }
   }
-}
 }

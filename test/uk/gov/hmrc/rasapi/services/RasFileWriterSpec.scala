@@ -20,14 +20,14 @@ import java.nio.file.Files
 
 import org.scalatest.BeforeAndAfter
 import org.scalatest.concurrent.ScalaFutures
-import org.scalatest.mockito.MockitoSugar
-import org.scalatestplus.play.OneServerPerSuite
+import org.scalatestplus.mockito.MockitoSugar
+import org.scalatestplus.play.guice.GuiceOneServerPerSuite
 import uk.gov.hmrc.play.test.UnitSpec
 
 import scala.collection.mutable.ListBuffer
 import scala.io.Source
 
-class RasFileWriterSpec extends UnitSpec with OneServerPerSuite with ScalaFutures with MockitoSugar with BeforeAndAfter {
+class RasFileWriterSpec extends UnitSpec with GuiceOneServerPerSuite with ScalaFutures with MockitoSugar with BeforeAndAfter {
   object fileWriter extends RasFileWriter
   val resultsArr = Array("456C,John,Smith,1990-02-21,nino-INVALID_FORMAT",
     "AB123456C,John,Smith,1990-02-21,MATCHING_FAILED",
@@ -63,7 +63,6 @@ class RasFileWriterSpec extends UnitSpec with OneServerPerSuite with ScalaFuture
       Files.exists(res._1) shouldBe true
       resultsArr.foreach(str => fileWriter.writeResultToFile(res._2,str, userId))
       fileWriter.closeWriter(res._2) shouldBe true
-
     }
   }
 }
