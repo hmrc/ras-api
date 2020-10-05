@@ -116,6 +116,11 @@ class DesConnector @Inject()(
         Logger.error(s"[DesConnector][getResidencyStatus] Bad Request returned from des. The details sent were not " +
           s"valid. userId ($userId).")
         Right(ResidencyStatusFailure(error_DoNotReProcess, "Internal server error."))
+
+      case internalServerException: InternalServerException =>
+        Logger.error(s"[DesConnector][getResidencyStatus] Internal Server Error. userId ($userId).")
+        Right(ResidencyStatusFailure(error_InternalServerError, "Internal server error."))
+
       case notFoundEx: NotFoundException =>
         Right(ResidencyStatusFailure(error_MatchingFailed, "Cannot provide a residency status for this pension scheme member."))
       case Upstream4xxResponse(_, 429, _, _) =>
