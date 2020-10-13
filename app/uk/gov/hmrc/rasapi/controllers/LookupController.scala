@@ -137,7 +137,7 @@ class LookupController @Inject()(
                         nino = Some(individualDetails.nino),
                         residencyStatus = None,
                         userId = id)
-                      Logger.error(s"[LookupController][getResidencyStatus] Error returned from DES, error code: " +
+                      Logger.warn(s"[LookupController][getResidencyStatus] Error returned from DES, error code: " +
                         s"${matchingFailed.code} for userId ($id).")
                       metrics.registry.counter(INTERNAL_SERVER_ERROR.toString)
                       InternalServerError(toJson(ErrorInternalServerError))
