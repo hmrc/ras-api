@@ -120,12 +120,9 @@ class FileProcessingService @Inject()(
   def saveFile(filePath: Path, userId: String, callbackData: CallbackData)(implicit hc: HeaderCarrier, request: Request[AnyContent]): Unit = {
 
     Logger.info("[FileProcessingService][saveFile] Starting to save file...")
-
     val fileSaveMetrics = metrics.register(fileSave).time
-    try {
       fileRepo.saveFile(userId, callbackData.envelopeId, filePath, callbackData.fileId).onComplete {
         result =>
-
           result match {
             case Success(file) =>
               Logger.info(s"[FileProcessingService][saveFile] Starting to save the file (${file.id}) for user ID: $userId")
@@ -149,7 +146,6 @@ class FileProcessingService @Inject()(
           fileSaveMetrics.stop
           fileUploadConnector.deleteUploadedFile(callbackData.envelopeId, callbackData.fileId, userId)
       }
-    }
   }
 
   def getTaxYearHeadings: String = {

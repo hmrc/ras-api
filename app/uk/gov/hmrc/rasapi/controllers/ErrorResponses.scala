@@ -16,8 +16,6 @@
 
 package uk.gov.hmrc.rasapi.controllers
 
-import uk.gov.hmrc.rasapi.config.AppContext
-
 sealed abstract class ErrorResponse(
                                        val httpStatusCode: Int,
                                        val  errorCode: String,

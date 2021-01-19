@@ -17,24 +17,21 @@
 package uk.gov.hmrc.rasapi.connectors
 
 import javax.inject.Inject
-import play.api.{Configuration, Logger, Play}
+import play.api.Logger
 import play.api.libs.json.{JsObject, JsValue, Json, Writes}
 import uk.gov.hmrc.http._
 import uk.gov.hmrc.play.bootstrap.http.DefaultHttpClient
-import uk.gov.hmrc.play.http.logging.MdcLoggingExecutionContext
-import uk.gov.hmrc.rasapi.config.{AppContext, WSHttp}
+import uk.gov.hmrc.rasapi.config.AppContext
 import uk.gov.hmrc.rasapi.models._
 import uk.gov.hmrc.rasapi.services.AuditService
 
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.{Failure, Success, Try}
 
-class DesConnector @Inject()(
-                              httpPost: DefaultHttpClient,
+class DesConnector @Inject()( httpPost: DefaultHttpClient,
                               val auditService: AuditService,
                               val appContext: AppContext,
-                              implicit val ec: ExecutionContext
-                            ) {
+                              implicit val ec: ExecutionContext) {
 
   val uk = "Uk"
   val scot = "Scottish"
@@ -42,7 +39,6 @@ class DesConnector @Inject()(
   val welsh = "Welsh"
   val welshRes = "welshResident"
   val otherUk = "otherUKResident"
-
 
   lazy val desBaseUrl: String = appContext.servicesConfig.baseUrl("des")
   lazy val edhUrl: String = desBaseUrl + appContext.edhUrl
@@ -106,31 +102,30 @@ class DesConnector @Inject()(
       .as[JsObject] + ("pensionSchemeOrganisationID" -> Json.toJson(userId)))
 
     val result = httpPost.POST[JsValue, HttpResponse](uri, payload, desHeaders)
-    (implicitly[Writes[IndividualDetails]], implicitly[HttpReads[HttpResponse]], rasHeaders,
-      MdcLoggingExecutionContext.fromLoggingDetails(rasHeaders))
+    (implicitly[Writes[IndividualDetails]], implicitly[HttpReads[HttpResponse]], rasHeaders, ec)
 
     result.map(response =>
       resolveResponse(response, userId, member.nino, apiVersion)
     ).recover {
-      case badRequestEx: BadRequestException =>
+      case _: BadRequestException =>
         Logger.error(s"[DesConnector][getResidencyStatus] Bad Request returned from des. The details sent were not " +
           s"valid. userId ($userId).")
         Right(ResidencyStatusFailure(error_DoNotReProcess, "Internal server error."))
-      case notFoundEx: NotFoundException =>
+      case _: NotFoundException =>
         Right(ResidencyStatusFailure(error_MatchingFailed, "Cannot provide a residency status for this pension scheme member."))
       case Upstream4xxResponse(_, 429, _, _) =>
         Logger.error(s"[DesConnector][getResidencyStatus] Request could not be sent 429 (Too Many Requests) was sent " +
           s"from the HoD. userId ($userId).")
         Right(ResidencyStatusFailure(error_TooManyRequests, "Too Many Requests."))
-      case requestTimeOutEx: RequestTimeoutException =>
+      case _: RequestTimeoutException =>
         Logger.error(s"[DesConnector][getResidencyStatus] Request has timed out. userId ($userId).")
         Right(ResidencyStatusFailure(error_DoNotReProcess, "Internal server error."))
-      case _5xx: Upstream5xxResponse =>
-        if (_5xx.upstreamResponseCode == 503) {
+      case _5xx: UpstreamErrorResponse =>
+        if (_5xx.statusCode == 503) {
           Logger.error(s"[DesConnector][getResidencyStatus] Service unavailable. userId ($userId).")
           Right(ResidencyStatusFailure(error_ServiceUnavailable, "Service unavailable"))
         } else {
-          Logger.error(s"[DesConnector][getResidencyStatus] ${_5xx.upstreamResponseCode} was returned from DES. userId ($userId).")
+          Logger.error(s"[DesConnector][getResidencyStatus] ${_5xx.statusCode} was returned from DES. userId ($userId).")
           Right(ResidencyStatusFailure(error_InternalServerError, "Internal server error."))
         }
       case th: Throwable =>

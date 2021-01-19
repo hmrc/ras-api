@@ -1,5 +1,5 @@
 /*
- * Copyright 2020 HM Revenue & Customs
+ * Copyright 2021 HM Revenue & Customs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -26,7 +26,7 @@ import play.api.mvc.{Action, AnyContent, ControllerComponents, Request, Result}
 import reactivemongo.bson.BSONObjectID
 import uk.gov.hmrc.auth.core.AuthProvider.GovernmentGateway
 import uk.gov.hmrc.auth.core._
-import uk.gov.hmrc.auth.core.retrieve.Retrievals.authorisedEnrolments
+import uk.gov.hmrc.auth.core.retrieve.v2.Retrievals.authorisedEnrolments
 import uk.gov.hmrc.play.bootstrap.controller.BackendController
 import uk.gov.hmrc.rasapi.metrics.Metrics
 import uk.gov.hmrc.rasapi.repository.{FileData, RasChunksRepository, RasFilesRepository}
@@ -133,13 +133,10 @@ class FileController @Inject()(
       }
   }
 
-  private def handleAuthFailure(implicit request: Request[_]): PartialFunction[Throwable, Future[Result]] =
-    PartialFunction[Throwable, Future[Result]] {
-      case _:InsufficientEnrolments => Logger.warn("[FileController][handleAuthFailure] Insufficient privileges")
+  private def handleAuthFailure(implicit request: Request[_]): PartialFunction[Throwable, Future[Result]] = {
+      case _: InsufficientEnrolments => Logger.warn("[FileController][handleAuthFailure] Insufficient privileges")
         metrics.registry.counter(UNAUTHORIZED.toString)
-
         Future.successful(Unauthorized(toJson(Unauthorised)))
-
       case _: NoActiveSession => Logger.warn("[FileController][handleAuthFailure] Inactive session")
         metrics.registry.counter(UNAUTHORIZED.toString)
         Future.successful(Unauthorized(toJson(InvalidCredentials)))

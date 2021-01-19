@@ -45,7 +45,7 @@ class DataCleansingService @Inject()(
         val chunksToBeDeleted = chunks.diff(parentFileIds)
         Logger.info(s"[data-cleansing-exercise][removeOrphanedChunks] Size of fileId's to be deleted is: ${chunksToBeDeleted.length}")
 
-        val res = processFutures(chunksToBeDeleted)(fileId => {
+        processFutures(chunksToBeDeleted)(fileId => {
           Logger.warn(s"[data-cleansing-exercise][removeOrphanedChunks] fileId to be deleted is: ${fileId}")
           chunksRepo.removeChunk(fileId).map{
             case true => Logger.info(s"[data-cleansing-exercise][removeOrphanedChunks] Chunk deletion succeeded, fileId is: ${fileId}")

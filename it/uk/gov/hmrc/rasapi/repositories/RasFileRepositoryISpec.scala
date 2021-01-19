@@ -1,12 +1,23 @@
+/*
+ * Copyright 2021 HM Revenue & Customs
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 
 package uk.gov.hmrc.rasapi.repositories
 
 import java.io.File
 
-import akka.stream.Materializer
-import akka.{Done, NotUsed}
-import akka.stream.scaladsl.{Sink, Source => AkkaSource}
-import akka.util.ByteString
 import org.scalatest.concurrent.PatienceConfiguration.{Interval, Timeout}
 import org.scalatest.concurrent.{Eventually, ScalaFutures}
 import org.scalatestplus.play.PlaySpec
@@ -14,9 +25,8 @@ import org.scalatestplus.play.guice.GuiceOneAppPerSuite
 import play.api.libs.iteratee.Iteratee
 import play.api.libs.json.Json
 import play.api.test.{DefaultAwaitTimeout, FutureAwaits}
-import reactivemongo.api.ReadPreference
+import reactivemongo.api.{ReadConcern, ReadPreference}
 import reactivemongo.bson.BSONDocument
-import uk.gov.hmrc.rasapi.models.ResultsFile
 import uk.gov.hmrc.rasapi.repository.{FileData, RasChunksRepository, RasFilesRepository}
 
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -40,14 +50,15 @@ class RasFileRepositoryISpec extends PlaySpec with ScalaFutures with GuiceOneApp
       app.materializer
     }
 
-    def fileCount: Int =
-      await(rasFileRepository.gridFSG.files.count())
+    def fileCount: Long = {
+      await(rasFileRepository.gridFSG.files.count(None, None, 0, None, readConcern = ReadConcern.Available))
+    }
 
     def chunksCount: Int =
       await(rasChunksRepository.count(Json.obj(), ReadPreference.secondaryPreferred))
 
     def saveFile(): Unit = {
-      val saveFile: ResultsFile = await(rasFileRepository.saveFile(
+      await(rasFileRepository.saveFile(
         userId = "userid-1",
         envelopeId = "envelopeid-1",
         filePath = largeFile.toPath,

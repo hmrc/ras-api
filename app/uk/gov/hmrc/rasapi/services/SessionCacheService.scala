@@ -20,7 +20,6 @@ import javax.inject.Inject
 import play.api.Logger
 import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.http.cache.client.{CacheMap, ShortLivedHttpCaching}
-import uk.gov.hmrc.rasapi.config.RasShortLivedHttpCaching
 import uk.gov.hmrc.rasapi.models.{CallbackData, FileMetadata, FileSession, ResultsFileMetaData}
 
 import scala.concurrent.{ExecutionContext, Future}
@@ -33,7 +32,6 @@ class SessionCacheService @Inject()(
 
   private val source: String = "ras"
   private val formId: String = "fileSession"
-  private val fileMetadata: String = "fileMetadata"
 
   def updateFileSession(
                          userId: String,

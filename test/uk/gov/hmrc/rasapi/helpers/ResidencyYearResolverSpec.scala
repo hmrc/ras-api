@@ -18,11 +18,11 @@ package uk.gov.hmrc.rasapi.helpers
 
 import org.joda.time.DateTime
 import org.scalatest.BeforeAndAfter
-import org.scalatest.mockito.MockitoSugar
-import org.scalatestplus.play.OneAppPerTest
+import org.scalatestplus.mockito.MockitoSugar
+import org.scalatestplus.play.guice.GuiceOneAppPerTest
 import uk.gov.hmrc.play.test.UnitSpec
 
-class ResidencyYearResolverSpec extends UnitSpec with MockitoSugar with OneAppPerTest with BeforeAndAfter {
+class ResidencyYearResolverSpec extends UnitSpec with MockitoSugar with GuiceOneAppPerTest with BeforeAndAfter {
 
   "isBetweenJanAndApril" should {
 

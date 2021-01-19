@@ -16,13 +16,13 @@
 
 package uk.gov.hmrc.rasapi.connectors
 
-import java.io.{ByteArrayInputStream, InputStream}
+import java.io.InputStream
 
 import akka.actor.ActorSystem
 import akka.stream.ActorMaterializer
 import akka.stream.scaladsl.StreamConverters
 import javax.inject.Inject
-import play.api.{Configuration, Logger, Play}
+import play.api.Logger
 import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.rasapi.config.{AppContext, WSHttp}
 import uk.gov.hmrc.rasapi.models.FileMetadata

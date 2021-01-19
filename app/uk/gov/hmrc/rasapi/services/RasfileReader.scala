@@ -81,7 +81,7 @@ trait RasFileWriter {
   def closeWriter(writer:BufferedWriter):Boolean ={
     val res = Try(writer.close())
      res.recover{
-       case ex:Throwable => Logger.error(s"[RasFileReader][writeResultToFile] Failed to close the Outputstream with error ${ex.getMessage}.", ex)
+       case ex: Throwable => Logger.error(s"[RasFileReader][writeResultToFile] Failed to close the Outputstream with error ${ex.getMessage}.", ex)
          false
      }
     true

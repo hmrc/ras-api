@@ -38,7 +38,7 @@ class RasShortLivedHttpCaching @Inject()(
                                           val appContext: AppContext,
                                           val http: DefaultHttpClient
                                         ) extends ShortLivedHttpCaching {
-  val mode: Mode.Mode = environment.mode
+  val mode: Mode = environment.mode
   override lazy val defaultSource = appContext.appName
   override lazy val baseUri = appContext.servicesConfig.baseUrl("cachable.short-lived-cache")
   override lazy val domain = appContext.servicesConfig.getConfString("cachable.short-lived-cache.domain",
@@ -56,7 +56,6 @@ class RasSessionCache @Inject()(
                                  val appContext: AppContext,
                                  val http: DefaultHttpClient
                                ) extends SessionCache {
-  val mode: Mode.Mode = environment.mode
   override lazy val defaultSource: String = appContext.appName
   override lazy val baseUri: String = appContext.servicesConfig.baseUrl("cachable.session-cache")
   override lazy val domain: String =

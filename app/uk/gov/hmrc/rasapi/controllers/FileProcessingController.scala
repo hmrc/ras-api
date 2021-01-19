@@ -20,7 +20,7 @@ import javax.inject.Inject
 import play.api.Logger
 import play.api.libs.json.JsSuccess
 import play.api.mvc.{Action, AnyContent, ControllerComponents, Request, Result}
-import uk.gov.hmrc.play.bootstrap.controller.{BackendController, BaseController}
+import uk.gov.hmrc.play.bootstrap.controller.BackendController
 import uk.gov.hmrc.rasapi.models.{ApiVersion, CallbackData, V1_0, V2_0}
 import uk.gov.hmrc.rasapi.services.{FileProcessingService, SessionCacheService}
 
