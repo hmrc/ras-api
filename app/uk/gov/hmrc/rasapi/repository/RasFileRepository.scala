@@ -1,5 +1,5 @@
 /*
- * Copyright 2020 HM Revenue & Customs
+ * Copyright 2021 HM Revenue & Customs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -31,7 +31,6 @@ import reactivemongo.bson.{BSONDocument, BSONObjectID, BSONValue}
 import uk.gov.hmrc.mongo.ReactiveRepository
 import uk.gov.hmrc.rasapi.config.AppContext
 import uk.gov.hmrc.rasapi.models.{Chunks, ResultsFile}
-import play.api.libs.iteratee.streams.IterateeStreams
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -68,7 +67,7 @@ class RasFilesRepository @Inject()(
     gridFSG.writeFromInputStream(generateFileToSave(fileId, contentType, envelopeId, userId), new FileInputStream(filePath.toFile)).map{ res =>
       logger.warn(s"Saved File id is ${res.id} for userId ($userId)")
       res
-    }.recover{case ex:Throwable =>
+    }.recover{ case ex: Throwable =>
         logger.error(s"error saving file -> $fileId for userId ($userId). Exception: ${ex.getMessage}")
         throw new RuntimeException(s"failed to save file due to error" + ex.getMessage)
     }

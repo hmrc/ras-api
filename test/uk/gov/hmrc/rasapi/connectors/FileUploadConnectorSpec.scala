@@ -1,5 +1,5 @@
 /*
- * Copyright 2020 HM Revenue & Customs
+ * Copyright 2021 HM Revenue & Customs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,8 +18,6 @@ package uk.gov.hmrc.rasapi.connectors
 
 import java.io.{BufferedReader, InputStreamReader}
 
-import akka.actor.ActorSystem
-import akka.stream.ActorMaterializer
 import akka.stream.scaladsl.Source
 import akka.util.ByteString
 import org.mockito.ArgumentMatchers._
@@ -34,11 +32,10 @@ import uk.gov.hmrc.http.{HeaderCarrier, HttpResponse, RequestTimeoutException}
 import uk.gov.hmrc.play.test.UnitSpec
 import uk.gov.hmrc.rasapi.config.{AppContext, WSHttp}
 import uk.gov.hmrc.rasapi.models.FileMetadata
-import uk.gov.hmrc.rasapi.services.RASWsHelpers
 
 import scala.concurrent.{ExecutionContext, Future}
 
-class FileUploadConnectorSpec extends UnitSpec with RASWsHelpers with GuiceOneAppPerSuite with MockitoSugar {
+class FileUploadConnectorSpec extends UnitSpec with GuiceOneAppPerSuite with MockitoSugar {
 
   implicit val hc: HeaderCarrier = HeaderCarrier()
 
@@ -48,7 +45,6 @@ class FileUploadConnectorSpec extends UnitSpec with RASWsHelpers with GuiceOneAp
 
   val bodyAsSource: Source[ByteString, _] = Source(Seq(ByteString("Test"),  ByteString("\r\n"), ByteString("Passed")).to[scala.collection.immutable.Iterable])
   val headers = Map("CONTENT_TYPE" -> Seq("application/octet-stream"))
-
 
   private def createMockResponse(status: Int, bodyAsSource: Source[ByteString, _], headers: Map[String, Seq[String]]): WSResponse = {
     when(wsResponseMock.status).thenReturn(status)
@@ -73,15 +69,11 @@ class FileUploadConnectorSpec extends UnitSpec with RASWsHelpers with GuiceOneAp
 
   "getFile" should {
 
-    implicit val system = ActorSystem()
-    implicit val materializer = ActorMaterializer()
-
     val wsResponse: WSResponse = createMockResponse(200, bodyAsSource, headers)
 
     "return an StreamedResponse from File-Upload service" in {
       when(mockWsHttp.buildRequestWithStream(any())(any())).thenReturn(Future.successful(wsResponse))
 
-      val values = List("Test", "Passed")
       val result = await(TestConnector.getFile(envelopeId, fileId, userId))
       val reader = new BufferedReader(new InputStreamReader(result.get))
 
@@ -100,12 +92,12 @@ class FileUploadConnectorSpec extends UnitSpec with RASWsHelpers with GuiceOneAp
 
   "getFileMetadata" should {
     "return the original filename when file metadata returns 200" in {
-      when(mockWsHttp.doGet(any(), any())(any(), any())).thenReturn(Future.successful(HttpResponse(200, Some(Json.toJson(fileMetadata)))))
+      when(mockWsHttp.doGet(any(), any())(any(), any())).thenReturn(Future.successful(HttpResponse(200, Json.toJson(fileMetadata).toString())))
       val result = await(TestConnector.getFileMetadata(envelopeId, fileId, userId))
       result.get shouldBe fileMetadata
     }
     "return None when file metadata does not return 200" in {
-      when(mockWsHttp.doGet(any(), any())(any(), any())).thenReturn(Future.successful(HttpResponse(404)))
+      when(mockWsHttp.doGet(any(), any())(any(), any())).thenReturn(Future.successful(HttpResponse(404, "")))
       val result = await(TestConnector.getFileMetadata(envelopeId, fileId, userId))
       result shouldBe None
     }
@@ -118,12 +110,12 @@ class FileUploadConnectorSpec extends UnitSpec with RASWsHelpers with GuiceOneAp
 
   "deleteUploadedFile" should {
     "submit delete request to file-upload service" in {
-      when(mockWsHttp.doDelete(any(), any())(any(), any())).thenReturn(Future.successful(HttpResponse(200)))
+      when(mockWsHttp.doDelete(any(), any())(any(), any())).thenReturn(Future.successful(HttpResponse(200, "")))
       val result = await(TestConnector.deleteUploadedFile(envelopeId, fileId, userId))
       result shouldBe true
     }
     "failed delete request to file-upload service" in {
-      when(mockWsHttp.doDelete(any(), any())(any(), any())).thenReturn(Future.successful(HttpResponse(400)))
+      when(mockWsHttp.doDelete(any(), any())(any(), any())).thenReturn(Future.successful(HttpResponse(400, "")))
       val result = await(TestConnector.deleteUploadedFile(envelopeId, fileId, userId))
       result shouldBe false
     }

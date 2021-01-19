@@ -1,5 +1,5 @@
 /*
- * Copyright 2020 HM Revenue & Customs
+ * Copyright 2021 HM Revenue & Customs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -81,7 +81,7 @@ trait RasFileWriter {
   def closeWriter(writer:BufferedWriter):Boolean ={
     val res = Try(writer.close())
      res.recover{
-       case ex:Throwable => Logger.error(s"[RasFileReader][writeResultToFile] Failed to close the Outputstream with error ${ex.getMessage}.", ex)
+       case ex: Throwable => Logger.error(s"[RasFileReader][writeResultToFile] Failed to close the Outputstream with error ${ex.getMessage}.", ex)
          false
      }
     true

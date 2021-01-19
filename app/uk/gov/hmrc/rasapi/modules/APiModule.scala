@@ -1,5 +1,5 @@
 /*
- * Copyright 2020 HM Revenue & Customs
+ * Copyright 2021 HM Revenue & Customs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,7 +20,7 @@ package uk.gov.hmrc.rasapi.modules
 import play.api.inject.{Binding, Module}
 import play.api.{Configuration, Environment}
 import uk.gov.hmrc.http.cache.client.ShortLivedHttpCaching
-import uk.gov.hmrc.rasapi.config.{AppContext, RasAuthConnector, RasErrorHandler, RasSessionCache, RasShortLivedCache, RasShortLivedHttpCaching, WSHttp}
+import uk.gov.hmrc.rasapi.config.{AppContext, RasAuthConnector, RasSessionCache, RasShortLivedCache, RasShortLivedHttpCaching, WSHttp}
 import uk.gov.hmrc.rasapi.connectors.{DesConnector, FileUploadConnector}
 import uk.gov.hmrc.rasapi.controllers.{Documentation, FileController, FileProcessingController, LookupController}
 import uk.gov.hmrc.rasapi.helpers.ResidencyYearResolver

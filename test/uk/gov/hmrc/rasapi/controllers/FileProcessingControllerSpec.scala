@@ -1,5 +1,5 @@
 /*
- * Copyright 2020 HM Revenue & Customs
+ * Copyright 2021 HM Revenue & Customs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -84,7 +84,7 @@ class FileProcessingControllerSpec extends UnitSpec with MockitoSugar with Guice
 
         val result = SUT.statusCallback(userId, version = "2.0").apply(fakeRequest.withJsonBody(Json.toJson(callbackData)))
 
-        verifyZeroInteractions(mockFileProcessingService)
+        verifyNoInteractions(mockFileProcessingService)
         verify(mockSessionCacheService).updateFileSession(Meq(userId), Meq(callbackData), Meq(None), Meq(None))(any())
 
         status(result) shouldBe OK
@@ -99,8 +99,8 @@ class FileProcessingControllerSpec extends UnitSpec with MockitoSugar with Guice
 
         val result = SUT.statusCallback(userId, version = "2.0").apply(fakeRequest.withJsonBody(Json.toJson(callbackData)))
 
-        verifyZeroInteractions(mockFileProcessingService)
-        verifyZeroInteractions(mockSessionCacheService)
+        verifyNoInteractions(mockFileProcessingService)
+        verifyNoInteractions(mockSessionCacheService)
 
         status(result) shouldBe OK
       }
@@ -114,8 +114,8 @@ class FileProcessingControllerSpec extends UnitSpec with MockitoSugar with Guice
 
         val result = SUT.statusCallback(userId, version = "2.0").apply(fakeRequest.withJsonBody(Json.toJson(callbackData)))
 
-        verifyZeroInteractions(mockFileProcessingService)
-        verifyZeroInteractions(mockSessionCacheService)
+        verifyNoInteractions(mockFileProcessingService)
+        verifyNoInteractions(mockSessionCacheService)
 
         status(result) shouldBe OK
       }
@@ -129,8 +129,8 @@ class FileProcessingControllerSpec extends UnitSpec with MockitoSugar with Guice
 
         val result = SUT.statusCallback(userId, version = "2.0").apply(fakeRequest.withJsonBody(Json.toJson(callbackData)))
 
-        verifyZeroInteractions(mockFileProcessingService)
-        verifyZeroInteractions(mockSessionCacheService)
+        verifyNoInteractions(mockFileProcessingService)
+        verifyNoInteractions(mockSessionCacheService)
 
         status(result) shouldBe OK
       }

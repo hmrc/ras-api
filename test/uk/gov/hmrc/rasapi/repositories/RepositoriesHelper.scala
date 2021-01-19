@@ -1,5 +1,5 @@
 /*
- * Copyright 2020 HM Revenue & Customs
+ * Copyright 2021 HM Revenue & Customs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,25 +21,23 @@ import java.nio.file.{Files, Path}
 
 import play.api.{Application, Logger}
 import play.api.libs.iteratee.{Enumerator, Iteratee}
-import play.modules.reactivemongo.ReactiveMongoComponent
+import play.api.mvc.ControllerComponents
+import play.api.test.Helpers.stubControllerComponents
 import reactivemongo.api.DefaultDB
 import reactivemongo.api.commands.WriteResult
 import reactivemongo.bson.BSONDocument
 import uk.gov.hmrc.mongo.{MongoConnector, MongoSpecSupport}
 import uk.gov.hmrc.play.test.UnitSpec
-import uk.gov.hmrc.rasapi.config.AppContext
 import uk.gov.hmrc.rasapi.models.ResultsFile
-import uk.gov.hmrc.rasapi.repositories.RepositoriesHelper.rasFileRepository
 import uk.gov.hmrc.rasapi.repository.{RasChunksRepository, RasFilesRepository}
 import uk.gov.hmrc.rasapi.services.RasFileWriter
 
 import scala.concurrent.{ExecutionContext, Future}
-import scala.concurrent.ExecutionContext.Implicits.global
 import scala.io.Source
 import scala.util.Random
 
-object TestFileWriter extends RasFileWriter
-{
+object TestFileWriter extends RasFileWriter {
+
   def generateFile(data: Iterator[Any]) :Path = {
     val file = Files.createTempFile(Random.nextInt().toString,".csv")
     val outputStream = new BufferedWriter(new FileWriter(file.toFile))
@@ -60,6 +58,8 @@ object TestFileWriter extends RasFileWriter
 
 object RepositoriesHelper extends MongoSpecSupport with UnitSpec {
 
+  val cc: ControllerComponents = stubControllerComponents()
+  implicit val ec: ExecutionContext = cc.executionContext
 
   val hostPort = System.getProperty("mongoHostPort", "127.0.0.1:27017")
   override val  databaseName = "ras-api"
@@ -101,7 +101,7 @@ object RepositoriesHelper extends MongoSpecSupport with UnitSpec {
       Source.fromInputStream(inputStream).getLines
     }
 
-    def remove(fileName:String): Future[WriteResult] = {gridFSG.files.remove[BSONDocument](BSONDocument("filename"-> fileName))}
+    def remove(fileName:String): Future[WriteResult] = {gridFSG.files.delete.one(BSONDocument("filename"-> fileName))}
   }
 
   def rasBulkOperationsRepository(implicit app: Application): RasChunksRepository = app.injector.instanceOf[RasChunksRepository]

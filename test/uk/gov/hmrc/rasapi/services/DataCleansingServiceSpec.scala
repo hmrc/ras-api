@@ -1,5 +1,5 @@
 /*
- * Copyright 2020 HM Revenue & Customs
+ * Copyright 2021 HM Revenue & Customs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -50,8 +50,8 @@ with BeforeAndAfter  {
   "DataCleansingService" should{
 
     " not remove chunks that are not orphoned" in {
-      val testData1 = await(RepositoriesHelper.saveTempFile("user14","envelope14","fileId14"))
-      val testData2=  await(RepositoriesHelper.saveTempFile("user15","envelope15","fileId15"))
+      await(RepositoriesHelper.saveTempFile("user14","envelope14","fileId14"))
+      await(RepositoriesHelper.saveTempFile("user15","envelope15","fileId15"))
 
       val result = await(dataCleansingService.removeOrphanedChunks())
 

@@ -1,5 +1,5 @@
 /*
- * Copyright 2020 HM Revenue & Customs
+ * Copyright 2021 HM Revenue & Customs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -179,7 +179,7 @@ class FileProcessingServiceSpec extends UnitSpec with GuiceOneAppPerSuite with S
 
         val res = await(rasFileRepo.fetchFile(fileId, userId))
         var result = new String("")
-        val temp = await(res.get.data run getAll map { bytes => result = result.concat(new String(bytes)) })
+        await(res.get.data run getAll map { bytes => result = result.concat(new String(bytes)) })
         result.replaceAll("(\\r|\\n)", "") shouldBe expectedResultsFile.mkString
 
         Files.deleteIfExists(testFilePath)
@@ -260,7 +260,7 @@ class FileProcessingServiceSpec extends UnitSpec with GuiceOneAppPerSuite with S
 
         val res = await(rasFileRepo.fetchFile(fileId, userId))
         var result = new String("")
-        val temp = await(res.get.data run getAll map { bytes => result = result.concat(new String(bytes)) })
+        await(res.get.data run getAll map { bytes => result = result.concat(new String(bytes)) })
         result.replaceAll("(\\r|\\n)", "") shouldBe expectedResultsFile.mkString
         Files.deleteIfExists(testFilePath)
 
@@ -340,7 +340,7 @@ class FileProcessingServiceSpec extends UnitSpec with GuiceOneAppPerSuite with S
 
         val res = await(rasFileRepo.fetchFile(fileId, userId))
         var result = new String("")
-        val temp = await(res.get.data run getAll map { bytes => result = result.concat(new String(bytes)) })
+        await(res.get.data run getAll map { bytes => result = result.concat(new String(bytes)) })
         result.replaceAll("(\\r|\\n)", "") shouldBe expectedResultsFile.mkString
         Files.deleteIfExists(testFilePath)
 
@@ -419,7 +419,7 @@ class FileProcessingServiceSpec extends UnitSpec with GuiceOneAppPerSuite with S
 
         val res = await(rasFileRepo.fetchFile(fileId, userId))
         var result = new String("")
-        val temp = await(res.get.data run getAll map { bytes => result = result.concat(new String(bytes)) })
+        await(res.get.data run getAll map { bytes => result = result.concat(new String(bytes)) })
         result.replaceAll("(\\r|\\n)", "") shouldBe expectedResultsFile.mkString
         Files.deleteIfExists(testFilePath)
 
@@ -498,7 +498,7 @@ class FileProcessingServiceSpec extends UnitSpec with GuiceOneAppPerSuite with S
 
         val res = await(rasFileRepo.fetchFile(fileId, userId))
         var result = new String("")
-        val temp = await(res.get.data run getAll map { bytes => result = result.concat(new String(bytes)) })
+        await(res.get.data run getAll map { bytes => result = result.concat(new String(bytes)) })
         result.replaceAll("(\\r|\\n)", "") shouldBe expectedResultsFile.mkString
         Files.deleteIfExists(testFilePath)
 
@@ -576,7 +576,7 @@ class FileProcessingServiceSpec extends UnitSpec with GuiceOneAppPerSuite with S
 
         val res = await(rasFileRepo.fetchFile(fileId, userId))
         var result = new String("")
-        val temp = await(res.get.data run getAll map { bytes => result = result.concat(new String(bytes)) })
+        await(res.get.data run getAll map { bytes => result = result.concat(new String(bytes)) })
         result.replaceAll("(\\r|\\n)", "") shouldBe expectedResultsFile.mkString
         Files.deleteIfExists(testFilePath)
 
@@ -808,7 +808,7 @@ class FileProcessingServiceSpec extends UnitSpec with GuiceOneAppPerSuite with S
 
         val res = await(rasFileRepository(app.injector.instanceOf[RasFilesRepository]).fetchFile(fileId, userId))
         var result = new String("")
-        val temp = await(res.get.data run getAll map { bytes => result = result.concat(new String(bytes)) })
+        await(res.get.data run getAll map { bytes => result = result.concat(new String(bytes)) })
         result.replaceAll("(\\r|\\n)", "") shouldBe expectedResultsFile.mkString
         Files.deleteIfExists(testFilePath)
       }

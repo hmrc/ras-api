@@ -1,5 +1,5 @@
 /*
- * Copyright 2020 HM Revenue & Customs
+ * Copyright 2021 HM Revenue & Customs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,12 +21,12 @@ import org.mockito.ArgumentMatchers
 import org.mockito.ArgumentMatchers.{eq => Meq, _}
 import org.mockito.Mockito._
 import org.scalatest.BeforeAndAfter
-import org.scalatest.mockito.MockitoSugar
+import org.scalatestplus.mockito.MockitoSugar
 import org.scalatestplus.play.guice.GuiceOneAppPerSuite
 import play.api.inject.guice.GuiceApplicationBuilder
 import play.api.libs.functional.syntax.{unlift, _}
 import play.api.libs.json.{JsPath, Json, Writes}
-import play.api.mvc.ControllerComponents
+import play.api.mvc.{BodyParsers, ControllerComponents}
 import play.api.test.Helpers._
 import play.api.test.{FakeRequest, Helpers}
 import play.mvc.Http.HeaderNames
@@ -63,14 +63,15 @@ class LookupControllerSpec extends UnitSpec with MockitoSugar with GuiceOneAppPe
   val appContext = app.injector.instanceOf[AppContext]
   val errorConverer = app.injector.instanceOf[ErrorConverter]
   val mockCC = mock[ControllerComponents]
+  val mockParser = mock[BodyParsers.Default]
 
   val expectedNino = uk.gov.hmrc.rasapi.models.Nino("LE241131B")
 
   private val enrolmentIdentifier1 = EnrolmentIdentifier("PSAID", "A123456")
-  private val enrolment1 = new Enrolment(key = "HMRC-PSA-ORG", identifiers = List(enrolmentIdentifier1), state = "Activated", None)
+  private val enrolment1 = Enrolment(key = "HMRC-PSA-ORG", identifiers = List(enrolmentIdentifier1), state = "Activated", None)
   private val enrolmentIdentifier2 = EnrolmentIdentifier("PPID", "A123456")
-  private val enrolment2 = new Enrolment(key = "HMRC-PP-ORG", identifiers = List(enrolmentIdentifier2), state = "Activated", None)
-  private val enrolments = new Enrolments(Set(enrolment1, enrolment2))
+  private val enrolment2 = Enrolment(key = "HMRC-PP-ORG", identifiers = List(enrolmentIdentifier2), state = "Activated", None)
+  private val enrolments = Enrolments(Set(enrolment1, enrolment2))
 
   val successfulRetrieval: Future[Enrolments] = Future.successful(enrolments)
 
@@ -98,7 +99,8 @@ class LookupControllerSpec extends UnitSpec with MockitoSugar with GuiceOneAppPe
     appContext,
     errorConverer,
     mockCC,
-    ExecutionContext.global
+    ExecutionContext.global,
+    mockParser
   ) {
 
     override def getCurrentDate: DateTime = new DateTime(2018, 7, 6, 0, 0, 0, 0)
@@ -120,7 +122,8 @@ class LookupControllerSpec extends UnitSpec with MockitoSugar with GuiceOneAppPe
     appContext,
     errorConverer,
     mockCC,
-    ExecutionContext.global
+    ExecutionContext.global,
+    mockParser
   ) {
     override def getCurrentDate: DateTime = new DateTime(2018, 2, 15, 0, 0, 0, 0)
 
@@ -141,7 +144,8 @@ class LookupControllerSpec extends UnitSpec with MockitoSugar with GuiceOneAppPe
     appContext,
     errorConverer,
     mockCC,
-    ExecutionContext.global
+    ExecutionContext.global,
+    mockParser
   ) {
     override def getCurrentDate: DateTime = new DateTime(2019, 2, 15, 0, 0, 0, 0)
 
@@ -162,7 +166,8 @@ class LookupControllerSpec extends UnitSpec with MockitoSugar with GuiceOneAppPe
     appContext,
     errorConverer,
     mockCC,
-    ExecutionContext.global
+    ExecutionContext.global,
+    mockParser
   ) {
     override def getCurrentDate: DateTime = new DateTime(2019, 1, 1, 0, 0, 0, 0)
 

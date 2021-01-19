@@ -1,5 +1,5 @@
 /*
- * Copyright 2020 HM Revenue & Customs
+ * Copyright 2021 HM Revenue & Customs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,7 +20,7 @@ import org.mockito.ArgumentCaptor
 import org.mockito.ArgumentMatchers._
 import org.mockito.Mockito._
 import org.scalatest.BeforeAndAfter
-import org.scalatest.mockito.MockitoSugar
+import org.scalatestplus.mockito.MockitoSugar
 import org.scalatestplus.play.guice.GuiceOneAppPerSuite
 import play.api.Configuration
 import uk.gov.hmrc.play.audit.http.connector.AuditConnector
@@ -52,7 +52,7 @@ trait AuditServiceSpec extends UnitSpec with MockitoSugar with GuiceOneAppPerSui
 
     "build an audit event with the correct mandatory details" in {
 
-      val result = SUT.audit(fakeAuditType, fakeEndpoint, auditDataMap)
+      SUT.audit(fakeAuditType, fakeEndpoint, auditDataMap)
       val captor = ArgumentCaptor.forClass(classOf[DataEvent])
 
       verify(mockAuditConnector).sendEvent(captor.capture())(any(), any())
@@ -65,7 +65,7 @@ trait AuditServiceSpec extends UnitSpec with MockitoSugar with GuiceOneAppPerSui
 
     "build an audit event with the correct tags" in {
 
-      val result = SUT.audit(fakeAuditType, fakeEndpoint, auditDataMap)
+      SUT.audit(fakeAuditType, fakeEndpoint, auditDataMap)
       val captor = ArgumentCaptor.forClass(classOf[DataEvent])
 
       verify(mockAuditConnector).sendEvent(captor.capture())(any(), any())
@@ -79,7 +79,7 @@ trait AuditServiceSpec extends UnitSpec with MockitoSugar with GuiceOneAppPerSui
 
     "build an audit event with the correct detail" in {
 
-      val result = SUT.audit(fakeAuditType, fakeEndpoint, auditDataMap)
+      SUT.audit(fakeAuditType, fakeEndpoint, auditDataMap)
       val captor = ArgumentCaptor.forClass(classOf[DataEvent])
 
       verify(mockAuditConnector).sendEvent(captor.capture())(any(), any())
@@ -93,7 +93,7 @@ trait AuditServiceSpec extends UnitSpec with MockitoSugar with GuiceOneAppPerSui
 
     "send an event via the audit connector" in {
 
-      val result = SUT.audit(fakeAuditType, fakeEndpoint, auditDataMap)
+      SUT.audit(fakeAuditType, fakeEndpoint, auditDataMap)
       verify(mockAuditConnector).sendEvent(any())(any(), any())
     }
   }

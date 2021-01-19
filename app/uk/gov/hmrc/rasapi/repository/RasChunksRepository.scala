@@ -1,5 +1,5 @@
 /*
- * Copyright 2020 HM Revenue & Customs
+ * Copyright 2021 HM Revenue & Customs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,7 +19,7 @@ package uk.gov.hmrc.rasapi.repository
 import javax.inject.Inject
 import play.api.Logger
 import play.modules.reactivemongo.ReactiveMongoComponent
-import reactivemongo.api.{Cursor, DB, DBMetaCommands}
+import reactivemongo.api.Cursor
 import reactivemongo.bson.{BSONDocument, BSONObjectID}
 import reactivemongo.play.json.ImplicitBSONHandlers._
 import uk.gov.hmrc.mongo.ReactiveRepository
@@ -41,7 +41,7 @@ class RasChunksRepository @Inject()(
 
     // only fetch the id and files-id field for the result documents
     val projection = BSONDocument("_id" -> 1, "files_id" -> 2)
-    collection.find(query,projection).cursor[Chunks]().collect[Seq](Int.MaxValue, Cursor.FailOnError()).recover {
+    collection.find(query,Some(projection)).cursor[Chunks]().collect[Seq](Int.MaxValue, Cursor.FailOnError()).recover {
       case ex: Throwable =>
         Logger.error(s"[RasChunksRepository][getAllChunks] Error fetching chunks  ${ex.getMessage}.", ex)
         Seq.empty
@@ -51,7 +51,7 @@ class RasChunksRepository @Inject()(
 
   def removeChunk(filesId:BSONObjectID): Future[Boolean] = {
     val query = BSONDocument("files_id" -> filesId)
-    collection.remove(query).map(res=> res.writeErrors.isEmpty).recover{
+    collection.delete.one(query).map(res=> res.writeErrors.isEmpty).recover{
       case ex:Throwable =>
         Logger.error(s"[RasChunksRepository][removeChunk] error removing chunk ${filesId} with the exception ${ex.getMessage}.")
         false

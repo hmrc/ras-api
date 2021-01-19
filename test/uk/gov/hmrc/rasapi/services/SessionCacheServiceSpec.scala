@@ -1,5 +1,5 @@
 /*
- * Copyright 2020 HM Revenue & Customs
+ * Copyright 2021 HM Revenue & Customs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,8 +21,8 @@ import org.mockito.ArgumentMatchers._
 import org.mockito.Mockito._
 import org.scalatest.BeforeAndAfter
 import org.scalatest.concurrent.ScalaFutures
-import org.scalatest.mockito.MockitoSugar
-import org.scalatestplus.play.OneServerPerSuite
+import org.scalatestplus.mockito.MockitoSugar
+import org.scalatestplus.play.guice.GuiceOneServerPerSuite
 import play.api.libs.json.{Json, Writes}
 import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.http.cache.client.{CacheMap, ShortLivedHttpCaching}
@@ -31,7 +31,7 @@ import uk.gov.hmrc.rasapi.models.{CallbackData, FileMetadata, FileSession, Resul
 
 import scala.concurrent.{ExecutionContext, Future}
 
-class SessionCacheServiceSpec extends UnitSpec with OneServerPerSuite with ScalaFutures with MockitoSugar with BeforeAndAfter {
+class SessionCacheServiceSpec extends UnitSpec with GuiceOneServerPerSuite with ScalaFutures with MockitoSugar with BeforeAndAfter {
   implicit val hc: HeaderCarrier = HeaderCarrier()
   val fileId = "file-id-1"
   val fileStatus = "AVAILABLE"
