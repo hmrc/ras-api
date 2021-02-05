@@ -100,7 +100,7 @@ class RasFileRepositoryISpec extends PlaySpec with ScalaFutures with GuiceOneApp
     "remove all chunks and files from the database" in new Setup("delete-file-name") {
       saveFile()
 
-      val deleteFile: Boolean = await(rasFileRepository.removeFile(filename, "fileId-1", "userid-1"))
+      val deleteFile: Boolean = await(rasFileRepository.removeFile(filename, "userid-1"))
       deleteFile mustBe true
 
       eventually(Timeout(5 seconds), Interval(1 second)) {

@@ -57,7 +57,7 @@ class FileProcessingApiISpec extends PlaySpec with ScalaFutures
     ))
 
     def dropAll(): Boolean = {
-      await(rasFileRepository.removeFile(filename, filename, "userid-1"))
+      await(rasFileRepository.removeFile(filename, "userid-1"))
     }
   }
 

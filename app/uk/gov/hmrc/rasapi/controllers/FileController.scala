@@ -83,27 +83,27 @@ class FileController @Inject()(
           }
   }
 
-  def remove(fileName:String, fileId:String):  Action[AnyContent] = Action.async {
+  def remove(fileName: String, userId: String):  Action[AnyContent] = Action.async {
     implicit request =>
       val apiMetrics = metrics.register(fileRemove).time
       authorised(AuthProviders(GovernmentGateway) and (Enrolment(PSA_ENROLMENT) or Enrolment(PP_ENROLMENT))).retrieve(authorisedEnrolments) {
         enrols =>
           val id = getEnrolmentIdentifier(enrols)
-          deleteFile(fileName, fileId:String, id).flatMap { res=>
-            (parseStringIdToBSONObjectId(fileId) match {
+          deleteFile(fileName, id).flatMap { res =>
+            (parseStringIdToBSONObjectId(fileName) match {
               case Success(bsonId) => chunksRepo.removeChunk(bsonId).map { isChunkRemoved =>
                 if (isChunkRemoved) {
-                  Logger.info(s"[FileController][remove] Chunk deletion succeeded, fileId is: ${fileId}")
+                  Logger.info(s"[FileController][remove] Chunk deletion succeeded, fileName is: ${fileName}")
                   auditService.audit(auditType = "FileDeletion",
                     path = request.path,
-                    auditData = Map("userIdentifier" -> id, "fileId" -> fileId, "chunkDeletionSuccess" -> "true")
+                    auditData = Map("userIdentifier" -> id, "fileName" -> fileName, "chunkDeletionSuccess" -> "true")
                   )
                 } else {
                   auditService.audit(auditType = "FileDeletion",
                     path = request.path,
-                    auditData = Map("userIdentifier" -> id, "fileId" -> fileId, "chunkDeletionSuccess" -> "false")
+                    auditData = Map("userIdentifier" -> id, "fileName" -> fileName, "chunkDeletionSuccess" -> "false")
                   )
-                  Logger.warn(s"[FileController][remove] Chunk deletion failed, fileId is: ${fileId}")
+                  Logger.warn(s"[FileController][remove] Chunk deletion failed, fileName is: ${fileName}")
                 }
               }.recover {
                 case ex: Throwable => {
@@ -111,11 +111,11 @@ class FileController @Inject()(
                 }
               }.map(_ => ())
               case Failure(ex) => {
-                Logger.warn(s"[FileController][remove] Exception ${ex.getMessage} was thrown, the following fileId ($fileId) could not be converted to a BSONObjectId.")
+                Logger.warn(s"[FileController][remove] Exception ${ex.getMessage} was thrown, the following file ($fileName) and userID $id could not be converted to a BSONObjectId.")
                 auditService.audit(auditType = "FileDeletion",
                   path = request.path,
-                  auditData = Map("userIdentifier" -> id, "fileId" -> fileId, "chunkDeletionSuccess" -> "false",
-                    "reason" -> "fileId could not be converted to BSONObjectId")
+                  auditData = Map("userIdentifier" -> id, "fileName" -> fileName, "chunkDeletionSuccess" -> "false",
+                    "reason" -> "fileName could not be converted to BSONObjectId")
                 )
                 Future.successful(())
               }
@@ -146,10 +146,9 @@ class FileController @Inject()(
 
   // $COVERAGE-OFF$Trivial and never going to be called by a test that uses it's own object implementation
 
-  def getFile(name:String, userId: String): Future[Option[FileData]] = fileRepo.fetchFile(name, userId)
+  def getFile(name: String, userId: String): Future[Option[FileData]] = fileRepo.fetchFile(name, userId)
 
-  //TODO: name and fileid are the same so might want to refactor it
-  def deleteFile(name:String, fileId:String, userId: String):Future[Boolean] = fileRepo.removeFile(name,fileId,userId)
+  def deleteFile(name: String, userId: String): Future[Boolean] = fileRepo.removeFile(name, userId)
   // $COVERAGE-ON$
 
 
