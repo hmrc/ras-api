@@ -104,9 +104,8 @@ class RasFilesRepository @Inject()(
       }
     }
 
-  // TODO: fileName and fileId are the same thing
-  def removeFile(fileName:String, fileId:String, userId: String): Future[Boolean] = {
-    logger.debug(s"file to remove => fileName: $fileName, file Id: $fileId for userId ($userId).")
+  def removeFile(fileName: String, userId: String): Future[Boolean] = {
+    logger.debug(s"file to remove => fileName: $fileName for userId ($userId).")
     getBsonObjectIdFromFileName(fileName).flatMap {
       case Some(bsonObjectId) =>
         logger.info(s"[RasFileRepository][removeFile] successfully got id for file. BSONObjectId: ${bsonObjectId.stringify}")

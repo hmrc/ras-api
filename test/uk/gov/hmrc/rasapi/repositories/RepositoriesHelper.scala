@@ -78,7 +78,7 @@ object RepositoriesHelper extends MongoSpecSupport with UnitSpec {
     await(TestFileWriter.generateFile(resultsArr.iterator))
   }
 
-  def saveTempFile(userID:String, envelopeID:String,fileId:String)(implicit rasFileRepository: RasFilesRepository): ResultsFile = {
+  def saveTempFile(userID: String, envelopeID: String, fileId: String)(implicit rasFileRepository: RasFilesRepository): ResultsFile = {
     val filePath = await(TestFileWriter.generateFile(tempFile.iterator))
     await(rasFileRepository.saveFile(userID, envelopeID, filePath, fileId))
   }

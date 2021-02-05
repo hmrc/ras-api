@@ -49,10 +49,10 @@ class RasChunksRepository @Inject()(
 
   }
 
-  def removeChunk(filesId:BSONObjectID): Future[Boolean] = {
+  def removeChunk(filesId: BSONObjectID): Future[Boolean] = {
     val query = BSONDocument("files_id" -> filesId)
     collection.delete.one(query).map(res=> res.writeErrors.isEmpty).recover{
-      case ex:Throwable =>
+      case ex: Throwable =>
         Logger.error(s"[RasChunksRepository][removeChunk] error removing chunk ${filesId} with the exception ${ex.getMessage}.")
         false
     }

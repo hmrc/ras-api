@@ -29,7 +29,7 @@ ScoverageKeys.coverageExcludedPackages  := "<empty>;" +
   "uk.gov.hmrc.rasapi.controllers.Documentation;" +
   "dev.*;" +
   "matching.*"
-ScoverageKeys.coverageMinimum           := 70
+ScoverageKeys.coverageMinimum           := 80
 ScoverageKeys.coverageFailOnMinimum     := false
 ScoverageKeys.coverageHighlighting      := true
 parallelExecution in Test               := false
@@ -60,12 +60,12 @@ lazy val silencerVersion = "1.7.1"
 libraryDependencies ++= Seq(
   ws,
   "uk.gov.hmrc"       %% "bootstrap-play-26"    % "2.3.0",
-  "uk.gov.hmrc"       %% "domain"               % "5.6.0-play-26",
-  "uk.gov.hmrc"       %% "mongo-caching"        % "6.15.0-play-26" excludeAll excludeIteratees,
+  "uk.gov.hmrc"       %% "domain"               % "5.10.0-play-26",
+  "uk.gov.hmrc"       %% "mongo-caching"        % "6.16.0-play-26" excludeAll excludeIteratees,
   "uk.gov.hmrc"       %% "simple-reactivemongo" % "7.31.0-play-26" excludeAll excludeIteratees,
-  "uk.gov.hmrc"       %% "json-encryption"      % "4.5.0-play-26",
+  "uk.gov.hmrc"       %% "json-encryption"      % "4.8.0-play-26",
   "uk.gov.hmrc"       %% "play-hmrc-api"        % "4.1.0-play-26",
-  "uk.gov.hmrc"       %% "http-caching-client"  % "9.0.0-play-26",
+  "uk.gov.hmrc"       %% "http-caching-client"  % "9.2.0-play-26",
   "com.typesafe.play" %% "play-iteratees-reactive-streams" % "2.6.1",
   "joda-time"         % "joda-time"             % "2.10.9",
   compilerPlugin("com.github.ghik" % "silencer-plugin" % silencerVersion cross CrossVersion.full),
@@ -84,12 +84,12 @@ dependencyOverrides ++= Seq(
 val scope = "test,it"
 
 libraryDependencies ++= Seq(
-  "uk.gov.hmrc"               %% "hmrctest"           % "3.9.0-play-26"   % scope,
+  "uk.gov.hmrc"               %% "hmrctest"           % "3.10.0-play-26"   % scope,
   "org.scalatest"             %% "scalatest"          % "3.0.9"           % scope,
   "org.pegdown"               %  "pegdown"            % "1.6.0"           % scope,
   "org.scalatestplus.play"    %% "scalatestplus-play" % "3.1.3"           % scope,
   "org.mockito"               %  "mockito-core"       % "3.3.3"           % scope,
-  "uk.gov.hmrc"               %% "reactivemongo-test" % "4.21.0-play-26"  % scope excludeAll excludeIteratees,
+  "uk.gov.hmrc"               %% "reactivemongo-test" % "4.22.0-play-26"  % scope excludeAll excludeIteratees,
   "com.typesafe.akka"         %  "akka-testkit_2.12"  % akkaVersion       % scope,
   "de.leanovate.play-mockws"  %% "play-mockws"        % "2.6.6"           % scope excludeAll excludeIteratees,
   "com.github.tomakehurst"    %  "wiremock-jre8"      % "2.21.0"          % scope

@@ -75,7 +75,7 @@ class RasFileRepositorySpec extends UnitSpec with MockitoSugar with GuiceOneAppP
       val resultFile = await(RepositoriesHelper.saveTempFile("user222","envelope222","file222"))
       Logger.info(s"file to remove ---> name : ${resultFile.filename.get} id = ${resultFile.id}  " )
 
-      val res = await(rasFileRepository.removeFile(resultFile.filename.get,resultFile.id.toString, userId))
+      val res = await(rasFileRepository.removeFile(resultFile.filename.get, userId))
       res shouldBe true
 
       eventually(Timeout(5 seconds), Interval(1 second)){
@@ -92,7 +92,7 @@ class RasFileRepositorySpec extends UnitSpec with MockitoSugar with GuiceOneAppP
         resultFile.id.asInstanceOf[BSONObjectID]))
       // res.get.data. shouldBe tempFile
         res.isDefined shouldBe true
-      await(rasFileRepository.removeFile(resultFile.filename.get,resultFile.id.toString, userId))
+      await(rasFileRepository.removeFile(resultFile.filename.get, userId))
 
     }
 
