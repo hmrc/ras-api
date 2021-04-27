@@ -1,19 +1,13 @@
 
-import play.core.PlayVersion
 import scoverage.ScoverageKeys
 import uk.gov.hmrc.DefaultBuildSettings
 
 val appName = "ras-api"
 
 lazy val microservice = Project(appName, file("."))
-  .enablePlugins(Seq(play.sbt.PlayScala,SbtAutoBuildPlugin, SbtGitVersioning, SbtDistributablesPlugin, SbtArtifactory): _*)
+  .enablePlugins(Seq(play.sbt.PlayScala, SbtAutoBuildPlugin, SbtGitVersioning, SbtDistributablesPlugin): _*)
   .disablePlugins(JUnitXmlReportPlugin)
   .configs(IntegrationTest)
-
-resolvers ++= Seq(
-  Resolver.bintrayRepo("hmrc", "releases"),
-  Resolver.jcenterRepo
-)
 
 // scoverage settings
 ScoverageKeys.coverageExcludedPackages  := "<empty>;" +
@@ -84,15 +78,15 @@ dependencyOverrides ++= Seq(
 val scope = "test,it"
 
 libraryDependencies ++= Seq(
-  "uk.gov.hmrc"               %% "hmrctest"           % "3.10.0-play-26"   % scope,
-  "org.scalatest"             %% "scalatest"          % "3.0.9"           % scope,
-  "org.pegdown"               %  "pegdown"            % "1.6.0"           % scope,
-  "org.scalatestplus.play"    %% "scalatestplus-play" % "3.1.3"           % scope,
-  "org.mockito"               %  "mockito-core"       % "3.3.3"           % scope,
-  "uk.gov.hmrc"               %% "reactivemongo-test" % "4.22.0-play-26"  % scope excludeAll excludeIteratees,
-  "com.typesafe.akka"         %  "akka-testkit_2.12"  % akkaVersion       % scope,
-  "de.leanovate.play-mockws"  %% "play-mockws"        % "2.6.6"           % scope excludeAll excludeIteratees,
-  "com.github.tomakehurst"    %  "wiremock-jre8"      % "2.21.0"          % scope
+  "uk.gov.hmrc"               %% "hmrctest"           % "3.10.0-play-26" % scope,
+  "org.scalatest"             %% "scalatest"          % "3.0.9"          % scope,
+  "org.pegdown"               %  "pegdown"            % "1.6.0"          % scope,
+  "org.scalatestplus.play"    %% "scalatestplus-play" % "3.1.3"          % scope,
+  "org.mockito"               %  "mockito-core"       % "3.3.3"          % scope,
+  "uk.gov.hmrc"               %% "reactivemongo-test" % "4.22.0-play-26" % scope excludeAll excludeIteratees,
+  "com.typesafe.akka"         %  "akka-testkit_2.12"  % akkaVersion      % scope,
+  "de.leanovate.play-mockws"  %% "play-mockws"        % "2.6.6"          % scope excludeAll excludeIteratees,
+  "com.github.tomakehurst"    %  "wiremock-jre8"      % "2.21.0"         % scope
 )
 
 scalacOptions ++= Seq(
