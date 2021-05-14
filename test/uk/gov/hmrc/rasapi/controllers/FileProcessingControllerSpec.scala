@@ -18,7 +18,7 @@ package uk.gov.hmrc.rasapi.controllers
 
 import org.mockito.ArgumentMatchers.{any, eq => Meq}
 import org.mockito.Mockito._
-import org.scalatest.BeforeAndAfter
+import org.scalatest.{BeforeAndAfter, Matchers, WordSpecLike}
 import org.scalatestplus.mockito.MockitoSugar
 import org.scalatestplus.play.guice.GuiceOneAppPerSuite
 import play.api.Application
@@ -27,26 +27,27 @@ import play.api.inject.guice.GuiceApplicationBuilder
 import play.api.libs.json.Json
 import play.api.mvc.ControllerComponents
 import play.api.test.FakeRequest
-import uk.gov.hmrc.play.test.UnitSpec
+import play.api.test.Helpers.{defaultAwaitTimeout, status}
+import uk.gov.hmrc.mongo.Awaiting
 import uk.gov.hmrc.rasapi.models.{CallbackData, ResultsFileMetaData, V2_0}
 import uk.gov.hmrc.rasapi.services.{FileProcessingService, SessionCacheService}
 
 import scala.concurrent.ExecutionContext
 import scala.util.Random
 
-class FileProcessingControllerSpec extends UnitSpec with MockitoSugar with GuiceOneAppPerSuite with BeforeAndAfter {
+class FileProcessingControllerSpec extends WordSpecLike with Matchers with Awaiting with MockitoSugar with GuiceOneAppPerSuite with BeforeAndAfter {
 
   val envelopeId = "0b215ey97-11d4-4006-91db-c067e74fc653"
   val fileId = "file-id-1"
   val fileStatus = "AVAILABLE"
   val reason: Option[String] = None
-  val callbackData = CallbackData(envelopeId, fileId, fileStatus, reason)
-  val resultsFile = ResultsFileMetaData(fileId, Some("fileName.csv"), Some(1234L), 123, 1234L)
+  val callbackData: CallbackData = CallbackData(envelopeId, fileId, fileStatus, reason)
+  val resultsFile: ResultsFileMetaData = ResultsFileMetaData(fileId, Some("fileName.csv"), Some(1234L), 123, 1234L)
   val userId: String = Random.nextInt(5).toString
 
-  val mockFileProcessingService = mock[FileProcessingService]
-  val mockSessionCacheService = mock[SessionCacheService]
-  val mockCC = app.injector.instanceOf[ControllerComponents]
+  val mockFileProcessingService: FileProcessingService = mock[FileProcessingService]
+  val mockSessionCacheService: SessionCacheService = mock[SessionCacheService]
+  val mockCC: ControllerComponents = app.injector.instanceOf[ControllerComponents]
 
   val SUT = new FileProcessingController(mockSessionCacheService, mockFileProcessingService, mockCC, ExecutionContext.global)
 
@@ -66,7 +67,7 @@ class FileProcessingControllerSpec extends UnitSpec with MockitoSugar with Guice
     "return Ok and interact with FileProcessingService and SessionCacheService" when {
       "an 'AVAILABLE' status is given" in {
 
-        val result = await(SUT.statusCallback(userId, version = "2.0").apply(fakeRequest.withJsonBody(Json.toJson(callbackData))))
+        val result = SUT.statusCallback(userId, version = "2.0").apply(fakeRequest.withJsonBody(Json.toJson(callbackData)))
 
         verify(mockFileProcessingService).processFile(Meq(userId), Meq(callbackData), Meq(V2_0))(any(), any())
 

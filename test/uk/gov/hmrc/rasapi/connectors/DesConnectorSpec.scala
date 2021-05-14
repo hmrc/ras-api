@@ -20,22 +20,22 @@ import org.joda.time.DateTime
 import org.mockito.ArgumentMatchers._
 import org.mockito.ArgumentMatchers.{eq => Meq}
 import org.mockito.Mockito.{reset, times, verify, when}
-import org.scalatest.BeforeAndAfter
+import org.scalatest.{BeforeAndAfter, Matchers, WordSpecLike}
 import org.scalatestplus.mockito.MockitoSugar
 import org.scalatestplus.play.guice.GuiceOneAppPerSuite
 import play.api.libs.json.{JsValue, Json, OFormat}
 import uk.gov.hmrc.http._
+import uk.gov.hmrc.mongo.Awaiting
 import uk.gov.hmrc.play.bootstrap.http.DefaultHttpClient
-import uk.gov.hmrc.play.test.UnitSpec
 import uk.gov.hmrc.rasapi.config.AppContext
 import uk.gov.hmrc.rasapi.models._
 import uk.gov.hmrc.rasapi.services.AuditService
 
 import scala.concurrent.{ExecutionContext, Future}
 
-class DesConnectorSpec extends UnitSpec with GuiceOneAppPerSuite with BeforeAndAfter with MockitoSugar {
+class DesConnectorSpec extends WordSpecLike with Matchers with GuiceOneAppPerSuite with BeforeAndAfter with MockitoSugar with Awaiting {
 
-  implicit val hc = HeaderCarrier()
+  implicit val hc: HeaderCarrier = HeaderCarrier()
 
   val mockHttp: DefaultHttpClient = mock[DefaultHttpClient]
   val mockAuditService: AuditService = mock[AuditService]
@@ -49,7 +49,6 @@ class DesConnectorSpec extends UnitSpec with GuiceOneAppPerSuite with BeforeAndA
 
   object TestDesConnector extends DesConnector(mockHttp, mockAuditService, appContext, ExecutionContext.global) {
     override lazy val desBaseUrl = ""
-    override lazy val edhUrl: String = "test-url"
     override val auditService: AuditService = mockAuditService
     override lazy val allowNoNextYearStatus: Boolean = true
     override lazy val retryLimit: Int = 3
@@ -60,15 +59,15 @@ class DesConnectorSpec extends UnitSpec with GuiceOneAppPerSuite with BeforeAndA
     override lazy val isBulkRetryEnabled: Boolean = false
   }
 
-  val individualDetails = IndividualDetails("LE241131B", "Joe", "Bloggs", new DateTime("1990-12-03"))
+  val individualDetails: IndividualDetails = IndividualDetails("LE241131B", "Joe", "Bloggs", new DateTime("1990-12-03"))
   val userId = "A123456"
 
-  val residencyStatus = ResidencyStatus(currentYearResidencyStatus = "scotResident",
+  val residencyStatus: ResidencyStatus = ResidencyStatus(currentYearResidencyStatus = "scotResident",
     nextYearForecastResidencyStatus = Some("scotResident"))
 
-  val residencyStatusFailure = ResidencyStatusFailure("500", "HODS NOT AVAILABLE")
+  val residencyStatusFailure: ResidencyStatusFailure = ResidencyStatusFailure("500", "HODS NOT AVAILABLE")
 
-  val residencyStatusJson = Json.parse(
+  val residencyStatusJson: JsValue = Json.parse(
     """{
          "currentYearResidencyStatus" : "scotResident",
          "nextYearForecastResidencyStatus" : "scotResident"
@@ -83,7 +82,7 @@ class DesConnectorSpec extends UnitSpec with GuiceOneAppPerSuite with BeforeAndA
        |  "firstName": "${individualDetails.firstName}",
        |  "lastName": "${individualDetails.lastName}",
        |  "dob": "${individualDetails.dateOfBirth.toString("yyyy-MM-dd")}",
-       |  "pensionSchemeOrganisationID": "${userId}"
+       |  "pensionSchemeOrganisationID": "$userId"
        |}
     """.stripMargin
   )
@@ -215,7 +214,6 @@ class DesConnectorSpec extends UnitSpec with GuiceOneAppPerSuite with BeforeAndA
 
       object TestDesConnector extends DesConnector(mockHttp, mockAuditService, appContext, ExecutionContext.global) {
         override lazy val desBaseUrl = ""
-        override lazy val edhUrl: String = "test-url"
         override val auditService: AuditService = mockAuditService
         override lazy val allowNoNextYearStatus: Boolean = true
         override lazy val retryLimit: Int = 3
@@ -253,7 +251,6 @@ class DesConnectorSpec extends UnitSpec with GuiceOneAppPerSuite with BeforeAndA
 
       object TestDesConnector extends DesConnector(mockHttp, mockAuditService, appContext, ExecutionContext.global) {
         override lazy val desBaseUrl = ""
-        override lazy val edhUrl: String = "test-url"
         override val auditService: AuditService = mockAuditService
         override lazy val allowNoNextYearStatus: Boolean = true
         override lazy val retryLimit: Int = 3
@@ -285,7 +282,6 @@ class DesConnectorSpec extends UnitSpec with GuiceOneAppPerSuite with BeforeAndA
 
       object TestDesConnector extends DesConnector(mockHttp, mockAuditService, appContext, ExecutionContext.global) {
         override lazy val desBaseUrl = ""
-        override lazy val edhUrl: String = "test-url"
         override val auditService: AuditService = mockAuditService
         override lazy val allowNoNextYearStatus: Boolean = false
         override lazy val retryLimit: Int = 3

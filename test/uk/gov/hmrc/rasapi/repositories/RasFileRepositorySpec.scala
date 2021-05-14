@@ -16,24 +16,22 @@
 
 package uk.gov.hmrc.rasapi.repositories
 
-import org.scalatest.BeforeAndAfter
-import org.scalatestplus.mockito.MockitoSugar
-import play.api.Logger
-import uk.gov.hmrc.play.test.UnitSpec
-
-import scala.collection.mutable.ListBuffer
-import scala.concurrent.ExecutionContext.Implicits.global
-import RepositoriesHelper.createFile
 import org.scalatest.concurrent.Eventually
 import org.scalatest.concurrent.PatienceConfiguration.{Interval, Timeout}
+import org.scalatest.{BeforeAndAfter, Matchers, WordSpecLike}
+import org.scalatestplus.mockito.MockitoSugar
 import org.scalatestplus.play.guice.GuiceOneAppPerSuite
+import play.api.Logging
 import reactivemongo.bson.{BSONDocument, BSONObjectID}
+import uk.gov.hmrc.mongo.Awaiting
+import uk.gov.hmrc.rasapi.repositories.RepositoriesHelper.createFile
 import uk.gov.hmrc.rasapi.repository.RasFilesRepository
 
+import scala.collection.mutable.ListBuffer
 import scala.concurrent.duration._
 
-class RasFileRepositorySpec extends UnitSpec with MockitoSugar with GuiceOneAppPerSuite
-  with BeforeAndAfter with Eventually {
+class RasFileRepositorySpec extends WordSpecLike with Matchers with Awaiting with MockitoSugar with GuiceOneAppPerSuite
+  with BeforeAndAfter with Eventually with Logging {
 
   val userId: String = "A1234567"
 
@@ -55,15 +53,15 @@ class RasFileRepositorySpec extends UnitSpec with MockitoSugar with GuiceOneAppP
       val file = await(rasFileRepository.saveFile("user111","envelope111",createFile,"file111" ))
 
       file.filename.get shouldBe "file111"
-      val result =  await(rasFileRepository.getFile(file))
-        val actual = result.toArray
-      Logger.debug(actual.mkString)
+      val result =  rasFileRepository.getFile(file)
+      val actual = result.toArray
+      logger.debug(actual.mkString)
         actual shouldBe RepositoriesHelper.resultsArr
     }
 
     "get File" in {
-      val resultFile = await(RepositoriesHelper.saveTempFile("user123","envelope123","file123"))
-      Logger.debug("resultFile.id.toString  -> " + resultFile.id.toString)
+      val resultFile = RepositoriesHelper.saveTempFile("user123","envelope123","file123")
+      logger.debug("resultFile.id.toString  -> " + resultFile.id.toString)
       val res = await(rasFileRepository.fetchFile(resultFile.filename.get, userId))
      // res.get.data. shouldBe tempFile
       val result = ListBuffer[String]()
@@ -72,8 +70,8 @@ class RasFileRepositorySpec extends UnitSpec with MockitoSugar with GuiceOneAppP
 
 
     "removeFile" in {
-      val resultFile = await(RepositoriesHelper.saveTempFile("user222","envelope222","file222"))
-      Logger.info(s"file to remove ---> name : ${resultFile.filename.get} id = ${resultFile.id}  " )
+      val resultFile = RepositoriesHelper.saveTempFile("user222","envelope222","file222")
+      logger.info(s"file to remove ---> name : ${resultFile.filename.get} id = ${resultFile.id}  " )
 
       val res = await(rasFileRepository.removeFile(resultFile.filename.get, userId))
       res shouldBe true
@@ -86,8 +84,8 @@ class RasFileRepositorySpec extends UnitSpec with MockitoSugar with GuiceOneAppP
     }
 
     "check if File exists" in {
-      val resultFile = await(RepositoriesHelper.saveTempFile("user124","envelope124","file444"))
-      Logger.debug("resultFile.id.toString  -> " + resultFile.id.toString)
+      val resultFile = RepositoriesHelper.saveTempFile("user124","envelope124","file444")
+      logger.debug("resultFile.id.toString  -> " + resultFile.id.toString)
       val res = await(rasFileRepository. isFileExists(
         resultFile.id.asInstanceOf[BSONObjectID]))
       // res.get.data. shouldBe tempFile

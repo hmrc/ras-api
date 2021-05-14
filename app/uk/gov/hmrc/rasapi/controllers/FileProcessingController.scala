@@ -17,10 +17,10 @@
 package uk.gov.hmrc.rasapi.controllers
 
 import javax.inject.Inject
-import play.api.Logger
+import play.api.Logging
 import play.api.libs.json.JsSuccess
 import play.api.mvc.{Action, AnyContent, ControllerComponents, Request, Result}
-import uk.gov.hmrc.play.bootstrap.controller.BackendController
+import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
 import uk.gov.hmrc.rasapi.models.{ApiVersion, CallbackData, V1_0, V2_0}
 import uk.gov.hmrc.rasapi.services.{FileProcessingService, SessionCacheService}
 
@@ -32,7 +32,7 @@ class FileProcessingController @Inject()(
                                           val fileProcessingService: FileProcessingService,
                                           cc: ControllerComponents,
                                           implicit val ec: ExecutionContext
-                                        ) extends BackendController(cc) {
+                                        ) extends BackendController(cc) with Logging {
 
   val STATUS_AVAILABLE: String = "AVAILABLE"
   val STATUS_ERROR: String = "ERROR"
@@ -48,15 +48,15 @@ class FileProcessingController @Inject()(
         case (Some(apiVersion), Some(callbackData)) =>
           callbackData.status match {
             case STATUS_AVAILABLE =>
-              Logger.info(s"[FileProcessingController][statusCallback] Callback request received with status available: file processing " +
+              logger.info(s"[FileProcessingController][statusCallback] Callback request received with status available: file processing " +
                 s"started for userId ($userId).")
               if (Try(fileProcessingService.processFile(userId, callbackData, apiVersion)).isFailure) {
                 sessionCacheService.updateFileSession(userId, callbackData, None, None)
               }
-            case STATUS_ERROR => Logger.error(s"[FileProcessingController][statusCallback] There is a problem with the " +
+            case STATUS_ERROR => logger.error(s"[FileProcessingController][statusCallback] There is a problem with the " +
               s"file for userId ($userId) ERROR (${callbackData.fileId}), the status is: ${callbackData.status} and the reason is: ${callbackData.reason.get}")
               sessionCacheService.updateFileSession(userId, callbackData, None, None)
-            case _ => Logger.warn(s"[FileProcessingController][statusCallback] There is a problem with the file (${callbackData.fileId}) for userId ($userId), the status is:" +
+            case _ => logger.warn(s"[FileProcessingController][statusCallback] There is a problem with the file (${callbackData.fileId}) for userId ($userId), the status is:" +
               s" ${callbackData.status}")
           }
           Future(Ok(""))
@@ -66,8 +66,8 @@ class FileProcessingController @Inject()(
 
   private def handleInvalidRequest(optVersion: Option[ApiVersion], optCallBackData: Option[CallbackData])(implicit request: Request[_]): Future[Result] = {
     (optVersion, optCallBackData) match {
-      case (None, _) => Logger.warn("[FileProcessingController][handleInvalidRequest] Unsupported api version supplied")
-      case _ => Logger.warn("[FileProcessingController][handleInvalidRequest] Invalid Json supplied")
+      case (None, _) => logger.warn("[FileProcessingController][handleInvalidRequest] Unsupported api version supplied")
+      case _ => logger.warn("[FileProcessingController][handleInvalidRequest] Invalid Json supplied")
     }
     Future.successful(BadRequest(""))
   }
@@ -77,9 +77,9 @@ class FileProcessingController @Inject()(
       case Some(json) =>
         Try(json.validate[CallbackData]) match {
           case Success(JsSuccess(payload, _)) => Some(payload)
-          case _ => Logger.warn(s"[FileProcessingController][withValidJson] Json could not be parsed. Json Data: $json"); None
+          case _ => logger.warn(s"[FileProcessingController][withValidJson] Json could not be parsed. Json Data: $json"); None
         }
-      case _ => Logger.warn("[FileProcessingController][withValidJson] No json provided."); None
+      case _ => logger.warn("[FileProcessingController][withValidJson] No json provided."); None
     }
   }
 }

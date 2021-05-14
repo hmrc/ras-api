@@ -16,15 +16,16 @@
 
 package uk.gov.hmrc.rasapi.models
 
-import play.api.libs.json.Json
+import play.api.libs.json.{Json, OFormat}
 
 case class ResidencyStatus(currentYearResidencyStatus: String = "", nextYearForecastResidencyStatus: Option[String] = None)
 {
-  override def toString: String = if(nextYearForecastResidencyStatus.nonEmpty)
-    s"${currentYearResidencyStatus}${","+nextYearForecastResidencyStatus.get}"
-  else
+  override def toString: String = if(nextYearForecastResidencyStatus.nonEmpty) {
+    s"$currentYearResidencyStatus${","+nextYearForecastResidencyStatus.get}"
+  } else {
     currentYearResidencyStatus
+  }
 }
 object ResidencyStatus{
-  implicit val format = Json.format[ResidencyStatus]
+  implicit val format: OFormat[ResidencyStatus] = Json.format[ResidencyStatus]
 }

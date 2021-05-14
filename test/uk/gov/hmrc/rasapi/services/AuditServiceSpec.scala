@@ -19,23 +19,23 @@ package uk.gov.hmrc.rasapi.services
 import org.mockito.ArgumentCaptor
 import org.mockito.ArgumentMatchers._
 import org.mockito.Mockito._
-import org.scalatest.BeforeAndAfter
+import org.scalatest.{BeforeAndAfter, Matchers, WordSpecLike}
 import org.scalatestplus.mockito.MockitoSugar
 import org.scalatestplus.play.guice.GuiceOneAppPerSuite
 import play.api.Configuration
+import uk.gov.hmrc.http.HeaderCarrier
+import uk.gov.hmrc.mongo.Awaiting
 import uk.gov.hmrc.play.audit.http.connector.AuditConnector
 import uk.gov.hmrc.play.audit.model.DataEvent
-import uk.gov.hmrc.http.HeaderCarrier
-import uk.gov.hmrc.play.test.UnitSpec
 import uk.gov.hmrc.rasapi.config.AppContext
 
 import scala.concurrent.ExecutionContext
 
-trait AuditServiceSpec extends UnitSpec with MockitoSugar with GuiceOneAppPerSuite with BeforeAndAfter {
+trait AuditServiceSpec extends WordSpecLike with Matchers with Awaiting with MockitoSugar with GuiceOneAppPerSuite with BeforeAndAfter {
 
-  implicit val hc:HeaderCarrier = HeaderCarrier()
-  val mockAuditConnector = mock[AuditConnector]
-  val mockAppContext = app.injector.instanceOf[AppContext]
+  implicit val hc: HeaderCarrier = HeaderCarrier()
+  val mockAuditConnector: AuditConnector = mock[AuditConnector]
+  val mockAppContext: AppContext = app.injector.instanceOf[AppContext]
 
   val SUT = new AuditService(mockAuditConnector, app.injector.instanceOf[Configuration], mockAppContext, ExecutionContext.global)
 
@@ -53,7 +53,7 @@ trait AuditServiceSpec extends UnitSpec with MockitoSugar with GuiceOneAppPerSui
     "build an audit event with the correct mandatory details" in {
 
       SUT.audit(fakeAuditType, fakeEndpoint, auditDataMap)
-      val captor = ArgumentCaptor.forClass(classOf[DataEvent])
+      val captor: ArgumentCaptor[DataEvent] = ArgumentCaptor.forClass(classOf[DataEvent])
 
       verify(mockAuditConnector).sendEvent(captor.capture())(any(), any())
 
@@ -66,7 +66,7 @@ trait AuditServiceSpec extends UnitSpec with MockitoSugar with GuiceOneAppPerSui
     "build an audit event with the correct tags" in {
 
       SUT.audit(fakeAuditType, fakeEndpoint, auditDataMap)
-      val captor = ArgumentCaptor.forClass(classOf[DataEvent])
+      val captor: ArgumentCaptor[DataEvent] = ArgumentCaptor.forClass(classOf[DataEvent])
 
       verify(mockAuditConnector).sendEvent(captor.capture())(any(), any())
 
@@ -80,7 +80,7 @@ trait AuditServiceSpec extends UnitSpec with MockitoSugar with GuiceOneAppPerSui
     "build an audit event with the correct detail" in {
 
       SUT.audit(fakeAuditType, fakeEndpoint, auditDataMap)
-      val captor = ArgumentCaptor.forClass(classOf[DataEvent])
+      val captor: ArgumentCaptor[DataEvent] = ArgumentCaptor.forClass(classOf[DataEvent])
 
       verify(mockAuditConnector).sendEvent(captor.capture())(any(), any())
 

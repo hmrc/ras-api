@@ -97,7 +97,7 @@ package object models {
       */
     private def dateReads(patterns: Map[String, String]): Reads[DateTime] = new Reads[DateTime] {
       def reads(json: JsValue): JsResult[DateTime] = json match {
-        case JsString(s) if !s.trim.isEmpty =>
+        case JsString(s) if s.trim.nonEmpty =>
           s.extractDateFormat(patterns) match {
             case Some(format) =>
               s.toDateTime(format) match {

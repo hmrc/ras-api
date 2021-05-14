@@ -19,31 +19,38 @@ package uk.gov.hmrc.rasapi.services
 import org.joda.time.DateTime
 import org.mockito.ArgumentMatchers._
 import org.mockito.Mockito._
-import org.scalatest.BeforeAndAfter
 import org.scalatest.concurrent.ScalaFutures
+import org.scalatest.{BeforeAndAfter, Matchers, WordSpecLike}
 import org.scalatestplus.mockito.MockitoSugar
 import org.scalatestplus.play.guice.GuiceOneServerPerSuite
-import play.api.libs.json.{Json, Writes}
+import play.api.libs.json.{JsValue, Json, Writes}
 import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.http.cache.client.{CacheMap, ShortLivedHttpCaching}
-import uk.gov.hmrc.play.test.UnitSpec
+import uk.gov.hmrc.mongo.Awaiting
 import uk.gov.hmrc.rasapi.models.{CallbackData, FileMetadata, FileSession, ResultsFileMetaData}
 
 import scala.concurrent.{ExecutionContext, Future}
 
-class SessionCacheServiceSpec extends UnitSpec with GuiceOneServerPerSuite with ScalaFutures with MockitoSugar with BeforeAndAfter {
+class SessionCacheServiceSpec extends WordSpecLike
+  with Matchers
+  with Awaiting
+  with GuiceOneServerPerSuite
+  with ScalaFutures
+  with MockitoSugar
+  with BeforeAndAfter {
+
   implicit val hc: HeaderCarrier = HeaderCarrier()
   val fileId = "file-id-1"
   val fileStatus = "AVAILABLE"
   val originalFileName = "originalFileName"
   val reason: Option[String] = None
-  val callbackData = CallbackData("1234", fileId, fileStatus, reason)
-  val resultsFile = ResultsFileMetaData(fileId,Some("fileName.csv"),Some(1234L),123,1234L)
-  val fileMetadata = FileMetadata(fileId, None, None)
-  val rasSession = FileSession(Some(callbackData), Some(resultsFile), "userId", Some(DateTime.now().getMillis), Some(fileMetadata))
-  val json = Json.toJson(rasSession)
+  val callbackData: CallbackData = CallbackData("1234", fileId, fileStatus, reason)
+  val resultsFile: ResultsFileMetaData = ResultsFileMetaData(fileId,Some("fileName.csv"),Some(1234L),123,1234L)
+  val fileMetadata: FileMetadata = FileMetadata(fileId, None, None)
+  val rasSession: FileSession = FileSession(Some(callbackData), Some(resultsFile), "userId", Some(DateTime.now().getMillis), Some(fileMetadata))
+  val json: JsValue = Json.toJson(rasSession)
 
-  val mockSessionCache = mock[ShortLivedHttpCaching]
+  val mockSessionCache: ShortLivedHttpCaching = mock[ShortLivedHttpCaching]
 
   object SUT extends SessionCacheService (
     mockSessionCache,
@@ -61,7 +68,7 @@ class SessionCacheServiceSpec extends UnitSpec with GuiceOneServerPerSuite with 
   "SessionCacheService" should {
     "update session cache with processing status" in {
       val res = await(SUT.updateFileSession("1234", callbackData, Some(resultsFile), None))
-      res.data.get("1234").get shouldBe json
+      res.data("1234") shouldBe json
     }
     "throw RuntimeException when something goes wrong when fetching FileSession" in {
       when(mockSessionCache.fetchAndGetEntry[FileSession](any(), any(), any())(any(), any(), any()))

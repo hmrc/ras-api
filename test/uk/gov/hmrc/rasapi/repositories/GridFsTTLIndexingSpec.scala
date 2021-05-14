@@ -16,35 +16,34 @@
 
 package uk.gov.hmrc.rasapi.repositories
 
-import org.scalatest.BeforeAndAfter
+
+import org.scalatest.{BeforeAndAfter, Matchers, WordSpecLike}
 import org.scalatestplus.mockito.MockitoSugar
 import org.scalatestplus.play.guice.GuiceOneAppPerSuite
 import play.modules.reactivemongo.ReactiveMongoComponent
 import reactivemongo.bson.BSONLong
-import uk.gov.hmrc.play.test.UnitSpec
+import uk.gov.hmrc.mongo.Awaiting
 import uk.gov.hmrc.rasapi.config.AppContext
 import uk.gov.hmrc.rasapi.repository.RasFilesRepository
 
-import scala.concurrent.ExecutionContext.Implicits.global
-
-class GridFsTTLIndexingSpec extends UnitSpec with MockitoSugar with GuiceOneAppPerSuite
+class GridFsTTLIndexingSpec extends WordSpecLike with Matchers with Awaiting with MockitoSugar with GuiceOneAppPerSuite
   with BeforeAndAfter {
-  val mockMongo = app.injector.instanceOf[ReactiveMongoComponent]
-  val mockAppContext = app.injector.instanceOf[AppContext]
+  val mockMongo: ReactiveMongoComponent = app.injector.instanceOf[ReactiveMongoComponent]
+  val mockAppContext: AppContext = app.injector.instanceOf[AppContext]
 
   val rasFileRepository: RasFilesRepository = new RasFilesRepository (
     mockMongo,
     mockAppContext
-  )
+  )(ec)
 
   before{
-    rasFileRepository.removeAll()
+    rasFileRepository.removeAll()(ec)
   }
 
   "GridFsTTLIndexingSpec" should {
   "ensure indexes and create if not available" in {
     val defaultTTL = BSONLong(3600)
-    val res =  await(rasFileRepository.gridFSG.files.indexesManager.list())
+    val res =  await(rasFileRepository.gridFSG.files.indexesManager(ec).list())
 
     res.filter(_.name.get == "lastUpdatedIndex")
       .head.options.get("expireAfterSeconds").get shouldBe defaultTTL
