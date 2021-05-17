@@ -16,24 +16,24 @@
 
 package uk.gov.hmrc.rasapi.services
 
-import java.nio.file.Files
-
-import org.scalatest.BeforeAndAfter
 import org.scalatest.concurrent.ScalaFutures
+import org.scalatest.{BeforeAndAfter, Matchers, WordSpecLike}
 import org.scalatestplus.mockito.MockitoSugar
 import org.scalatestplus.play.guice.GuiceOneServerPerSuite
-import uk.gov.hmrc.play.test.UnitSpec
+import uk.gov.hmrc.mongo.Awaiting
 
+import java.nio.file.Files
 import scala.collection.mutable.ListBuffer
 import scala.io.Source
 
-class RasFileWriterSpec extends UnitSpec with GuiceOneServerPerSuite with ScalaFutures with MockitoSugar with BeforeAndAfter {
+class RasFileWriterSpec extends WordSpecLike with Matchers with Awaiting with GuiceOneServerPerSuite with ScalaFutures with MockitoSugar with BeforeAndAfter {
   object fileWriter extends RasFileWriter
-  val resultsArr = Array("456C,John,Smith,1990-02-21,nino-INVALID_FORMAT",
+
+  val resultsArr: Array[String] = Array("456C,John,Smith,1990-02-21,nino-INVALID_FORMAT",
     "AB123456C,John,Smith,1990-02-21,MATCHING_FAILED",
     "AB123456C,John,Smith,1990-02-21,otherUKResident,scotResident")
 
-  val resultsList = ListBuffer("456C,John,Smith,1990-02-21,nino-INVALID_FORMAT",
+  val resultsList: ListBuffer[String] = ListBuffer("456C,John,Smith,1990-02-21,nino-INVALID_FORMAT",
     "AB123456C,John,Smith,1990-02-21,MATCHING_FAILED",
     "AB123456C,John,Smith,1990-02-21,otherUKResident,scotResident")
 

@@ -5,7 +5,7 @@ import uk.gov.hmrc.DefaultBuildSettings
 val appName = "ras-api"
 
 lazy val microservice = Project(appName, file("."))
-  .enablePlugins(Seq(play.sbt.PlayScala, SbtAutoBuildPlugin, SbtGitVersioning, SbtDistributablesPlugin): _*)
+  .enablePlugins(Seq(play.sbt.PlayScala, SbtDistributablesPlugin): _*)
   .disablePlugins(JUnitXmlReportPlugin)
   .configs(IntegrationTest)
 
@@ -46,24 +46,24 @@ DefaultBuildSettings.integrationTestSettings()
 unmanagedResourceDirectories in Compile += baseDirectory.value / "resources"
 
 // dependencies
-val akkaVersion = "2.5.23"
+val akkaVersion = "2.6.14"
 val excludeIteratees = ExclusionRule("com.typesafe.play", "play-iteratees_2.12")
 lazy val silencerVersion = "1.7.1"
 
 //compile dependencies
 libraryDependencies ++= Seq(
   ws,
-  "uk.gov.hmrc"       %% "bootstrap-play-26"    % "2.3.0",
-  "uk.gov.hmrc"       %% "domain"               % "5.10.0-play-26",
-  "uk.gov.hmrc"       %% "mongo-caching"        % "6.16.0-play-26" excludeAll excludeIteratees,
-  "uk.gov.hmrc"       %% "simple-reactivemongo" % "7.31.0-play-26" excludeAll excludeIteratees,
-  "uk.gov.hmrc"       %% "json-encryption"      % "4.8.0-play-26",
-  "uk.gov.hmrc"       %% "play-hmrc-api"        % "4.1.0-play-26",
-  "uk.gov.hmrc"       %% "http-caching-client"  % "9.2.0-play-26",
+  "uk.gov.hmrc"       %% "bootstrap-backend-play-27"    % "5.2.0",
+  "uk.gov.hmrc"       %% "domain"                       % "5.11.0-play-27",
+  "uk.gov.hmrc"       %% "mongo-caching"                % "7.0.0-play-27" excludeAll excludeIteratees,
+  "uk.gov.hmrc"       %% "simple-reactivemongo"         % "8.0.0-play-27" excludeAll excludeIteratees,
+  "uk.gov.hmrc"       %% "json-encryption"              % "4.10.0-play-27",
+  "uk.gov.hmrc"       %% "play-hmrc-api"                % "6.2.0-play-27",
+  "uk.gov.hmrc"       %% "http-caching-client"          % "9.4.0-play-27",
   "com.typesafe.play" %% "play-iteratees-reactive-streams" % "2.6.1",
-  "joda-time"         % "joda-time"             % "2.10.9",
-  compilerPlugin("com.github.ghik" % "silencer-plugin" % silencerVersion cross CrossVersion.full),
-                              "com.github.ghik" % "silencer-lib"    % silencerVersion % Provided cross CrossVersion.full
+  "joda-time"         % "joda-time"                     % "2.10.9",
+  compilerPlugin("com.github.ghik"          % "silencer-plugin" % silencerVersion cross CrossVersion.full),
+                              "com.github.ghik"         % "silencer-lib"    % silencerVersion % Provided cross CrossVersion.full
 )
 
 dependencyOverrides ++= Seq(
@@ -78,12 +78,11 @@ dependencyOverrides ++= Seq(
 val scope = "test,it"
 
 libraryDependencies ++= Seq(
-  "uk.gov.hmrc"               %% "hmrctest"           % "3.10.0-play-26" % scope,
   "org.scalatest"             %% "scalatest"          % "3.0.9"          % scope,
   "org.pegdown"               %  "pegdown"            % "1.6.0"          % scope,
-  "org.scalatestplus.play"    %% "scalatestplus-play" % "3.1.3"          % scope,
-  "org.mockito"               %  "mockito-core"       % "3.3.3"          % scope,
-  "uk.gov.hmrc"               %% "reactivemongo-test" % "4.22.0-play-26" % scope excludeAll excludeIteratees,
+  "org.scalatestplus.play"    %% "scalatestplus-play" % "4.0.0"          % scope,
+  "org.mockito"               %  "mockito-core"       % "3.9.0"          % scope,
+  "uk.gov.hmrc"               %% "reactivemongo-test" % "5.0.0-play-27" % scope excludeAll excludeIteratees,
   "com.typesafe.akka"         %  "akka-testkit_2.12"  % akkaVersion      % scope,
   "de.leanovate.play-mockws"  %% "play-mockws"        % "2.6.6"          % scope excludeAll excludeIteratees,
   "com.github.tomakehurst"    %  "wiremock-jre8"      % "2.21.0"         % scope

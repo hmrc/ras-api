@@ -23,32 +23,33 @@ import reactivemongo.api.gridfs.GridFS
 import reactivemongo.api.indexes.{Index, IndexType}
 import reactivemongo.bson.{BSONDocument, BSONLong}
 
-import scala.concurrent.Future
+import scala.concurrent.{ExecutionContext, Future}
 
 trait GridFsTTLIndexing {
 
   val expireAfterSeconds: Long
+  val log: Logger
 
   private lazy val LastUpdatedIndex = "lastUpdatedIndex"
   private lazy val OptExpireAfterSeconds = "expireAfterSeconds"
   protected lazy val UploadDate = "uploadDate"
 
-  def addAllTTLs(gfs : GridFS[BSONSerializationPack.type])(implicit ec: scala.concurrent.ExecutionContext): Future[Seq[Boolean]] = {
+  def addAllTTLs(gfs: GridFS[BSONSerializationPack.type])(implicit ec: ExecutionContext): Future[Seq[Boolean]] = {
     Future.sequence(Seq(
       addFilesTTL(gfs),
       addChunksTTL(gfs)
     ))
   }
 
-  def addChunksTTL(gfs : GridFS[BSONSerializationPack.type])(implicit ec: scala.concurrent.ExecutionContext): Future[Boolean] = {
+  def addChunksTTL(gfs: GridFS[BSONSerializationPack.type])(implicit ec: ExecutionContext): Future[Boolean] = {
     addTTL(gfs.chunks)
   }
 
-  def addFilesTTL(gfs : GridFS[BSONSerializationPack.type])(implicit ec: scala.concurrent.ExecutionContext): Future[Boolean] = {
+  def addFilesTTL(gfs: GridFS[BSONSerializationPack.type])(implicit ec: ExecutionContext): Future[Boolean] = {
     addTTL(gfs.files)
   }
 
-  private def addTTL(collection: GenericCollection[BSONSerializationPack.type])(implicit ec: scala.concurrent.ExecutionContext): Future[Boolean] = {
+  private def addTTL(collection: GenericCollection[BSONSerializationPack.type])(implicit ec: ExecutionContext): Future[Boolean] = {
     import reactivemongo.bson.DefaultBSONHandlers._
     val indexes = collection.indexesManager.list()
     indexes.flatMap {
@@ -70,12 +71,12 @@ trait GridFsTTLIndexing {
         }
       }
     }
-    Logger.info(s"[GridFsTTLIndexing][addTTL] Creating time to live for entries in ${collection.name} to $expireAfterSeconds seconds")
+    log.info(s"[GridFsTTLIndexing][addTTL] Creating time to live for entries in ${collection.name} to $expireAfterSeconds seconds")
     ensureLastUpdated(collection)
   }
 
-  private def ensureLastUpdated(collection : GenericCollection[BSONSerializationPack.type])(implicit ec: scala.concurrent.ExecutionContext) = {
-    Logger.debug("[GridFsTTLIndexing][ensureLastUpdated] Indexes ensured by creating if they doesn't exist")
+  private def ensureLastUpdated(collection: GenericCollection[BSONSerializationPack.type])(implicit ec: ExecutionContext) = {
+    log.debug("[GridFsTTLIndexing][ensureLastUpdated] Indexes ensured by creating if they doesn't exist")
     collection.indexesManager.ensure(
       Index(
         key = Seq(UploadDate -> IndexType.Ascending),

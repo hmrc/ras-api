@@ -16,47 +16,47 @@
 
 package uk.gov.hmrc.rasapi.services
 
-import javax.inject.Inject
-import play.api.Logger
+import play.api.Logging
 import reactivemongo.bson.BSONObjectID
 import uk.gov.hmrc.rasapi.config.AppContext
 import uk.gov.hmrc.rasapi.repository.{RasChunksRepository, RasFilesRepository}
 
+import javax.inject.Inject
 import scala.concurrent.{ExecutionContext, Future}
 
 class DataCleansingService @Inject()(
                                       appContext: AppContext,
                                       chunksRepo: RasChunksRepository,
                                       fileRepo: RasFilesRepository)
-                                    (implicit val ec: ExecutionContext) {
+                                    (implicit val ec: ExecutionContext) extends Logging {
 
   def removeOrphanedChunks(): Future[Seq[BSONObjectID]] = if(appContext.removeChunksDataExerciseEnabled){
-    Logger.info("[data-cleansing-exercise][removeOrphanedChunks] Starting data exercise for removing of chunks")
+    logger.info("[data-cleansing-exercise][removeOrphanedChunks] Starting data exercise for removing of chunks")
     for {
-      chunks <- chunksRepo.getAllChunks().map(_.map(_.files_id).distinct)
+      chunks <- chunksRepo.getAllChunks.map(_.map(_.files_id).distinct)
 
       fileInfoList <- {
-        Logger.info(s"[data-cleansing-exercise][removeOrphanedChunks] Size of chunks to verify is: ${chunks.size}" )
+        logger.info(s"[data-cleansing-exercise][removeOrphanedChunks] Size of chunks to verify is: ${chunks.size}" )
         processFutures(chunks)(fileRepo.isFileExists(_))
       }
 
       chunksDeleted <- {
         val parentFileIds = fileInfoList.filter(_.isDefined).map(rec => rec.get.id.asInstanceOf[BSONObjectID])
         val chunksToBeDeleted = chunks.diff(parentFileIds)
-        Logger.info(s"[data-cleansing-exercise][removeOrphanedChunks] Size of fileId's to be deleted is: ${chunksToBeDeleted.length}")
+        logger.info(s"[data-cleansing-exercise][removeOrphanedChunks] Size of fileId's to be deleted is: ${chunksToBeDeleted.length}")
 
         processFutures(chunksToBeDeleted)(fileId => {
-          Logger.warn(s"[data-cleansing-exercise][removeOrphanedChunks] fileId to be deleted is: ${fileId}")
+          logger.warn(s"[data-cleansing-exercise][removeOrphanedChunks] fileId to be deleted is: $fileId")
           chunksRepo.removeChunk(fileId).map{
-            case true => Logger.info(s"[data-cleansing-exercise][removeOrphanedChunks] Chunk deletion succeeded, fileId is: ${fileId}")
-            case false => Logger.warn(s"[data-cleansing-exercise][removeOrphanedChunks] Chunk deletion failed, fileId is: ${fileId}")
+            case true => logger.info(s"[data-cleansing-exercise][removeOrphanedChunks] Chunk deletion succeeded, fileId is: $fileId")
+            case false => logger.warn(s"[data-cleansing-exercise][removeOrphanedChunks] Chunk deletion failed, fileId is: $fileId")
           }
         })
         Future(chunksToBeDeleted)
       }
     } yield chunksDeleted
   } else {
-    Logger.info("[data-cleansing-exercise][removeOrphanedChunks] No data exercise carried")
+    logger.info("[data-cleansing-exercise][removeOrphanedChunks] No data exercise carried")
     Future.successful(Seq.empty)
   }
 

@@ -16,40 +16,36 @@
 
 package uk.gov.hmrc.rasapi.services
 
-import javax.inject.Inject
-import play.api.Logger
+import play.api.Logging
 import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.http.cache.client.{CacheMap, ShortLivedHttpCaching}
 import uk.gov.hmrc.rasapi.models.{CallbackData, FileMetadata, FileSession, ResultsFileMetaData}
 
+import javax.inject.Inject
 import scala.concurrent.{ExecutionContext, Future}
 
-class SessionCacheService @Inject()(
-                                     val sessionCache: ShortLivedHttpCaching,
-                                     implicit val ec: ExecutionContext
-                                   ) {
-
-
+class SessionCacheService @Inject()(val sessionCache: ShortLivedHttpCaching,
+                                    implicit val ec: ExecutionContext
+                                   ) extends Logging {
   private val source: String = "ras"
   private val formId: String = "fileSession"
 
-  def updateFileSession(
-                         userId: String,
-                         userFile: CallbackData,
-                         resultsFile: Option[ResultsFileMetaData],
-                         fileMetadata: Option[FileMetadata]
+  def updateFileSession(userId: String,
+                        userFile: CallbackData,
+                        resultsFile: Option[ResultsFileMetaData],
+                        fileMetadata: Option[FileMetadata]
                        )(implicit hc: HeaderCarrier): Future[CacheMap] = {
 
     sessionCache.fetchAndGetEntry[FileSession](source,userId,formId).flatMap{ session =>
     sessionCache.cache[FileSession](source,userId,formId,
       FileSession(Some(userFile), resultsFile, userId, session.get.uploadTimeStamp, fileMetadata) ).recover {
-        case ex: Throwable => Logger.error(s"[SessionCacheService][updateFileSession] unable to save FileSession to cache => " +
+        case ex: Throwable => logger.error(s"[SessionCacheService][updateFileSession] unable to save FileSession to cache => " +
           s"userId ($userId) , userFile : ${userFile.toString} , resultsFile id : " +
           s"${if(resultsFile.isDefined) resultsFile.get.id}, \n Exception is ${ex.getMessage}", ex)
           throw new RuntimeException("Error in saving sessionCache" + ex.getMessage)
       }
     }.recover {
-      case ex: Throwable => Logger.error(s"[SessionCacheService][updateFileSession] cannot fetch  data to cache for FileSession => " +
+      case ex: Throwable => logger.error(s"[SessionCacheService][updateFileSession] cannot fetch  data to cache for FileSession => " +
         s"userId ($userId) , userFile : ${userFile.toString} , resultsFile id : " +
         s"${if(resultsFile.isDefined) resultsFile.get.id}, \n Exception is ${ex.getMessage}", ex)
         throw new RuntimeException(s"Error in saving sessionCache ${ex.getMessage}")

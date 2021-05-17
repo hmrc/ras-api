@@ -16,7 +16,6 @@
 
 package uk.gov.hmrc.rasapi.repository
 
-import javax.inject.Inject
 import play.api.Logger
 import play.modules.reactivemongo.ReactiveMongoComponent
 import reactivemongo.api.Cursor
@@ -25,6 +24,7 @@ import reactivemongo.play.json.ImplicitBSONHandlers._
 import uk.gov.hmrc.mongo.ReactiveRepository
 import uk.gov.hmrc.rasapi.models.Chunks
 
+import javax.inject.Inject
 import scala.concurrent.{ExecutionContext, Future}
 
 class RasChunksRepository @Inject()(
@@ -33,17 +33,19 @@ class RasChunksRepository @Inject()(
                                    ) extends ReactiveRepository[Chunks, BSONObjectID](
     collectionName = "resultsFiles.chunks",
     mongo = mongoComponent.mongoConnector.db,
-    domainFormat = Chunks.format){
+    domainFormat = Chunks.format) {
 
-  def getAllChunks(): Future[Seq[Chunks]] ={
+  val log: Logger = Logger(getClass)
+
+  def getAllChunks: Future[Seq[Chunks]] ={
     val query = BSONDocument("files_id" -> BSONDocument("$ne" -> "1"))
-    Logger.debug("********Remove chunks :Started*********")
+    log.debug("********Remove chunks :Started*********")
 
     // only fetch the id and files-id field for the result documents
     val projection = BSONDocument("_id" -> 1, "files_id" -> 2)
     collection.find(query,Some(projection)).cursor[Chunks]().collect[Seq](Int.MaxValue, Cursor.FailOnError()).recover {
       case ex: Throwable =>
-        Logger.error(s"[RasChunksRepository][getAllChunks] Error fetching chunks  ${ex.getMessage}.", ex)
+        log.error(s"[RasChunksRepository][getAllChunks] Error fetching chunks  ${ex.getMessage}.", ex)
         Seq.empty
     }
 
@@ -53,7 +55,7 @@ class RasChunksRepository @Inject()(
     val query = BSONDocument("files_id" -> filesId)
     collection.delete.one(query).map(res=> res.writeErrors.isEmpty).recover{
       case ex: Throwable =>
-        Logger.error(s"[RasChunksRepository][removeChunk] error removing chunk ${filesId} with the exception ${ex.getMessage}.")
+        log.error(s"[RasChunksRepository][removeChunk] error removing chunk $filesId with the exception ${ex.getMessage}.")
         false
     }
   }

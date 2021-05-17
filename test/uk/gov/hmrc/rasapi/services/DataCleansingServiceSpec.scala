@@ -16,33 +16,31 @@
 
 package uk.gov.hmrc.rasapi.services
 
-import org.scalatest.BeforeAndAfter
+import org.scalatest.{BeforeAndAfter, Matchers, WordSpecLike}
 import org.scalatestplus.mockito.MockitoSugar
 import org.scalatestplus.play.guice.GuiceOneAppPerSuite
 import play.api.inject.guice.GuiceApplicationBuilder
-import play.api.{Application, Logger}
+import play.api.{Application, Logger, Logging}
 import reactivemongo.bson.BSONObjectID
-import uk.gov.hmrc.play.test.UnitSpec
+import uk.gov.hmrc.mongo.Awaiting
 import uk.gov.hmrc.rasapi.repositories.RepositoriesHelper
 import uk.gov.hmrc.rasapi.repository.RasFilesRepository
 
-import scala.concurrent.ExecutionContext.Implicits.global
-
-class DataCleansingServiceSpec extends UnitSpec with MockitoSugar with GuiceOneAppPerSuite
-with BeforeAndAfter  {
+class DataCleansingServiceSpec extends WordSpecLike with Matchers with Awaiting with MockitoSugar with GuiceOneAppPerSuite
+with BeforeAndAfter with Logging  {
 
   override implicit lazy val app: Application = new GuiceApplicationBuilder()
     .configure("remove-chunks-data-exercise.enabled" -> true)
     .build()
 
-  implicit lazy val rasFilesRepository = app.injector.instanceOf[RasFilesRepository]
+  implicit lazy val rasFilesRepository: RasFilesRepository = app.injector.instanceOf[RasFilesRepository]
   before{
-    await(RepositoriesHelper.rasFileRepository.removeAll())
-    await(RepositoriesHelper.rasBulkOperationsRepository.removeAll())
+    await(RepositoriesHelper.rasFileRepository.removeAll()(ec))
+    await(RepositoriesHelper.rasBulkOperationsRepository.removeAll()(ec))
   }
   after{
-    await(RepositoriesHelper.rasFileRepository.removeAll())
-    await(RepositoriesHelper.rasBulkOperationsRepository.removeAll())
+    await(RepositoriesHelper.rasFileRepository.removeAll()(ec))
+    await(RepositoriesHelper.rasBulkOperationsRepository.removeAll()(ec))
   }
 
   lazy val dataCleansingService: DataCleansingService = app.injector.instanceOf[DataCleansingService]
@@ -50,8 +48,8 @@ with BeforeAndAfter  {
   "DataCleansingService" should{
 
     " not remove chunks that are not orphoned" in {
-      await(RepositoriesHelper.saveTempFile("user14","envelope14","fileId14"))
-      await(RepositoriesHelper.saveTempFile("user15","envelope15","fileId15"))
+      RepositoriesHelper.saveTempFile("user14","envelope14","fileId14")
+      RepositoriesHelper.saveTempFile("user15","envelope15","fileId15")
 
       val result = await(dataCleansingService.removeOrphanedChunks())
 
@@ -61,11 +59,11 @@ with BeforeAndAfter  {
     }
 
     "remove orphaned chunks" in  {
-      Logger.warn("1 ~~~~~~~~####### Testing Data Cleansing" )
+      logger.warn("1 ~~~~~~~~####### Testing Data Cleansing" )
       val testFiles = RepositoriesHelper.createTestDataForDataCleansing(rasFilesRepository).map(_.id.asInstanceOf[BSONObjectID])
 
       val result = await(dataCleansingService.removeOrphanedChunks())
-      Logger.warn("7 ~~~~~~~~####### results complete" )
+      logger.warn("7 ~~~~~~~~####### results complete" )
 
       result shouldEqual  testFiles
     }

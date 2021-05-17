@@ -16,8 +16,7 @@
 
 package uk.gov.hmrc.rasapi.connectors
 
-import javax.inject.Inject
-import play.api.Logger
+import play.api.Logging
 import play.api.libs.json.{JsObject, JsValue, Json, Writes}
 import uk.gov.hmrc.http._
 import uk.gov.hmrc.play.bootstrap.http.DefaultHttpClient
@@ -25,13 +24,14 @@ import uk.gov.hmrc.rasapi.config.AppContext
 import uk.gov.hmrc.rasapi.models._
 import uk.gov.hmrc.rasapi.services.AuditService
 
+import javax.inject.Inject
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.{Failure, Success, Try}
 
 class DesConnector @Inject()( httpPost: DefaultHttpClient,
                               val auditService: AuditService,
                               val appContext: AppContext,
-                              implicit val ec: ExecutionContext) {
+                              implicit val ec: ExecutionContext) extends Logging {
 
   val uk = "Uk"
   val scot = "Scottish"
@@ -41,7 +41,6 @@ class DesConnector @Inject()( httpPost: DefaultHttpClient,
   val otherUk = "otherUKResident"
 
   lazy val desBaseUrl: String = appContext.servicesConfig.baseUrl("des")
-  lazy val edhUrl: String = desBaseUrl + appContext.edhUrl
   lazy val error_InternalServerError: String = appContext.internalServerErrorStatus
   lazy val error_Deceased: String = appContext.deceasedStatus
   lazy val error_MatchingFailed: String = appContext.matchingFailedStatus
@@ -69,17 +68,17 @@ class DesConnector @Inject()( httpPost: DefaultHttpClient,
 
     implicit val rasHeaders: HeaderCarrier = HeaderCarrier()
 
-    val uri = s"${desBaseUrl}/individuals/residency-status/"
+    val uri = s"$desBaseUrl/individuals/residency-status/"
 
     val desHeaders = Seq("Environment" -> desUrlHeaderEnv,
       "OriginatorId" -> "DA_RAS",
       "Content-Type" -> "application/json",
-      "authorization" -> s"Bearer ${desAuthToken}")
+      "authorization" -> s"Bearer $desAuthToken")
 
     def getResultAndProcess(memberDetails: IndividualDetails, retryCount: Int = 1): Future[Either[ResidencyStatus, ResidencyStatusFailure]] = {
 
       if (retryCount > 1) {
-        Logger.warn(s"[ResultsGenerator][getResultAndProcess] Did not receive a result from des, retry count: $retryCount for userId ($userId).")
+        logger.warn(s"[ResultsGenerator][getResultAndProcess] Did not receive a result from des, retry count: $retryCount for userId ($userId).")
       }
 
       sendResidencyStatusRequest(uri, member, userId, desHeaders, apiVersion)(rasHeaders) flatMap {
@@ -95,8 +94,12 @@ class DesConnector @Inject()( httpPost: DefaultHttpClient,
     getResultAndProcess(member)
   }
 
-  private def sendResidencyStatusRequest(uri: String, member: IndividualDetails, userId: String,
-                                         desHeaders: Seq[(String, String)], apiVersion: ApiVersion)(implicit rasHeaders: HeaderCarrier): Future[Either[ResidencyStatus, ResidencyStatusFailure]] = {
+  private def sendResidencyStatusRequest(uri: String,
+                                         member: IndividualDetails,
+                                         userId: String,
+                                         desHeaders: Seq[(String, String)],
+                                         apiVersion: ApiVersion
+                                        )(implicit rasHeaders: HeaderCarrier): Future[Either[ResidencyStatus, ResidencyStatusFailure]] = {
 
     val payload = Json.toJson(Json.toJson[IndividualDetails](member)
       .as[JsObject] + ("pensionSchemeOrganisationID" -> Json.toJson(userId)))
@@ -108,28 +111,28 @@ class DesConnector @Inject()( httpPost: DefaultHttpClient,
       resolveResponse(response, userId, member.nino, apiVersion)
     ).recover {
       case _: BadRequestException =>
-        Logger.error(s"[DesConnector][getResidencyStatus] Bad Request returned from des. The details sent were not " +
+        logger.error(s"[DesConnector][getResidencyStatus] Bad Request returned from des. The details sent were not " +
           s"valid. userId ($userId).")
         Right(ResidencyStatusFailure(error_DoNotReProcess, "Internal server error."))
       case _: NotFoundException =>
         Right(ResidencyStatusFailure(error_MatchingFailed, "Cannot provide a residency status for this pension scheme member."))
       case Upstream4xxResponse(_, 429, _, _) =>
-        Logger.error(s"[DesConnector][getResidencyStatus] Request could not be sent 429 (Too Many Requests) was sent " +
+        logger.error(s"[DesConnector][getResidencyStatus] Request could not be sent 429 (Too Many Requests) was sent " +
           s"from the HoD. userId ($userId).")
         Right(ResidencyStatusFailure(error_TooManyRequests, "Too Many Requests."))
       case _: RequestTimeoutException =>
-        Logger.error(s"[DesConnector][getResidencyStatus] Request has timed out. userId ($userId).")
+        logger.error(s"[DesConnector][getResidencyStatus] Request has timed out. userId ($userId).")
         Right(ResidencyStatusFailure(error_DoNotReProcess, "Internal server error."))
       case _5xx: UpstreamErrorResponse =>
         if (_5xx.statusCode == 503) {
-          Logger.error(s"[DesConnector][getResidencyStatus] Service unavailable. userId ($userId).")
+          logger.error(s"[DesConnector][getResidencyStatus] Service unavailable. userId ($userId).")
           Right(ResidencyStatusFailure(error_ServiceUnavailable, "Service unavailable"))
         } else {
-          Logger.error(s"[DesConnector][getResidencyStatus] ${_5xx.statusCode} was returned from DES. userId ($userId).")
+          logger.error(s"[DesConnector][getResidencyStatus] ${_5xx.statusCode} was returned from DES. userId ($userId).")
           Right(ResidencyStatusFailure(error_InternalServerError, "Internal server error."))
         }
       case th: Throwable =>
-        Logger.error(s"[DesConnector][getResidencyStatus] Caught error occurred when calling the HoD. userId ($userId).Exception message: ${th.getMessage}.")
+        logger.error(s"[DesConnector][getResidencyStatus] Caught error occurred when calling the HoD. userId ($userId).Exception message: ${th.getMessage}.")
         Right(ResidencyStatusFailure(error_InternalServerError, "Internal server error."))
     }
   }
@@ -151,7 +154,7 @@ class DesConnector @Inject()( httpPost: DefaultHttpClient,
       case Success(payload) =>
         payload.deseasedIndicator match {
           case Some(true) => Right(ResidencyStatusFailure(error_Deceased, "Cannot provide a residency status for this pension scheme member."))
-          case _ => {
+          case _ =>
             if (payload.nextYearResidencyStatus.isEmpty && !allowNoNextYearStatus) {
               val auditDataMap = Map("userId" -> userId,
                 "nino" -> nino,
@@ -168,15 +171,14 @@ class DesConnector @Inject()( httpPost: DefaultHttpClient,
               val nextYearStatus: Option[String] = payload.nextYearResidencyStatus.map(convertResidencyStatus(_, apiVersion))
               Left(ResidencyStatus(currentStatus, nextYearStatus))
             }
-          }
         }
       case Failure(_) =>
         Try(httpResponse.json.as[ResidencyStatusFailure](ResidencyStatusFormats.failureFormats)) match {
           case Success(data) =>
-            Logger.debug(s"[DesConnector][resolveResponse] DesFailureResponse from DES :${data}")
+            logger.debug(s"[DesConnector][resolveResponse] DesFailureResponse from DES :$data")
             Right(data)
           case Failure(ex) =>
-            Logger.error(s"[DesConnector][resolveResponse] Error from DES :${ex.getMessage}", ex)
+            logger.error(s"[DesConnector][resolveResponse] Error from DES :${ex.getMessage}", ex)
             Right(ResidencyStatusFailure(error_InternalServerError, "Internal server error."))
         }
     }

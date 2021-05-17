@@ -16,38 +16,43 @@
 
 package uk.gov.hmrc.rasapi.models
 
-import play.api.libs.json.Json
+import play.api.libs.json.{Format, Json, OFormat}
 import reactivemongo.bson.BSONObjectID
 import uk.gov.hmrc.mongo.json.ReactiveMongoFormats
 
 case class FileMetadata(id: String, name: Option[String], created: Option[String])
 
 object FileMetadata {
-  implicit val format = Json.format[FileMetadata]
+  implicit val format: OFormat[FileMetadata] = Json.format[FileMetadata]
 }
 
 case class CallbackData(envelopeId: String, fileId: String, status: String, reason: Option[String])
 
 object CallbackData {
-  implicit val formats = Json.format[CallbackData]
+  implicit val formats: OFormat[CallbackData] = Json.format[CallbackData]
 }
 
 case class ResultsFileMetaData (id: String, filename: Option[String],uploadDate: Option[Long], chunkSize: Int, length: Long)
 
 object ResultsFileMetaData {
-  implicit val formats = Json.format[ResultsFileMetaData]
+  implicit val formats: OFormat[ResultsFileMetaData] = Json.format[ResultsFileMetaData]
 
 }
 
 case class Chunks(_id:BSONObjectID, files_id:BSONObjectID)
 
 object Chunks {
-  implicit val objectIdformats = ReactiveMongoFormats.objectIdFormats
-  implicit  val format = Json.format[Chunks]
+  implicit val objectIdformats: Format[BSONObjectID] = ReactiveMongoFormats.objectIdFormats
+  implicit  val format: OFormat[Chunks] = Json.format[Chunks]
 }
 
-case class FileSession(userFile: Option[CallbackData], resultsFile: Option[ResultsFileMetaData], userId: String, uploadTimeStamp : Option[Long], fileMetadata: Option[FileMetadata])
+case class FileSession(userFile: Option[CallbackData],
+                       resultsFile: Option[ResultsFileMetaData],
+                       userId: String,
+                       uploadTimeStamp : Option[Long],
+                       fileMetadata: Option[FileMetadata]
+                      )
 
 object FileSession {
-  implicit val format = Json.format[FileSession]
+  implicit val format: OFormat[FileSession] = Json.format[FileSession]
 }
