@@ -72,7 +72,7 @@ class FileUploadConnectorSpec extends WordSpecLike with Matchers with Awaiting w
     val wsResponse: WSResponse = createMockResponse(bodyAsSource, headers)
 
     "return an StreamedResponse from File-Upload service" in {
-      when(mockWsHttp.buildRequestWithStream(any())(any())).thenReturn(Future.successful(wsResponse))
+      when(mockWsHttp.buildRequestWithStream(any())).thenReturn(Future.successful(wsResponse))
 
       val result = await(TestConnector.getFile(envelopeId, fileId, userId))
       val reader = new BufferedReader(new InputStreamReader(result.get))
@@ -80,7 +80,7 @@ class FileUploadConnectorSpec extends WordSpecLike with Matchers with Awaiting w
       (Iterator continually reader.readLine takeWhile (_ != null) toList) should contain theSameElementsAs List("Test", "Passed")
     }
     "return a RuntimeException when File Upload throws error" in {
-      when(mockWsHttp.buildRequestWithStream(any())(any())).thenReturn(Future.failed(new RequestTimeoutException("")))
+      when(mockWsHttp.buildRequestWithStream(any())).thenReturn(Future.failed(new RequestTimeoutException("")))
 
       val exception = intercept[RuntimeException] {
         await(TestConnector.getFile(envelopeId, fileId, userId))

@@ -19,7 +19,6 @@ package uk.gov.hmrc.rasapi.config
 import akka.actor.ActorSystem
 import play.api.Configuration
 import play.api.libs.ws.{WSClient, WSResponse}
-import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.play.audit.http.HttpAuditing
 import uk.gov.hmrc.play.bootstrap.http.DefaultHttpClient
 
@@ -29,5 +28,5 @@ import scala.concurrent.Future
 class WSHttp @Inject()(httpAuditing: HttpAuditing, wsClient: WSClient, configuration: Configuration, actorSystem: ActorSystem)
   extends DefaultHttpClient(configuration, httpAuditing, wsClient, actorSystem) {
   //TODO Verify if I should be passing in specific headers rather than an empty Seq
-  def buildRequestWithStream(uri: String)(implicit hc: HeaderCarrier): Future[WSResponse] = buildRequest(uri, Seq()).stream()
+  def buildRequestWithStream(uri: String): Future[WSResponse] = buildRequest(uri, Seq()).stream()
 }
