@@ -18,21 +18,25 @@ package uk.gov.hmrc.rasapi.models
 
 import org.joda.time.DateTime
 import play.api.libs.functional.syntax._
-import play.api.libs.json.{JsPath, Json, Reads, Writes}
+import play.api.libs.json.{JsPath, Json, OFormat, Reads, Writes}
 
-case class RawMemberDetails(nino: String = "",firstName: String = "", lastName: String = "",  dateOfBirth: String = "")
+case class RawMemberDetails(nino: String = "",
+                            firstName: String = "",
+                            lastName: String = "",
+                            dateOfBirth: String = ""
+                           )
 
 object RawMemberDetails {
-  implicit val formats = Json.format[RawMemberDetails]
+  implicit val formats: OFormat[RawMemberDetails] = Json.format[RawMemberDetails]
 }
 
 case class IndividualDetails(nino: NINO, firstName: Name, lastName: Name, dateOfBirth: DateTime)
 
 object IndividualDetails {
 
-  implicit val individualDetailsReads = individualDetailsReadsWith(JsonReads.isoDate)
+  implicit val individualDetailsReads: Reads[IndividualDetails] = individualDetailsReadsWith(JsonReads.isoDate)
 
-  implicit val individualDetailsBulkReads = individualDetailsReadsWith(JsonReads.bulkDate)
+  implicit val individualDetailsBulkReads: Reads[IndividualDetails] = individualDetailsReadsWith(JsonReads.bulkDate)
 
   implicit val individualDetailssWrites: Writes[IndividualDetails] = (
     (JsPath \ "nino").write[String] and

@@ -27,7 +27,7 @@ class ResidencyYearResolver @Inject()() {
     * Checks to see if the current date is between 1st January and 5th April (inclusive)
     * @return true if the date is between 1st January and 5th April (inclusive) else return false
     */
-  def isBetweenJanAndApril(): Boolean = {
+  def isBetweenJanAndApril: Boolean = {
     val currentDate = currentDateTime
     currentDate.isAfter(new DateTime(currentDate.getYear - 1, 12, 31, 0, 0, 0, 0)) && currentDate.isBefore(new DateTime(currentDate.getYear, 4, 6, 0, 0, 0, 0))
   }

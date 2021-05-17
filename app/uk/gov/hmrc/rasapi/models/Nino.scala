@@ -16,10 +16,10 @@
 
 package uk.gov.hmrc.rasapi.models
 
-import play.api.libs.json.Json
+import play.api.libs.json.{Json, OFormat}
 
 case class Nino(nino: String)
 
 object Nino {
-  implicit val format = Json.format[Nino]
+  implicit val format: OFormat[Nino] = Json.format[Nino]
 }

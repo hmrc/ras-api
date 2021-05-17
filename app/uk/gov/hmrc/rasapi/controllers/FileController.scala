@@ -18,21 +18,21 @@ package uk.gov.hmrc.rasapi.controllers
 
 import akka.stream.scaladsl.Source
 import akka.util.ByteString
-import javax.inject.Inject
-import play.api.Logger
+import play.api.Logging
 import play.api.http.HttpEntity
+import play.api.libs.iteratee.streams.IterateeStreams
 import play.api.libs.json.Json.toJson
-import play.api.mvc.{Action, AnyContent, ControllerComponents, Request, Result}
+import play.api.mvc._
 import reactivemongo.bson.BSONObjectID
 import uk.gov.hmrc.auth.core.AuthProvider.GovernmentGateway
 import uk.gov.hmrc.auth.core._
 import uk.gov.hmrc.auth.core.retrieve.v2.Retrievals.authorisedEnrolments
-import uk.gov.hmrc.play.bootstrap.controller.BackendController
+import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
 import uk.gov.hmrc.rasapi.metrics.Metrics
 import uk.gov.hmrc.rasapi.repository.{FileData, RasChunksRepository, RasFilesRepository}
 import uk.gov.hmrc.rasapi.services.AuditService
-import play.api.libs.iteratee.streams.IterateeStreams
 
+import javax.inject.Inject
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.{Failure, Success, Try}
 
@@ -44,7 +44,7 @@ class FileController @Inject()(
                                 val authConnector: AuthConnector,
                                 cc: ControllerComponents,
                                 implicit val ec: ExecutionContext
-                              ) extends BackendController(cc) with AuthorisedFunctions {
+                              ) extends BackendController(cc) with AuthorisedFunctions with Logging {
 
   val fileRemove: String = "File-Remove"
   val fileServe: String = "File-Read"
@@ -60,22 +60,22 @@ class FileController @Inject()(
           val id = getEnrolmentIdentifier(enrols)
           getFile(fileName, id).map { fileData =>
             if (fileData.isDefined) {
-              Logger.debug("[FileController][serverFile] File repo enumerator received")
+              logger.debug("[FileController][serverFile] File repo enumerator received")
               val byteArray = Source.fromPublisher(IterateeStreams.enumeratorToPublisher(fileData.get.data.map(ByteString.fromArray)))
               apiMetrics.stop()
               Ok.sendEntity(HttpEntity.Streamed(byteArray, Some(fileData.get.length), Some(_contentType)))
-                .withHeaders(CONTENT_DISPOSITION -> s"""attachment; filename="${fileName}"""",
+                .withHeaders(CONTENT_DISPOSITION -> s"""attachment; filename="$fileName"""",
                   CONTENT_LENGTH -> s"${fileData.get.length}",
                   CONTENT_TYPE -> _contentType)
             }
             else {
-              Logger.error(s"[FileController][serverFile] Requested File not found to serve fileName is $fileName")
+              logger.error(s"[FileController][serverFile] Requested File not found to serve fileName is $fileName")
               NotFound(toJson(ErrorNotFound))
             }
 
           }.recover {
             case ex: Throwable =>
-              Logger.error(s"[FileController][serverFile] Request failed with Exception ${ex.getMessage} for userId ($id) file -> $fileName")
+              logger.error(s"[FileController][serverFile] Request failed with Exception ${ex.getMessage} for userId ($id) file -> $fileName")
               InternalServerError
           }
       } recoverWith{
@@ -93,7 +93,7 @@ class FileController @Inject()(
             (parseStringIdToBSONObjectId(fileName) match {
               case Success(bsonId) => chunksRepo.removeChunk(bsonId).map { isChunkRemoved =>
                 if (isChunkRemoved) {
-                  Logger.info(s"[FileController][remove] Chunk deletion succeeded, fileName is: ${fileName}")
+                  logger.info(s"[FileController][remove] Chunk deletion succeeded, fileName is: $fileName")
                   auditService.audit(auditType = "FileDeletion",
                     path = request.path,
                     auditData = Map("userIdentifier" -> id, "fileName" -> fileName, "chunkDeletionSuccess" -> "true")
@@ -103,29 +103,31 @@ class FileController @Inject()(
                     path = request.path,
                     auditData = Map("userIdentifier" -> id, "fileName" -> fileName, "chunkDeletionSuccess" -> "false")
                   )
-                  Logger.warn(s"[FileController][remove] Chunk deletion failed, fileName is: ${fileName}")
+                  logger.warn(s"[FileController][remove] Chunk deletion failed, fileName is: $fileName")
                 }
               }.recover {
-                case ex: Throwable => {
-                  Logger.error(s"[FileController][remove] Exception ${ex.getMessage} was thrown", ex)
-                }
+                case ex: Throwable =>
+                  logger.error(s"[FileController][remove] Exception ${ex.getMessage} was thrown", ex)
               }.map(_ => ())
-              case Failure(ex) => {
-                Logger.warn(s"[FileController][remove] Exception ${ex.getMessage} was thrown, the following file ($fileName) and userID $id could not be converted to a BSONObjectId.")
-                auditService.audit(auditType = "FileDeletion",
-                  path = request.path,
-                  auditData = Map("userIdentifier" -> id, "fileName" -> fileName, "chunkDeletionSuccess" -> "false",
-                    "reason" -> "fileName could not be converted to BSONObjectId")
+              case Failure(ex) =>
+                logger.warn(s"[FileController][remove] Exception ${ex.getMessage} was thrown," +
+                  s" the following file ($fileName) and userID $id could not be converted to a BSONObjectId.")
+
+                auditService.audit(auditType = "FileDeletion", path = request.path,
+                  auditData = Map("userIdentifier" -> id,
+                    "fileName" -> fileName,
+                    "chunkDeletionSuccess" -> "false",
+                    "reason" -> "fileName could not be converted to BSONObjectId"
+                  )
                 )
                 Future.successful(())
-              }
             }).map {
               _ =>
                 apiMetrics.stop()
                 if(res) Ok("") else InternalServerError
             }
           }.recover {
-            case ex: Throwable => Logger.error(s"[FileController][remove] Request failed with Exception ${ex.getMessage} for userId ($id) file -> $fileName")
+            case ex: Throwable => logger.error(s"[FileController][remove] Request failed with Exception ${ex.getMessage} for userId ($id) file -> $fileName")
               InternalServerError
           }
       } recoverWith{
@@ -134,13 +136,13 @@ class FileController @Inject()(
   }
 
   private def handleAuthFailure(implicit request: Request[_]): PartialFunction[Throwable, Future[Result]] = {
-      case _: InsufficientEnrolments => Logger.warn("[FileController][handleAuthFailure] Insufficient privileges")
+      case _: InsufficientEnrolments => logger.warn("[FileController][handleAuthFailure] Insufficient privileges")
         metrics.registry.counter(UNAUTHORIZED.toString)
         Future.successful(Unauthorized(toJson(Unauthorised)))
-      case _: NoActiveSession => Logger.warn("[FileController][handleAuthFailure] Inactive session")
+      case _: NoActiveSession => logger.warn("[FileController][handleAuthFailure] Inactive session")
         metrics.registry.counter(UNAUTHORIZED.toString)
         Future.successful(Unauthorized(toJson(InvalidCredentials)))
-      case ex => Logger.error(s"[FileController][handleAuthFailure] Exception ${ex.getMessage} was thrown from auth", ex)
+      case ex => logger.error(s"[FileController][handleAuthFailure] Exception ${ex.getMessage} was thrown from auth", ex)
         Future.successful(InternalServerError(toJson(ErrorInternalServerError)))
   }
 

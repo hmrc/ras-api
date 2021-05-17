@@ -20,7 +20,7 @@ package uk.gov.hmrc.rasapi.modules
 import play.api.inject.{Binding, Module}
 import play.api.{Configuration, Environment}
 import uk.gov.hmrc.http.cache.client.ShortLivedHttpCaching
-import uk.gov.hmrc.rasapi.config.{AppContext, RasAuthConnector, RasSessionCache, RasShortLivedCache, RasShortLivedHttpCaching, WSHttp}
+import uk.gov.hmrc.rasapi.config.{AppContext, RasShortLivedHttpCaching, WSHttp}
 import uk.gov.hmrc.rasapi.connectors.{DesConnector, FileUploadConnector}
 import uk.gov.hmrc.rasapi.controllers.{Documentation, FileController, FileProcessingController, LookupController}
 import uk.gov.hmrc.rasapi.helpers.ResidencyYearResolver
@@ -47,8 +47,7 @@ class APiModule extends Module {
 
   lazy val bindConnectors: Seq[Binding[_]] = Seq(
     bind[DesConnector].toSelf.eagerly(),
-    bind[FileUploadConnector].toSelf.eagerly(),
-    bind[RasAuthConnector].toSelf.eagerly()
+    bind[FileUploadConnector].toSelf.eagerly()
   )
 
   lazy val bindRepositories: Seq[Binding[_]] = Seq(
@@ -60,8 +59,6 @@ class APiModule extends Module {
     bind[AppContext].toSelf.eagerly(),
     bind[Metrics].toSelf.eagerly(),
     bind[ErrorConverter].toSelf.eagerly(),
-    bind[RasSessionCache].toSelf.eagerly(),
-    bind[RasShortLivedCache].toSelf.eagerly(),
     bind[ShortLivedHttpCaching].to[RasShortLivedHttpCaching].eagerly(),
     bind[ResidencyYearResolver].toSelf.eagerly(),
     bind[WSHttp].toSelf.eagerly()

@@ -20,9 +20,10 @@ import org.joda.time.DateTime
 import org.mockito.ArgumentMatchers
 import org.mockito.ArgumentMatchers.{eq => Meq, _}
 import org.mockito.Mockito._
-import org.scalatest.BeforeAndAfter
+import org.scalatest.{BeforeAndAfter, Matchers, WordSpecLike}
 import org.scalatestplus.mockito.MockitoSugar
 import org.scalatestplus.play.guice.GuiceOneAppPerSuite
+import play.api.Application
 import play.api.inject.guice.GuiceApplicationBuilder
 import play.api.libs.functional.syntax.{unlift, _}
 import play.api.libs.json.{JsPath, Json, Writes}
@@ -33,39 +34,39 @@ import play.mvc.Http.HeaderNames
 import uk.gov.hmrc.api.controllers.ErrorAcceptHeaderInvalid
 import uk.gov.hmrc.auth.core._
 import uk.gov.hmrc.http.HeaderCarrier
-import uk.gov.hmrc.play.test.UnitSpec
-import uk.gov.hmrc.rasapi.config.{AppContext, RasAuthConnector}
+import uk.gov.hmrc.mongo.Awaiting
+import uk.gov.hmrc.rasapi.config.AppContext
 import uk.gov.hmrc.rasapi.connectors.DesConnector
 import uk.gov.hmrc.rasapi.helpers.ResidencyYearResolver
 import uk.gov.hmrc.rasapi.metrics.Metrics
-import uk.gov.hmrc.rasapi.models._
+import uk.gov.hmrc.rasapi.models.{Nino, _}
 import uk.gov.hmrc.rasapi.services.AuditService
 import uk.gov.hmrc.rasapi.utils.ErrorConverter
 
 import scala.concurrent.{ExecutionContext, Future}
 
-class LookupControllerSpec extends UnitSpec with MockitoSugar with GuiceOneAppPerSuite with BeforeAndAfter {
+class LookupControllerSpec extends WordSpecLike with Matchers with Awaiting with MockitoSugar with GuiceOneAppPerSuite with BeforeAndAfter {
 
-  override implicit lazy val app = new GuiceApplicationBuilder()
+  override implicit lazy val app: Application = new GuiceApplicationBuilder()
     .configure("api-v2_0.enabled" -> "true")
     .build()
 
-  implicit val hc = HeaderCarrier()
+  implicit val hc: HeaderCarrier = HeaderCarrier()
 
   val acceptHeader: (String, String) = (HeaderNames.ACCEPT, "application/vnd.hmrc.2.0+json")
   val acceptHeaderV1: (String, String) = (HeaderNames.ACCEPT, "application/vnd.hmrc.1.0+json")
 
-  val mockDesConnector = mock[DesConnector]
-  val mockAuditService = mock[AuditService]
-  val mockAuthConnector = mock[RasAuthConnector]
-  val mockResidencyYearResolver = mock[ResidencyYearResolver]
-  val mockMetrics = app.injector.instanceOf[Metrics]
-  val appContext = app.injector.instanceOf[AppContext]
-  val errorConverer = app.injector.instanceOf[ErrorConverter]
-  val mockCC = mock[ControllerComponents]
-  val mockParser = mock[BodyParsers.Default]
+  val mockDesConnector: DesConnector = mock[DesConnector]
+  val mockAuditService: AuditService = mock[AuditService]
+  val mockAuthConnector: AuthConnector = mock[AuthConnector]
+  val mockResidencyYearResolver: ResidencyYearResolver = mock[ResidencyYearResolver]
+  val mockMetrics: Metrics = app.injector.instanceOf[Metrics]
+  val appContext: AppContext = app.injector.instanceOf[AppContext]
+  val errorConverer: ErrorConverter = app.injector.instanceOf[ErrorConverter]
+  val mockCC: ControllerComponents = mock[ControllerComponents]
+  val mockParser: BodyParsers.Default = mock[BodyParsers.Default]
 
-  val expectedNino = uk.gov.hmrc.rasapi.models.Nino("LE241131B")
+  val expectedNino: Nino = uk.gov.hmrc.rasapi.models.Nino("LE241131B")
 
   private val enrolmentIdentifier1 = EnrolmentIdentifier("PSAID", "A123456")
   private val enrolment1 = Enrolment(key = "HMRC-PSA-ORG", identifiers = List(enrolmentIdentifier1), state = "Activated", None)
@@ -75,7 +76,7 @@ class LookupControllerSpec extends UnitSpec with MockitoSugar with GuiceOneAppPe
 
   val successfulRetrieval: Future[Enrolments] = Future.successful(enrolments)
 
-  val individualDetails = IndividualDetails("LE241131B", "Joe", "Bloggs", new DateTime("1990-12-03"))
+  val individualDetails: IndividualDetails = IndividualDetails("LE241131B", "Joe", "Bloggs", new DateTime("1990-12-03"))
 
   val STATUS_DECEASED: String = "DECEASED"
   val STATUS_MATCHING_FAILED: String = "STATUS_UNAVAILABLE"
@@ -193,7 +194,7 @@ class LookupControllerSpec extends UnitSpec with MockitoSugar with GuiceOneAppPe
 
         when(mockAuthConnector.authorise[Enrolments](any(), any())(any(), any())).thenReturn(successfulRetrieval)
 
-        when(mockResidencyYearResolver.isBetweenJanAndApril()).thenReturn(true)
+        when(mockResidencyYearResolver.isBetweenJanAndApril).thenReturn(true)
 
         val residencyStatus = ResidencyStatus("scotResident", Some("otherUKResident"))
 
@@ -220,7 +221,7 @@ class LookupControllerSpec extends UnitSpec with MockitoSugar with GuiceOneAppPe
 
         when(mockAuthConnector.authorise[Enrolments](any(), any())(any(), any())).thenReturn(successfulRetrieval)
 
-        when(mockResidencyYearResolver.isBetweenJanAndApril()).thenReturn(true)
+        when(mockResidencyYearResolver.isBetweenJanAndApril).thenReturn(true)
 
         val residencyStatus = ResidencyStatus("scotResident", Some("otherUKResident"))
 
@@ -247,7 +248,7 @@ class LookupControllerSpec extends UnitSpec with MockitoSugar with GuiceOneAppPe
 
         when(mockAuthConnector.authorise[Enrolments](any(), any())(any(), any())).thenReturn(successfulRetrieval)
 
-        when(mockResidencyYearResolver.isBetweenJanAndApril()).thenReturn(false)
+        when(mockResidencyYearResolver.isBetweenJanAndApril).thenReturn(false)
 
         val residencyStatus = ResidencyStatus("otherUKResident", Some("otherUKResident"))
 
@@ -272,7 +273,7 @@ class LookupControllerSpec extends UnitSpec with MockitoSugar with GuiceOneAppPe
       "a valid request has been submitted and the date is between april and december and the individual is deceased" in {
         when(mockAuthConnector.authorise[Enrolments](any(), any())(any(), any())).thenReturn(successfulRetrieval)
 
-        when(mockResidencyYearResolver.isBetweenJanAndApril()).thenReturn(false)
+        when(mockResidencyYearResolver.isBetweenJanAndApril).thenReturn(false)
 
         when(mockDesConnector.getResidencyStatus(any(), any(), any(), any())).thenReturn(Future.successful(Right(ResidencyStatusFailure(STATUS_DECEASED, "Individual is deceased"))))
 
@@ -353,7 +354,7 @@ class LookupControllerSpec extends UnitSpec with MockitoSugar with GuiceOneAppPe
 
           when(mockAuthConnector.authorise[Enrolments](any(), any())(any(), any())).thenReturn(successfulRetrieval)
 
-          when(mockResidencyYearResolver.isBetweenJanAndApril()).thenReturn(true)
+          when(mockResidencyYearResolver.isBetweenJanAndApril).thenReturn(true)
 
           val residencyStatus = ResidencyStatus("scotResident", Some("otherUKResident"))
 
@@ -393,7 +394,7 @@ class LookupControllerSpec extends UnitSpec with MockitoSugar with GuiceOneAppPe
 
           when(mockAuthConnector.authorise[Enrolments](any(), any())(any(), any())).thenReturn(successfulRetrieval)
 
-          when(mockResidencyYearResolver.isBetweenJanAndApril()).thenReturn(true)
+          when(mockResidencyYearResolver.isBetweenJanAndApril).thenReturn(true)
 
           val residencyStatus = ResidencyStatus("scotResident", Some("otherUKResident"))
 
@@ -418,7 +419,7 @@ class LookupControllerSpec extends UnitSpec with MockitoSugar with GuiceOneAppPe
 
           when(mockAuthConnector.authorise[Enrolments](any(), any())(any(), any())).thenReturn(successfulRetrieval)
 
-          when(mockResidencyYearResolver.isBetweenJanAndApril()).thenReturn(true)
+          when(mockResidencyYearResolver.isBetweenJanAndApril).thenReturn(true)
 
           val residencyStatus = ResidencyStatus("scotResident", Some("otherUKResident"))
 
@@ -442,7 +443,7 @@ class LookupControllerSpec extends UnitSpec with MockitoSugar with GuiceOneAppPe
         "a version 2.0 request payload is given and the date of the request is between january and april 2018" in {
           when(mockAuthConnector.authorise[Enrolments](any(), any())(any(), any())).thenReturn(successfulRetrieval)
 
-          when(mockResidencyYearResolver.isBetweenJanAndApril()).thenReturn(true)
+          when(mockResidencyYearResolver.isBetweenJanAndApril).thenReturn(true)
 
           val residencyStatus = ResidencyStatus("scotResident", Some("otherUKResident"))
 
@@ -467,7 +468,7 @@ class LookupControllerSpec extends UnitSpec with MockitoSugar with GuiceOneAppPe
 
           when(mockAuthConnector.authorise[Enrolments](any(), any())(any(), any())).thenReturn(successfulRetrieval)
 
-          when(mockResidencyYearResolver.isBetweenJanAndApril()).thenReturn(true)
+          when(mockResidencyYearResolver.isBetweenJanAndApril).thenReturn(true)
 
           val residencyStatus = ResidencyStatus("scotResident", Some("otherUKResident"))
 
@@ -492,7 +493,7 @@ class LookupControllerSpec extends UnitSpec with MockitoSugar with GuiceOneAppPe
 
           when(mockAuthConnector.authorise[Enrolments](any(), any())(any(), any())).thenReturn(successfulRetrieval)
 
-          when(mockResidencyYearResolver.isBetweenJanAndApril()).thenReturn(true)
+          when(mockResidencyYearResolver.isBetweenJanAndApril).thenReturn(true)
 
           val residencyStatus = ResidencyStatus("otherUKResident", Some("otherUKResident"))
 
@@ -517,7 +518,7 @@ class LookupControllerSpec extends UnitSpec with MockitoSugar with GuiceOneAppPe
 
           when(mockAuthConnector.authorise[Enrolments](any(), any())(any(), any())).thenReturn(successfulRetrieval)
 
-          when(mockResidencyYearResolver.isBetweenJanAndApril()).thenReturn(false)
+          when(mockResidencyYearResolver.isBetweenJanAndApril).thenReturn(false)
 
           val residencyStatus = ResidencyStatus("otherUKResident", Some("otherUKResident"))
 
@@ -540,7 +541,7 @@ class LookupControllerSpec extends UnitSpec with MockitoSugar with GuiceOneAppPe
         "a valid request payload is given with a nino which is 8 characters in length e.g. AA123456" in {
 
           when(mockAuthConnector.authorise[Enrolments](any(), any())(any(), any())).thenReturn(successfulRetrieval)
-          when(mockResidencyYearResolver.isBetweenJanAndApril()).thenReturn(true)
+          when(mockResidencyYearResolver.isBetweenJanAndApril).thenReturn(true)
 
           val residencyStatus = ResidencyStatus("otherUKResident", Some("otherUKResident"))
 

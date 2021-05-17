@@ -16,16 +16,14 @@
 
 package uk.gov.hmrc.rasapi.repositories
 
-import org.scalatest.BeforeAndAfter
+import org.scalatest.{BeforeAndAfter, Matchers, WordSpecLike}
 import org.scalatestplus.mockito.MockitoSugar
 import org.scalatestplus.play.guice.GuiceOneAppPerSuite
 import reactivemongo.bson.BSONObjectID
-import uk.gov.hmrc.play.test.UnitSpec
+import uk.gov.hmrc.mongo.Awaiting
 import uk.gov.hmrc.rasapi.repository.{RasChunksRepository, RasFilesRepository}
 
-import scala.concurrent.ExecutionContext.Implicits.global
-
-class RasChunksRepositorySpec extends UnitSpec with MockitoSugar with GuiceOneAppPerSuite
+class RasChunksRepositorySpec extends WordSpecLike with Matchers with Awaiting with MockitoSugar with GuiceOneAppPerSuite
   with BeforeAndAfter  {
 
     val userId: String = "A1234567"
@@ -44,19 +42,19 @@ class RasChunksRepositorySpec extends UnitSpec with MockitoSugar with GuiceOneAp
   "RasChunksRepository" should {
 
     "get All Chunks" in {
-      await(RepositoriesHelper.saveTempFile("user222","envelope222","file222")(rasFilesRepository))
+      RepositoriesHelper.saveTempFile("user222","envelope222","file222")(rasFilesRepository)
 
-      val res = await(rasBulkOperationsRepository.getAllChunks())
+      val res = await(rasBulkOperationsRepository.getAllChunks)
       res.size shouldBe 1
     }
     "remove a Chunk for an ObjectId" in {
-      val fileMetaData = await(RepositoriesHelper.saveTempFile("user222","envelope222","file222")(rasFilesRepository))
+      val fileMetaData = RepositoriesHelper.saveTempFile("user222","envelope222","file222")(rasFilesRepository)
 
      val result = await(rasBulkOperationsRepository.removeChunk(
         fileMetaData.id.asInstanceOf[BSONObjectID]))
 
       result shouldBe true
-      val res1 = await(rasBulkOperationsRepository.getAllChunks())
+      val res1 = await(rasBulkOperationsRepository.getAllChunks)
       res1.filter(_.files_id == fileMetaData.id).headOption.isEmpty shouldBe true
     }
   }

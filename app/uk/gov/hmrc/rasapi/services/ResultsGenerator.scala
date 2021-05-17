@@ -20,11 +20,12 @@ import org.joda.time.DateTime
 import play.api.libs.json.{JsError, JsSuccess, Json}
 import play.api.mvc.{AnyContent, Request}
 import uk.gov.hmrc.http.HeaderCarrier
+import uk.gov.hmrc.play.audit.http.connector.AuditResult
 import uk.gov.hmrc.rasapi.connectors.DesConnector
 import uk.gov.hmrc.rasapi.helpers.ResidencyYearResolver
 import uk.gov.hmrc.rasapi.models._
 
-import scala.concurrent.Await
+import scala.concurrent.{Await, Future}
 import scala.concurrent.duration._
 import scala.util.{Failure, Success, Try}
 
@@ -49,18 +50,17 @@ trait ResultsGenerator {
 
     createMatchingData(inputRow) match {
       case Right(errors) => s"$inputRow,${errors.mkString(comma)}"
-      case Left(memberDetails) => {
+      case Left(memberDetails) =>
         val result = Await.result(desConnector.getResidencyStatus(memberDetails, userId, apiVersion, isBulkRequest = true), 20 second)
 
         result match {
-          case Left(residencyStatus) => {
-            val resStatus = if (residencyYearResolver.isBetweenJanAndApril()) updateResidencyResponse(residencyStatus)
+          case Left(residencyStatus) =>
+            val resStatus = if (residencyYearResolver.isBetweenJanAndApril) updateResidencyResponse(residencyStatus)
             else residencyStatus.copy(nextYearForecastResidencyStatus = None)
             auditResponse(failureReason = None, nino = memberDetails.nino,
               residencyStatus = Some(resStatus), userId = userId, fileId = fileId)
             inputRow + comma + resStatus.toString
-          }
-          case Right(residencyStatusFailure) => {
+          case Right(residencyStatusFailure) =>
             auditResponse(failureReason = Some(residencyStatusFailure.code.replace(MATCHING_FAILED, "MATCHING_FAILED")), nino = memberDetails.nino,
               residencyStatus = None, userId = userId, fileId = fileId)
 
@@ -68,9 +68,7 @@ trait ResultsGenerator {
                                                           .replace(MATCHING_FAILED, FILE_PROCESSING_MATCHING_FAILED)
                                                           .replace(INTERNAL_SERVER_ERROR, FILE_PROCESSING_INTERNAL_SERVER_ERROR)
                                                           .replace(SERVICE_UNAVAILABLE, FILE_PROCESSING_INTERNAL_SERVER_ERROR)
-          }
         }
-      }
     }
   }
 
@@ -108,7 +106,7 @@ trait ResultsGenerator {
     * @param hc Headers
     */
   private def auditResponse(failureReason: Option[String], nino: String, residencyStatus: Option[ResidencyStatus],
-    userId: String, fileId: String)(implicit request: Request[AnyContent], hc: HeaderCarrier) = {
+    userId: String, fileId: String)(implicit request: Request[AnyContent], hc: HeaderCarrier): Future[AuditResult] = {
 
     auditService.audit(
       auditType = "ReliefAtSourceResidency",
@@ -118,7 +116,7 @@ trait ResultsGenerator {
         "fileId" -> fileId,
         "userIdentifier" -> userId,
         "requestSource" -> "FE_BULK",
-        "NextCYStatus" -> residencyStatus.flatMap(_.nextYearForecastResidencyStatus).getOrElse("").toString,
+        "NextCYStatus" -> residencyStatus.flatMap(_.nextYearForecastResidencyStatus).getOrElse(""),
         "successfulLookup" -> failureReason.getOrElse("").isEmpty.toString,
         "reason" -> failureReason.getOrElse(""),
         "CYStatus" -> residencyStatus.map(_.currentYearResidencyStatus).getOrElse("")).filterNot(_._2 == "")

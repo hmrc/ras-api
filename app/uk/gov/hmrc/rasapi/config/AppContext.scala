@@ -20,15 +20,12 @@ import javax.inject.Inject
 import uk.gov.hmrc.play.bootstrap.config.ServicesConfig
 
 class AppContext @Inject()(val servicesConfig: ServicesConfig) {
-  lazy val appName = servicesConfig.getString("appName")
-  lazy val appUrl = servicesConfig.getString("appUrl")
-  lazy val apiContext = servicesConfig.getString(s"api.context")
-  lazy val baseUrl = servicesConfig.getString("baseUrl")
-  lazy val apiStatus = servicesConfig.getString("api.status")
-  lazy val endpointsEnabled = servicesConfig.getBoolean("api.endpointsEnabled")
-  lazy val desAuthToken = servicesConfig.getString("desauthtoken")
+  lazy val appName: String = servicesConfig.getString("appName")
+  lazy val apiContext: String = servicesConfig.getString(s"api.context")
+  lazy val apiStatus: String = servicesConfig.getString("api.status")
+  lazy val endpointsEnabled: Boolean = servicesConfig.getBoolean("api.endpointsEnabled")
+  lazy val desAuthToken: String = servicesConfig.getString("desauthtoken")
   lazy val desUrlHeaderEnv: String =  servicesConfig.getString("environment")
-  lazy val edhUrl: String = servicesConfig.getString("endpoints.edh.url")
   lazy val resultsExpriyTime: Int = servicesConfig.getInt("results.expiry.time")
   lazy val allowNoNextYearStatus: Boolean = servicesConfig.getBoolean("toggle-feature.allow-no-next-year-status")
   lazy val allowDefaultRUK: Boolean = servicesConfig.getBoolean("toggle-feature.allow-default-ruk")

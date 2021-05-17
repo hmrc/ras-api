@@ -17,12 +17,11 @@
 package uk.gov.hmrc.rasapi.helpers
 
 import org.joda.time.DateTime
-import org.scalatest.BeforeAndAfter
+import org.scalatest.{BeforeAndAfter, Matchers, WordSpecLike}
 import org.scalatestplus.mockito.MockitoSugar
 import org.scalatestplus.play.guice.GuiceOneAppPerTest
-import uk.gov.hmrc.play.test.UnitSpec
 
-class ResidencyYearResolverSpec extends UnitSpec with MockitoSugar with GuiceOneAppPerTest with BeforeAndAfter {
+class ResidencyYearResolverSpec extends WordSpecLike with Matchers with MockitoSugar with GuiceOneAppPerTest with BeforeAndAfter {
 
   "isBetweenJanAndApril" should {
 
@@ -34,7 +33,7 @@ class ResidencyYearResolverSpec extends UnitSpec with MockitoSugar with GuiceOne
           override def currentDateTime = new DateTime(2017, 4, 6, 0, 0)
         }
 
-        SUT.isBetweenJanAndApril() shouldBe false
+        SUT.isBetweenJanAndApril shouldBe false
       }
 
       "the date is on 31st December" in {
@@ -43,7 +42,7 @@ class ResidencyYearResolverSpec extends UnitSpec with MockitoSugar with GuiceOne
           override def currentDateTime = new DateTime(2017, 12, 31, 0, 0)
         }
 
-        SUT.isBetweenJanAndApril() shouldBe false
+        SUT.isBetweenJanAndApril shouldBe false
       }
 
       "the date is after 6th April but before 31st December" in {
@@ -52,7 +51,7 @@ class ResidencyYearResolverSpec extends UnitSpec with MockitoSugar with GuiceOne
           override def currentDateTime = new DateTime(2017, 8, 22, 0, 0)
         }
 
-        SUT.isBetweenJanAndApril() shouldBe false
+        SUT.isBetweenJanAndApril shouldBe false
       }
     }
 
@@ -63,7 +62,7 @@ class ResidencyYearResolverSpec extends UnitSpec with MockitoSugar with GuiceOne
           override def currentDateTime = new DateTime(2017, 1, 22, 0, 0)
         }
 
-        SUT.isBetweenJanAndApril() shouldBe true
+        SUT.isBetweenJanAndApril shouldBe true
       }
 
       "the date is on 5th April" in {
@@ -72,7 +71,7 @@ class ResidencyYearResolverSpec extends UnitSpec with MockitoSugar with GuiceOne
           override def currentDateTime = new DateTime(2017, 4, 5, 0, 0)
         }
 
-        SUT.isBetweenJanAndApril() shouldBe true
+        SUT.isBetweenJanAndApril shouldBe true
       }
 
       "the date is between 1st Jan and 5th April" in {
@@ -81,7 +80,7 @@ class ResidencyYearResolverSpec extends UnitSpec with MockitoSugar with GuiceOne
           override def currentDateTime = new DateTime(2017, 2, 25, 0, 0)
         }
 
-        SUT.isBetweenJanAndApril() shouldBe true
+        SUT.isBetweenJanAndApril shouldBe true
       }
     }
   }

@@ -16,11 +16,8 @@
 
 package uk.gov.hmrc.rasapi.services
 
-import java.nio.file.Path
-
-import javax.inject.Inject
 import org.joda.time.DateTime
-import play.api.Logger
+import play.api.Logging
 import play.api.mvc.{AnyContent, Request}
 import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.rasapi.config.AppContext
@@ -30,6 +27,8 @@ import uk.gov.hmrc.rasapi.metrics.Metrics
 import uk.gov.hmrc.rasapi.models.{ApiVersion, CallbackData, ResultsFileMetaData}
 import uk.gov.hmrc.rasapi.repository.RasFilesRepository
 
+import java.nio.file.Path
+import javax.inject.Inject
 import scala.concurrent.ExecutionContext
 import scala.util.{Failure, Success, Try}
 
@@ -43,7 +42,7 @@ class FileProcessingService @Inject()(
                                      val appContext: AppContext,
                                      val metrics: Metrics,
                                      implicit val ec: ExecutionContext
-                                     ) extends RasFileReader with RasFileWriter with ResultsGenerator {
+                                     ) extends RasFileReader with RasFileWriter with ResultsGenerator with Logging {
 
   def getCurrentDate: DateTime = DateTime.now()
 
@@ -76,7 +75,11 @@ class FileProcessingService @Inject()(
     fileMetrics.stop
   }
 
-  def manipulateFile(inputFileData: Try[Iterator[String]], userId: String, callbackData: CallbackData, apiVersion: ApiVersion)(implicit hc: HeaderCarrier, request: Request[AnyContent]): Unit = {
+  def manipulateFile(inputFileData: Try[Iterator[String]],
+                     userId: String,
+                     callbackData: CallbackData,
+                     apiVersion: ApiVersion
+                    )(implicit hc: HeaderCarrier, request: Request[AnyContent]): Unit = {
     val fileResultsMetrics = metrics.register(fileResults).time
     val writer = createFileWriter(callbackData.fileId, userId)
 
@@ -89,27 +92,26 @@ class FileProcessingService @Inject()(
 
     try{
       val dataIterator = inputFileData.get.toList
-      Logger.info(s"[FileProcessingService][manipulateFile] File data size ${dataIterator.size} for user $userId")
+      logger.info(s"[FileProcessingService][manipulateFile] File data size ${dataIterator.size} for user $userId")
       writeResultToFile(writer._2, s"National Insurance number,First name,Last name,Date of birth,$getTaxYearHeadings", userId)
       dataIterator.foreach(row =>
-        if (!row.isEmpty) {
+        if (row.nonEmpty) {
           writeResultToFile(writer._2,fetchResult(removeDoubleQuotes(row),userId,callbackData.fileId, apiVersion = apiVersion), userId)
         }
       )
       closeWriter(writer._2)
       fileResultsMetrics.stop
 
-      Logger.info(s"[FileProcessingService][manipulateFile] File results complete, ready to save the file (fileId: ${callbackData.fileId}) for userId ($userId).")
+      logger.info(s"[FileProcessingService][manipulateFile] File results complete, ready to save the file (fileId: ${callbackData.fileId}) for userId ($userId).")
 
       saveFile(writer._1, userId, callbackData)
 
     } catch
       {
-        case ex:Throwable => {
-          Logger.error(s"[FileProcessingService][manipulateFile] Error for userId ($userId) in File processing -> ${ex.getMessage}", ex)
+        case ex:Throwable =>
+          logger.error(s"[FileProcessingService][manipulateFile] Error for userId ($userId) in File processing -> ${ex.getMessage}", ex)
           sessionCacheService.updateFileSession(userId, callbackData.copy(status = STATUS_ERROR), None, None)
           fileResultsMetrics.stop
-        }
       }
     finally {
       closeWriter(writer._2)
@@ -119,13 +121,13 @@ class FileProcessingService @Inject()(
 
   def saveFile(filePath: Path, userId: String, callbackData: CallbackData)(implicit hc: HeaderCarrier, request: Request[AnyContent]): Unit = {
 
-    Logger.info("[FileProcessingService][saveFile] Starting to save file...")
+    logger.info("[FileProcessingService][saveFile] Starting to save file...")
     val fileSaveMetrics = metrics.register(fileSave).time
       fileRepo.saveFile(userId, callbackData.envelopeId, filePath, callbackData.fileId).onComplete {
         result =>
           result match {
             case Success(file) =>
-              Logger.info(s"[FileProcessingService][saveFile] Starting to save the file (${file.id}) for user ID: $userId")
+              logger.info(s"[FileProcessingService][saveFile] Starting to save the file (${file.id}) for user ID: $userId")
 
               val resultsFileMetaData = Some(ResultsFileMetaData(file.id.toString, file.filename, file.uploadDate, file.chunkSize, file.length))
 
@@ -133,14 +135,13 @@ class FileProcessingService @Inject()(
                 case Success(metadata) =>
                   sessionCacheService.updateFileSession(userId, callbackData, resultsFileMetaData, metadata)
                 case Failure(ex) =>
-                  Logger.error(s"[FileProcessingService][saveFile] Failed to get File Metadata for file (${file.id}), for user ID: $userId, message: ${ex.getMessage}", ex)
+                  logger.error(s"[FileProcessingService][saveFile] Failed to get File Metadata for file (${file.id}), for user ID: $userId, message: ${ex.getMessage}", ex)
                   sessionCacheService.updateFileSession(userId, callbackData, resultsFileMetaData, None)
               }
-              Logger.info(s"[FileProcessingService][saveFile] Completed saving the file (${file.id}) for user ID: $userId")
-            case Failure(ex) => {
-              Logger.error(s"[FileProcessingService][saveFile] results file for userId ($userId) generation/saving failed with Exception ${ex.getMessage}", ex)
+              logger.info(s"[FileProcessingService][saveFile] Completed saving the file (${file.id}) for user ID: $userId")
+            case Failure(ex) =>
+              logger.error(s"[FileProcessingService][saveFile] results file for userId ($userId) generation/saving failed with Exception ${ex.getMessage}", ex)
               sessionCacheService.updateFileSession(userId, callbackData.copy(status = STATUS_ERROR), None, None)
-            }
             //delete result  a future ind
           }
           fileSaveMetrics.stop

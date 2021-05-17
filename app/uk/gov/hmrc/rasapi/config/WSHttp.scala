@@ -17,22 +17,15 @@
 package uk.gov.hmrc.rasapi.config
 
 import akka.actor.ActorSystem
-import javax.inject.Inject
 import play.api.Configuration
 import play.api.libs.ws.{WSClient, WSResponse}
-import uk.gov.hmrc.auth.core.PlayAuthConnector
-import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.play.audit.http.HttpAuditing
 import uk.gov.hmrc.play.bootstrap.http.DefaultHttpClient
 
+import javax.inject.Inject
 import scala.concurrent.Future
 
 class WSHttp @Inject()(httpAuditing: HttpAuditing, wsClient: WSClient, configuration: Configuration, actorSystem: ActorSystem)
   extends DefaultHttpClient(configuration, httpAuditing, wsClient, actorSystem) {
-  def buildRequestWithStream(uri: String)(implicit hc: HeaderCarrier): Future[WSResponse] = buildRequest(uri).stream()
-}
-
-class RasAuthConnector @Inject()(appContext: AppContext, val http: DefaultHttpClient)
-  extends PlayAuthConnector {
-  lazy val serviceUrl: String = appContext.servicesConfig.baseUrl("auth")
+  def buildRequestWithStream(uri: String): Future[WSResponse] = buildRequest(uri, Seq()).stream()
 }
