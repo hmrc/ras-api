@@ -16,8 +16,9 @@
 
 package uk.gov.hmrc.rasapi.config
 
-import javax.inject.Inject
 import uk.gov.hmrc.play.bootstrap.config.ServicesConfig
+
+import javax.inject.Inject
 
 class AppContext @Inject()(val servicesConfig: ServicesConfig) {
   lazy val appName: String = servicesConfig.getString("appName")

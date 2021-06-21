@@ -16,8 +16,9 @@
 
 package uk.gov.hmrc.rasapi.helpers
 
-import javax.inject.Inject
 import org.joda.time.DateTime
+
+import javax.inject.Inject
 
 class ResidencyYearResolver @Inject()() {
 

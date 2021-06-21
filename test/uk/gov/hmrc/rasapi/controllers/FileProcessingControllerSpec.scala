@@ -28,21 +28,20 @@ import play.api.libs.json.Json
 import play.api.mvc.ControllerComponents
 import play.api.test.FakeRequest
 import play.api.test.Helpers.{defaultAwaitTimeout, status}
-import uk.gov.hmrc.mongo.Awaiting
 import uk.gov.hmrc.rasapi.models.{CallbackData, ResultsFileMetaData, V2_0}
 import uk.gov.hmrc.rasapi.services.{FileProcessingService, SessionCacheService}
 
 import scala.concurrent.ExecutionContext
 import scala.util.Random
 
-class FileProcessingControllerSpec extends WordSpecLike with Matchers with Awaiting with MockitoSugar with GuiceOneAppPerSuite with BeforeAndAfter {
+class FileProcessingControllerSpec extends WordSpecLike with Matchers with MockitoSugar with GuiceOneAppPerSuite with BeforeAndAfter {
 
   val envelopeId = "0b215ey97-11d4-4006-91db-c067e74fc653"
   val fileId = "file-id-1"
   val fileStatus = "AVAILABLE"
   val reason: Option[String] = None
   val callbackData: CallbackData = CallbackData(envelopeId, fileId, fileStatus, reason)
-  val resultsFile: ResultsFileMetaData = ResultsFileMetaData(fileId, Some("fileName.csv"), Some(1234L), 123, 1234L)
+  val resultsFile: ResultsFileMetaData = ResultsFileMetaData(fileId, "fileName.csv", 1234L, 123, 1234L)
   val userId: String = Random.nextInt(5).toString
 
   val mockFileProcessingService: FileProcessingService = mock[FileProcessingService]

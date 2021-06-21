@@ -18,6 +18,7 @@ package uk.gov.hmrc.rasapi.controllers
 
 import akka.actor.ActorSystem
 import akka.stream.ActorMaterializer
+import org.bson.types.ObjectId
 import org.mockito.ArgumentMatchers.{any, eq => Meq}
 import org.mockito.Mockito.{reset, verify, when}
 import org.scalatest.{BeforeAndAfter, Matchers, WordSpecLike}
@@ -29,12 +30,10 @@ import play.api.http.Status.UNAUTHORIZED
 import play.api.inject.guice.GuiceApplicationBuilder
 import play.api.libs.iteratee.Enumerator
 import play.api.mvc.ControllerComponents
-import play.api.test.Helpers.{defaultAwaitTimeout, status}
+import play.api.test.Helpers.{await, defaultAwaitTimeout, status}
 import play.api.test.{FakeRequest, Helpers}
-import reactivemongo.bson.BSONObjectID
 import uk.gov.hmrc.auth.core._
 import uk.gov.hmrc.http.HeaderCarrier
-import uk.gov.hmrc.mongo.Awaiting
 import uk.gov.hmrc.rasapi.metrics.Metrics
 import uk.gov.hmrc.rasapi.repository.{FileData, RasChunksRepository, RasFilesRepository}
 import uk.gov.hmrc.rasapi.services.AuditService
@@ -42,7 +41,7 @@ import uk.gov.hmrc.rasapi.services.AuditService
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.{Failure, Try}
 
-class FileControllerSpec extends WordSpecLike with Matchers with Awaiting with MockitoSugar with GuiceOneAppPerSuite with BeforeAndAfter {
+class FileControllerSpec extends WordSpecLike with Matchers with MockitoSugar with GuiceOneAppPerSuite with BeforeAndAfter {
 
   implicit val hc: HeaderCarrier = HeaderCarrier()
 
@@ -163,7 +162,7 @@ class FileControllerSpec extends WordSpecLike with Matchers with Awaiting with M
         )(any())
       }
 
-      "chunks deletion fails as id cannot be converted to a BSONObjectId" in {
+      "chunks deletion fails as id cannot be converted to a ObjectId" in {
         val fileController = new FileController (
           mockRasFileRepository,
           mockRasChunksRepository,
@@ -175,7 +174,7 @@ class FileControllerSpec extends WordSpecLike with Matchers with Awaiting with M
         ){
           override def getFile(name: String, userId: String): Future[Option[FileData]] = Future(Some(fileData))
 
-          override def parseStringIdToBSONObjectId(id: String): Try[BSONObjectID] = Failure(new Throwable("Failure"))
+          override def parseStringIdToObjectId(id: String): Try[ObjectId] = Failure(new Throwable("Failure"))
         }
 
         when(mockAuthConnector.authorise[Enrolments](any(), any())(any(), any())).thenReturn(successfulRetrieval)
@@ -191,7 +190,7 @@ class FileControllerSpec extends WordSpecLike with Matchers with Awaiting with M
           auditData = Meq(Map("userIdentifier" -> userId,
             "fileName" -> fileName,
             "chunkDeletionSuccess" -> "false",
-            "reason" -> "fileName could not be converted to BSONObjectId"))
+            "reason" -> "fileName could not be converted to ObjectId"))
         )(any())
       }
 

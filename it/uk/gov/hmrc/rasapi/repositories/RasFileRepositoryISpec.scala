@@ -16,19 +16,16 @@
 
 package uk.gov.hmrc.rasapi.repositories
 
-import java.io.File
-
 import org.scalatest.concurrent.PatienceConfiguration.{Interval, Timeout}
 import org.scalatest.concurrent.{Eventually, ScalaFutures}
 import org.scalatestplus.play.PlaySpec
 import org.scalatestplus.play.guice.GuiceOneAppPerSuite
 import play.api.libs.iteratee.Iteratee
-import play.api.libs.json.Json
 import play.api.test.{DefaultAwaitTimeout, FutureAwaits}
-import reactivemongo.api.{ReadConcern, ReadPreference}
-import reactivemongo.bson.BSONDocument
+import uk.gov.hmrc.rasapi.models.ResultsFile
 import uk.gov.hmrc.rasapi.repository.{FileData, RasChunksRepository, RasFilesRepository}
 
+import java.io.File
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 import scala.concurrent.duration._
@@ -42,8 +39,7 @@ class RasFileRepositoryISpec extends PlaySpec with ScalaFutures with GuiceOneApp
     val largeFile: File = new File("it/resources/testFiles/bulk.csv")
 
     val dropAll: Unit = {
-      await(rasFileRepository.gridFSG.files.delete().one(BSONDocument()))
-      await(rasFileRepository.gridFSG.chunks.delete().one(BSONDocument()))
+      await(rasFileRepository.gridFSG.drop.head)
       fileCount mustBe 0
       chunksCount mustBe 0
 
@@ -51,11 +47,11 @@ class RasFileRepositoryISpec extends PlaySpec with ScalaFutures with GuiceOneApp
     }
 
     def fileCount: Long = {
-      await(rasFileRepository.gridFSG.files.count(None, None, 0, None, readConcern = ReadConcern.Available))
+      await(rasFileRepository.gridFSG.find.collect.head.map(res => res.length))
     }
 
     def chunksCount: Int =
-      await(rasChunksRepository.count(Json.obj(), ReadPreference.secondaryPreferred))
+      await(rasChunksRepository.collection.find.collect.head.map(res => res.length))
 
     def saveFile(): Unit = {
       await(rasFileRepository.saveFile(
@@ -84,7 +80,7 @@ class RasFileRepositoryISpec extends PlaySpec with ScalaFutures with GuiceOneApp
 
       val receiveFile: Option[FileData] = await(rasFileRepository.fetchFile(filename, "userid-1"))
 
-      val convertedToString: Future[String] = receiveFile.map{
+      val convertedToString: Future[String] = receiveFile.map {
         x => Iteratee.flatten(x.data.map(new String(_)) apply Iteratee.consume()).run
       }.getOrElse(Future.successful("failed"))
 

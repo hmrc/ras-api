@@ -127,18 +127,18 @@ class FileProcessingService @Inject()(
         result =>
           result match {
             case Success(file) =>
-              logger.info(s"[FileProcessingService][saveFile] Starting to save the file (${file.id}) for user ID: $userId")
+              logger.info(s"[FileProcessingService][saveFile] Starting to save the file (${file.getId}) for user ID: $userId")
 
-              val resultsFileMetaData = Some(ResultsFileMetaData(file.id.toString, file.filename, file.uploadDate, file.chunkSize, file.length))
+              val resultsFileMetaData = Some(ResultsFileMetaData(file.getId.toString, file.getFilename, file.getUploadDate.getTime, file.getChunkSize, file.getLength))
 
               fileUploadConnector.getFileMetadata(callbackData.envelopeId, callbackData.fileId, userId).onComplete {
                 case Success(metadata) =>
                   sessionCacheService.updateFileSession(userId, callbackData, resultsFileMetaData, metadata)
                 case Failure(ex) =>
-                  logger.error(s"[FileProcessingService][saveFile] Failed to get File Metadata for file (${file.id}), for user ID: $userId, message: ${ex.getMessage}", ex)
+                  logger.error(s"[FileProcessingService][saveFile] Failed to get File Metadata for file (${file.getId}), for user ID: $userId, message: ${ex.getMessage}", ex)
                   sessionCacheService.updateFileSession(userId, callbackData, resultsFileMetaData, None)
               }
-              logger.info(s"[FileProcessingService][saveFile] Completed saving the file (${file.id}) for user ID: $userId")
+              logger.info(s"[FileProcessingService][saveFile] Completed saving the file (${file.getId}) for user ID: $userId")
             case Failure(ex) =>
               logger.error(s"[FileProcessingService][saveFile] results file for userId ($userId) generation/saving failed with Exception ${ex.getMessage}", ex)
               sessionCacheService.updateFileSession(userId, callbackData.copy(status = STATUS_ERROR), None, None)

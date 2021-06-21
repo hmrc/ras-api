@@ -16,14 +16,14 @@
 
 package uk.gov.hmrc.rasapi.repository
 
+import org.mongodb.scala.MongoDatabase
+import org.mongodb.scala.bson.{BsonInt64, Document}
+import org.mongodb.scala.model.IndexOptions
 import play.api.Logger
-import reactivemongo.api.BSONSerializationPack
-import reactivemongo.api.collections.GenericCollection
-import reactivemongo.api.gridfs.GridFS
-import reactivemongo.api.indexes.{Index, IndexType}
-import reactivemongo.bson.{BSONDocument, BSONLong}
 
-import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.Future
+import scala.concurrent.duration.SECONDS
 
 trait GridFsTTLIndexing {
 
@@ -34,55 +34,55 @@ trait GridFsTTLIndexing {
   private lazy val OptExpireAfterSeconds = "expireAfterSeconds"
   protected lazy val UploadDate = "uploadDate"
 
-  def addAllTTLs(gfs: GridFS[BSONSerializationPack.type])(implicit ec: ExecutionContext): Future[Seq[Boolean]] = {
-    Future.sequence(Seq(
-      addFilesTTL(gfs),
-      addChunksTTL(gfs)
-    ))
+  private def listAllIndexes(mdb: MongoDatabase, collectionName: String): Future[Seq[Document]] = {
+    log.info(s"[GridFsTTLIndexing][retrieveLastUpdatedIndex] Searching $collectionName for all indexes.")
+    mdb.getCollection(collectionName)
+      .listIndexes()
+      .toFuture()
   }
 
-  def addChunksTTL(gfs: GridFS[BSONSerializationPack.type])(implicit ec: ExecutionContext): Future[Boolean] = {
-    addTTL(gfs.chunks)
+  private def retrieveIndex(mdb: MongoDatabase, collectionName: String, indexName: String): Future[Seq[Document]] = {
+    log.info(s"[GridFsTTLIndexing][retrieveLastUpdatedIndex] Searching $collectionName for $LastUpdatedIndex")
+    mdb.getCollection(collectionName)
+      .listIndexes()
+      .filter(index => {
+        log.info(s"[GridFsTTLIndexing][retrieveLastUpdatedIndex] Index within $collectionName: $index")
+        index.containsValue(indexName)
+      }
+    ).toFuture()
   }
 
-  def addFilesTTL(gfs: GridFS[BSONSerializationPack.type])(implicit ec: ExecutionContext): Future[Boolean] = {
-    addTTL(gfs.files)
+  private def dropIndex(mdb: MongoDatabase, collectionName: String, indexName: String): Future[Void] = {
+    log.info(s"[GridFsTTLIndexing][checkAndEnsureTTL] Dropping the existing $indexName")
+    mdb.getCollection(collectionName).dropIndex(indexName).toFuture()
   }
 
-  private def addTTL(collection: GenericCollection[BSONSerializationPack.type])(implicit ec: ExecutionContext): Future[Boolean] = {
-    import reactivemongo.bson.DefaultBSONHandlers._
-    val indexes = collection.indexesManager.list()
-    indexes.flatMap {
-      idxs => {
+  private def createIndex(mdb: MongoDatabase, collectionName: String, indexName: String): Future[String] = {
+    log.info(s"[GridFsTTLIndexing][checkAndEnsureTTL] Index does not exist, adding $indexName with TTL option set to $expireAfterSeconds seconds.")
+    mdb.getCollection(collectionName)
+        .createIndex(
+          key = Document(UploadDate -> 1),
+          options = IndexOptions()
+            .name(indexName)
+            .expireAfter(expireAfterSeconds, SECONDS)
+        ).toFuture()
+  }
 
-        val idxToUpdate = idxs.find(index =>
-          index.eventualName == LastUpdatedIndex
-            && index.options.getAs[BSONLong](OptExpireAfterSeconds).getOrElse(BSONLong(expireAfterSeconds)).as[Long] != expireAfterSeconds)
-
-        if (idxToUpdate.isDefined) {
-          for {
-            _ <- collection.indexesManager.drop(idxToUpdate.get.eventualName)
-
-            updated <- ensureLastUpdated(collection)
-          } yield updated
+  def checkAndEnsureTTL(mdb: MongoDatabase, collectionName: String): Future[Boolean] = {
+    listAllIndexes(mdb, collectionName).flatMap { indexes =>
+      for {
+        _ <- if (indexes.exists(index => index.containsValue(LastUpdatedIndex))) {
+          dropIndex(mdb, collectionName, LastUpdatedIndex)
+        } else {
+          Future.successful(s"$LastUpdatedIndex does not exist.")
         }
-        else {
-          ensureLastUpdated(collection)
+        _ <- createIndex(mdb, collectionName, LastUpdatedIndex)
+        ttlResult <- retrieveIndex(mdb, collectionName, LastUpdatedIndex).map { indexes =>
+          indexes.exists(index => index.containsKey(OptExpireAfterSeconds) && index.values.toList.contains(BsonInt64(expireAfterSeconds)))
         }
+      } yield {
+        ttlResult
       }
     }
-    log.info(s"[GridFsTTLIndexing][addTTL] Creating time to live for entries in ${collection.name} to $expireAfterSeconds seconds")
-    ensureLastUpdated(collection)
-  }
-
-  private def ensureLastUpdated(collection: GenericCollection[BSONSerializationPack.type])(implicit ec: ExecutionContext) = {
-    log.debug("[GridFsTTLIndexing][ensureLastUpdated] Indexes ensured by creating if they doesn't exist")
-    collection.indexesManager.ensure(
-      Index(
-        key = Seq(UploadDate -> IndexType.Ascending),
-        name = Some(LastUpdatedIndex),
-        options = BSONDocument(OptExpireAfterSeconds -> expireAfterSeconds)
-      )
-    )
   }
 }

@@ -15,116 +15,126 @@
  */
 
 package uk.gov.hmrc.rasapi.repository
-
-import org.joda.time.DateTime
+import org.mongodb.scala.bson.{Document, ObjectId}
+import org.mongodb.scala.gridfs.{GridFSBucket, GridFSUploadOptions}
+import org.mongodb.scala.{Observable, ObservableFuture}
 import play.api.Logger
 import play.api.libs.iteratee.Enumerator
-import play.modules.reactivemongo.ReactiveMongoComponent
-import reactivemongo.api.BSONSerializationPack
-import reactivemongo.api.gridfs.DefaultFileToSave.FileName.SomeFileName
-import reactivemongo.api.gridfs.Implicits._
-import reactivemongo.api.gridfs._
-import reactivemongo.bson.{BSONDocument, BSONObjectID, BSONValue}
-import uk.gov.hmrc.mongo.ReactiveRepository
+import uk.gov.hmrc.mongo.MongoComponent
+import uk.gov.hmrc.mongo.play.json.PlayMongoRepository
 import uk.gov.hmrc.rasapi.config.AppContext
 import uk.gov.hmrc.rasapi.models.{Chunks, ResultsFile}
 
-import java.io.FileInputStream
-import java.nio.file.Path
+import java.nio.ByteBuffer
+import java.nio.file.{Files, Path}
 import javax.inject.Inject
 import scala.concurrent.{ExecutionContext, Future}
 
 case class FileData(length: Long = 0, data: Enumerator[Array[Byte]] = Enumerator.empty)
 
-class RasFilesRepository @Inject()(val mongoComponent: ReactiveMongoComponent,
+class RasFilesRepository @Inject()(val mongoComponent: MongoComponent,
                                    val appContext: AppContext)
-                                   (implicit val ec: ExecutionContext) extends ReactiveRepository[Chunks, BSONObjectID](
+                                   (implicit val ec: ExecutionContext) extends PlayMongoRepository[Chunks](
+  mongoComponent = mongoComponent,
   collectionName = "rasFileStore",
-  mongo = mongoComponent.mongoConnector.db,
-  domainFormat = Chunks.format
+  domainFormat = Chunks.format,
+  indexes = Seq(),
+  replaceIndexes = false
 ) with GridFsTTLIndexing {
 
   override lazy val expireAfterSeconds: Long = appContext.resultsExpriyTime
-  private val contentType =  "text/csv"
   override val log: Logger = Logger(getClass)
-
-  val gridFSG: GridFS[BSONSerializationPack.type] =
-    GridFS[BSONSerializationPack.type](mongoComponent.mongoConnector.db(), "resultsFiles")
-
-  addAllTTLs(gridFSG)
-
-  def generateFileToSave(fileId: String, contentType: String, envelopeId: String, userId: String): FileToSave[BSONSerializationPack.type, BSONValue] =
-    DefaultFileToSave(
-      filename = Some(fileId),
-      contentType = Some(contentType),
-      uploadDate = Some(DateTime.now().getMillis),
-      metadata = BSONDocument("envelopeId" -> envelopeId, "fileId" -> fileId, "userId" -> userId)
-    )
+  private val contentType =  "text/csv"
+  private val bucketName: String = "resultsFiles"
+  val gridFSG: GridFSBucket = GridFSBucket(mongoComponent.database, bucketName)
 
   def saveFile(userId:String, envelopeId: String, filePath: Path, fileId: String): Future[ResultsFile] = {
     log.info("[RasFileRepository][saveFile] Starting to save file")
 
-    gridFSG.writeFromInputStream(generateFileToSave(fileId, contentType, envelopeId, userId), new FileInputStream(filePath.toFile)).map{ res =>
-      log.warn(s"Saved File id is ${res.id} for userId ($userId)")
-      res
-    }.recover{ case ex: Throwable =>
-        log.error(s"error saving file -> $fileId for userId ($userId). Exception: ${ex.getMessage}")
-        throw new RuntimeException(s"failed to save file due to error" + ex.getMessage)
+    val observableToUploadFrom: Observable[ByteBuffer] = Observable(
+      Seq(ByteBuffer.wrap(Files.readAllBytes(filePath))
+    ))
+
+    val options: GridFSUploadOptions = new GridFSUploadOptions()
+      .metadata(Document(
+        "envelopeId" -> envelopeId,
+        "fileId" -> fileId,
+        "userId" -> userId,
+        "contentType" -> contentType))
+
+    gridFSG.uploadFromObservable(fileId, observableToUploadFrom, options).head().flatMap { res =>
+      log.warn(s"[RasFileRepository][saveFile] Saved file $fileId for user $userId")
+      checkAndEnsureTTL(mongoComponent.database, s"$bucketName.files").flatMap { ttlIndexExists =>
+        if (ttlIndexExists)
+          gridFSG.find(Document("_id" -> res)).head()
+        else
+          throw new RuntimeException("Failed to checkAndEnsureTTL.")
+      }
+    }.recover {
+      case e: Throwable =>
+        log.error(s"[RasFileRepository][saveFile] Error saving the file $fileId for user $userId. Exception: ${e.getMessage}")
+        throw new RuntimeException(s"Failed to save file due to error: ${e.getMessage}")
     }
   }
 
   def fetchFile(_fileName: String, userId: String)(implicit ec: ExecutionContext): Future[Option[FileData]] = {
-      log.info(s"id in repo input is ${_fileName} for userId ($userId).")
-
-      gridFSG.find[BSONDocument, ResultsFile](BSONDocument("filename" -> _fileName)).headOption.map {
-      case Some(file) =>   log.info(s"file fetched ${file.id} file size = ${file.length}")
-        Some(FileData(file.length, gridFSG.enumerate(file)))
-      case None => log.warn(s"file not found for userId ($userId).")
-        None
-    }.recover{
-      case ex:Throwable =>
-        log.error(s"error trying to fetch file ${_fileName} for userId ($userId). Exception: ${ex.getMessage}")
-        throw new RuntimeException("failed to fetch file due to error" + ex.getMessage)
+    log.info(s"[RasFileRepository][fetchFile] Attempting to fetch file ${_fileName} for userId ($userId).")
+    gridFSG.find(Document("filename" -> _fileName)).headOption().flatMap {
+      case Some(file) =>
+        log.info(s"[RasFileRepository][fetchFile] Found ${_fileName} for userId ($userId).")
+        gridFSG.downloadToObservable(file.getObjectId)
+          .toFuture
+          .map(seq => seq.map(bb => bb.array).reduceLeft(_ ++ _))
+          .map(array => {
+            log.info(s"[RasFileRepository][fetchFile] Successfully downloaded ${_fileName} for userId ($userId).")
+            Some(FileData(file.getLength, Enumerator(array)))
+          })
+      case None =>
+        log.warn(s"[RasFileRepository][fetchFile] Unable to find ${_fileName} for userId ($userId).")
+        Future.successful(None)
+    }.recover {
+      case ex: Throwable =>
+        log.warn(s"[RasFileRepository][fetchFile] Exception while trying to fetch file ${_fileName} for userId ($userId). Exception message: ${ex.getMessage}")
+        throw new RuntimeException(s"Failed to fetch file due to error ${ex.getMessage}")
     }
   }
 
-  def isFileExists(fileId:BSONObjectID): Future[Option[ResultsFile]] = {
-    log.debug(s"Checking if file exists $fileId ")
-    gridFSG.find[BSONDocument, ResultsFile](BSONDocument("_id" -> fileId)).headOption.recover{
-      case ex:Throwable =>
-        log.error(s"error trying to find if parent file record Exists $fileId for . Exception: ${ex.getMessage}")
-        throw new RuntimeException("failed to check file exists due to error" + ex.getMessage)
+  def fetchResultsFile(fileId: ObjectId): Future[Option[ResultsFile]] = {
+    log.debug(s"[RasFileRepository][isFileExists] Checking if file exists with id: $fileId ")
+    gridFSG.find(Document("_id" -> fileId)).headOption.recover {
+      case ex: Throwable =>
+        log.error(s"[RasFileRepository][isFileExists] Error trying to find if parent file record exists for id: $fileId. Exception: ${ex.getMessage}")
+        throw new RuntimeException("Failed to check file exists due to error ${ex.getMessage}")
     }
   }
-
-  private def getBsonObjectIdFromFileName(filename: String): Future[Option[BSONObjectID]] =
-    gridFSG.files.find(BSONDocument("filename" -> filename), Some(BSONDocument("_id" -> 1))).one[BSONDocument].map {
-      optionalDocument => optionalDocument.flatMap { document =>
-        document.getAs[BSONObjectID]("_id")
-      }
-    }
 
   def removeFile(fileName: String, userId: String): Future[Boolean] = {
-    log.debug(s"file to remove => fileName: $fileName for userId ($userId).")
-    getBsonObjectIdFromFileName(fileName).flatMap {
-      case Some(bsonObjectId) =>
-        log.info(s"[RasFileRepository][removeFile] successfully got id for file. BSONObjectId: ${bsonObjectId.stringify}")
-        gridFSG.remove(bsonObjectId).map {
-          res =>
-            if(res.writeErrors.isEmpty){
-              log.info(s"Results file removed successfully for userId ($userId) with the file named $fileName")
-            } else {
-              log.error(s"error while removing file ${res.writeErrors.toString} for userId ($userId).")
-            }
-            res.writeErrors.isEmpty
+    log.debug(s"[RasFileRepository][removeFile] File to remove => fileName: $fileName for userId ($userId).")
+    gridFSG.find(Document("filename" -> fileName)).headOption.flatMap {
+      case Some(file) =>
+        val objectId: ObjectId = file.getObjectId
+        log.info(s"[RasFileRepository][removeFile] Successfully retrieved ObjectId: $objectId")
+        log.info(s"[RasFileRepository][removeFile] Attempting to delete file with ObjectId: $objectId")
+        for {
+          _ <- gridFSG.delete(objectId).toFuture()
+          maybeFile <- fetchResultsFile(objectId)
+        } yield {
+          maybeFile match {
+            case Some(file) =>
+              log.error(s"[RasFileRepository][removeFile] Error while removing file ${file.getFilename} for userId ($userId).")
+              false
+            case None =>
+              log.info(s"[RasFileRepository][removeFile] Results file removed successfully for userId ($userId) with the file named $fileName")
+              true
+          }
         }
       case None =>
-        log.error(s"[RasFileRepository][removeFile] no id found for filename $fileName and userId $userId")
+        log.error(s"[RasFileRepository][removeFile] No id found for filename $fileName and userId $userId")
         Future.successful(false)
     } recover {
       case ex: Throwable =>
-        log.error(s"error trying to remove file $fileName ${ex.getMessage} for userId ($userId).")
-        throw new RuntimeException("failed to remove file due to error" + ex.getMessage)
+        log.error(s"[RasFileRepository][removeFile] Error trying to remove file $fileName ${ex.getMessage} for userId ($userId).")
+        throw new RuntimeException("Failed to remove file due to error" + ex.getMessage)
     }
   }
 }

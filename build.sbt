@@ -55,8 +55,7 @@ libraryDependencies ++= Seq(
   ws,
   "uk.gov.hmrc"       %% "bootstrap-backend-play-27"    % "5.2.0",
   "uk.gov.hmrc"       %% "domain"                       % "5.11.0-play-27",
-  "uk.gov.hmrc"       %% "mongo-caching"                % "7.0.0-play-27" excludeAll excludeIteratees,
-  "uk.gov.hmrc"       %% "simple-reactivemongo"         % "8.0.0-play-27" excludeAll excludeIteratees,
+  "uk.gov.hmrc.mongo" %% "hmrc-mongo-play-27"           % "0.50.0",
   "uk.gov.hmrc"       %% "json-encryption"              % "4.10.0-play-27",
   "uk.gov.hmrc"       %% "play-hmrc-api"                % "6.2.0-play-27",
   "uk.gov.hmrc"       %% "http-caching-client"          % "9.4.0-play-27",
@@ -78,14 +77,14 @@ dependencyOverrides ++= Seq(
 val scope = "test,it"
 
 libraryDependencies ++= Seq(
-  "org.scalatest"             %% "scalatest"          % "3.0.9"          % scope,
-  "org.pegdown"               %  "pegdown"            % "1.6.0"          % scope,
-  "org.scalatestplus.play"    %% "scalatestplus-play" % "4.0.0"          % scope,
-  "org.mockito"               %  "mockito-core"       % "3.9.0"          % scope,
-  "uk.gov.hmrc"               %% "reactivemongo-test" % "5.0.0-play-27" % scope excludeAll excludeIteratees,
-  "com.typesafe.akka"         %  "akka-testkit_2.12"  % akkaVersion      % scope,
-  "de.leanovate.play-mockws"  %% "play-mockws"        % "2.6.6"          % scope excludeAll excludeIteratees,
-  "com.github.tomakehurst"    %  "wiremock-jre8"      % "2.21.0"         % scope
+  "org.scalatest"             %% "scalatest"                  % "3.0.9"          % scope,
+  "org.pegdown"               %  "pegdown"                    % "1.6.0"          % scope,
+  "uk.gov.hmrc.mongo"         %%  "hmrc-mongo-test-play-27"   % "0.50.0"         % scope,
+  "org.scalatestplus.play"    %% "scalatestplus-play"         % "4.0.0"          % scope,
+  "org.mockito"               %  "mockito-core"               % "3.9.0"          % scope,
+  "com.typesafe.akka"         %  "akka-testkit_2.12"          % akkaVersion      % scope,
+  "de.leanovate.play-mockws"  %% "play-mockws"                % "2.6.6"          % scope excludeAll excludeIteratees,
+  "com.github.tomakehurst"    %  "wiremock-jre8"              % "2.21.0"         % scope
 )
 
 scalacOptions ++= Seq(
