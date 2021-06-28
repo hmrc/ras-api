@@ -34,7 +34,6 @@ import play.mvc.Http.HeaderNames
 import uk.gov.hmrc.api.controllers.ErrorAcceptHeaderInvalid
 import uk.gov.hmrc.auth.core._
 import uk.gov.hmrc.http.HeaderCarrier
-import uk.gov.hmrc.mongo.Awaiting
 import uk.gov.hmrc.rasapi.config.AppContext
 import uk.gov.hmrc.rasapi.connectors.DesConnector
 import uk.gov.hmrc.rasapi.helpers.ResidencyYearResolver
@@ -45,7 +44,7 @@ import uk.gov.hmrc.rasapi.utils.ErrorConverter
 
 import scala.concurrent.{ExecutionContext, Future}
 
-class LookupControllerSpec extends WordSpecLike with Matchers with Awaiting with MockitoSugar with GuiceOneAppPerSuite with BeforeAndAfter {
+class LookupControllerSpec extends WordSpecLike with Matchers with MockitoSugar with GuiceOneAppPerSuite with BeforeAndAfter {
 
   override implicit lazy val app: Application = new GuiceApplicationBuilder()
     .configure("api-v2_0.enabled" -> "true")

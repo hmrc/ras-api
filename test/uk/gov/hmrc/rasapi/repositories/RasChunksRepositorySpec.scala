@@ -16,46 +16,43 @@
 
 package uk.gov.hmrc.rasapi.repositories
 
+import org.mockito.Mockito.when
 import org.scalatest.{BeforeAndAfter, Matchers, WordSpecLike}
 import org.scalatestplus.mockito.MockitoSugar
 import org.scalatestplus.play.guice.GuiceOneAppPerSuite
-import reactivemongo.bson.BSONObjectID
-import uk.gov.hmrc.mongo.Awaiting
+import play.api.test.Helpers.{await, defaultAwaitTimeout}
+import uk.gov.hmrc.mongo.test.DefaultPlayMongoRepositorySupport
+import uk.gov.hmrc.rasapi.config.AppContext
+import uk.gov.hmrc.rasapi.models.{Chunks, ResultsFile}
+import uk.gov.hmrc.rasapi.repositories.RepositoriesHelper.createFile
 import uk.gov.hmrc.rasapi.repository.{RasChunksRepository, RasFilesRepository}
 
-class RasChunksRepositorySpec extends WordSpecLike with Matchers with Awaiting with MockitoSugar with GuiceOneAppPerSuite
-  with BeforeAndAfter  {
+import scala.concurrent.ExecutionContext.Implicits.global
 
-    val userId: String = "A1234567"
+class RasChunksRepositorySpec extends WordSpecLike with Matchers with MockitoSugar with GuiceOneAppPerSuite
+  with BeforeAndAfter with DefaultPlayMongoRepositorySupport[Chunks] {
 
-    val rasFilesRepository: RasFilesRepository = app.injector.instanceOf[RasFilesRepository]
-    val rasBulkOperationsRepository: RasChunksRepository = app.injector.instanceOf[RasChunksRepository]
+  val mockAppContext: AppContext = mock[AppContext]
+  when(mockAppContext.resultsExpriyTime).thenReturn(3600)
 
-    before {
-      RepositoriesHelper.createTestDataForDataCleansing(rasFilesRepository)
-      await(rasBulkOperationsRepository.removeAll())
-    }
-    after{
-     rasFilesRepository.removeAll()
-    }
+  override lazy val repository = new RasFilesRepository(mongoComponent, mockAppContext)
+  val chunksRepository = new RasChunksRepository(mongoComponent)
+  val userId: String = "A1234567"
 
   "RasChunksRepository" should {
 
-    "get All Chunks" in {
-      RepositoriesHelper.saveTempFile("user222","envelope222","file222")(rasFilesRepository)
-
-      val res = await(rasBulkOperationsRepository.getAllChunks)
-      res.size shouldBe 1
+    "getAllChunks should return the correct amount of chunks as instances of the Chunk model" in {
+      val uploadedFile: ResultsFile = await(repository.saveFile("user222","envelope222",createFile,"file222"))
+      val chunks = await(chunksRepository.getAllChunks)
+      chunks.size shouldBe 1
     }
-    "remove a Chunk for an ObjectId" in {
-      val fileMetaData = RepositoriesHelper.saveTempFile("user222","envelope222","file222")(rasFilesRepository)
 
-     val result = await(rasBulkOperationsRepository.removeChunk(
-        fileMetaData.id.asInstanceOf[BSONObjectID]))
-
+    "removeChunk should successfully delete a chunk when provided with an ObjectId" in {
+      val uploadedFile: ResultsFile = await(repository.saveFile("user222","envelope222",createFile,"file222"))
+      val result = await(chunksRepository.removeChunk(uploadedFile.getObjectId))
       result shouldBe true
-      val res1 = await(rasBulkOperationsRepository.getAllChunks)
-      res1.filter(_.files_id == fileMetaData.id).headOption.isEmpty shouldBe true
+      val chunks = await(chunksRepository.getAllChunks)
+      chunks.exists(chunk => chunk.files_id == uploadedFile.getObjectId) shouldBe false
     }
   }
 }

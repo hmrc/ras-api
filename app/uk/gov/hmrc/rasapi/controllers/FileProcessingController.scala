@@ -16,14 +16,14 @@
 
 package uk.gov.hmrc.rasapi.controllers
 
-import javax.inject.Inject
 import play.api.Logging
 import play.api.libs.json.JsSuccess
-import play.api.mvc.{Action, AnyContent, ControllerComponents, Request, Result}
+import play.api.mvc._
 import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
 import uk.gov.hmrc.rasapi.models.{ApiVersion, CallbackData, V1_0, V2_0}
 import uk.gov.hmrc.rasapi.services.{FileProcessingService, SessionCacheService}
 
+import javax.inject.Inject
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.{Success, Try}
 

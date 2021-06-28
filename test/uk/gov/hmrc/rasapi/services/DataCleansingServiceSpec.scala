@@ -16,58 +16,45 @@
 
 package uk.gov.hmrc.rasapi.services
 
+import org.mongodb.scala.{Document, MongoCollection}
 import org.scalatest.{BeforeAndAfter, Matchers, WordSpecLike}
 import org.scalatestplus.mockito.MockitoSugar
 import org.scalatestplus.play.guice.GuiceOneAppPerSuite
 import play.api.inject.guice.GuiceApplicationBuilder
-import play.api.{Application, Logger, Logging}
-import reactivemongo.bson.BSONObjectID
-import uk.gov.hmrc.mongo.Awaiting
-import uk.gov.hmrc.rasapi.repositories.RepositoriesHelper
+import play.api.test.Helpers.{await, defaultAwaitTimeout}
+import play.api.{Application, Logging}
+import uk.gov.hmrc.rasapi.models.ResultsFile
+import uk.gov.hmrc.rasapi.repositories.RepositoriesHelper.createFile
 import uk.gov.hmrc.rasapi.repository.RasFilesRepository
 
-class DataCleansingServiceSpec extends WordSpecLike with Matchers with Awaiting with MockitoSugar with GuiceOneAppPerSuite
-with BeforeAndAfter with Logging  {
+class DataCleansingServiceSpec extends WordSpecLike with Matchers with MockitoSugar with GuiceOneAppPerSuite
+with BeforeAndAfter with Logging {
 
+  lazy val dataCleansingService: DataCleansingService = app.injector.instanceOf[DataCleansingService]
+  implicit lazy val rasFilesRepository: RasFilesRepository = app.injector.instanceOf[RasFilesRepository]
   override implicit lazy val app: Application = new GuiceApplicationBuilder()
     .configure("remove-chunks-data-exercise.enabled" -> true)
     .build()
 
-  implicit lazy val rasFilesRepository: RasFilesRepository = app.injector.instanceOf[RasFilesRepository]
-  before{
-    await(RepositoriesHelper.rasFileRepository.removeAll()(ec))
-    await(RepositoriesHelper.rasBulkOperationsRepository.removeAll()(ec))
-  }
-  after{
-    await(RepositoriesHelper.rasFileRepository.removeAll()(ec))
-    await(RepositoriesHelper.rasBulkOperationsRepository.removeAll()(ec))
-  }
-
-  lazy val dataCleansingService: DataCleansingService = app.injector.instanceOf[DataCleansingService]
-
   "DataCleansingService" should{
 
     " not remove chunks that are not orphoned" in {
-      RepositoriesHelper.saveTempFile("user14","envelope14","fileId14")
-      RepositoriesHelper.saveTempFile("user15","envelope15","fileId15")
-
+      await(rasFilesRepository.saveFile("user14","envelope14",createFile,"fileId14"))
+      await(rasFilesRepository.saveFile("user15","envelope15",createFile,"fileId15"))
       val result = await(dataCleansingService.removeOrphanedChunks())
-
       result.size shouldEqual 0
-      await(RepositoriesHelper.rasFileRepository.remove("fileId14"))
-      await(RepositoriesHelper.rasFileRepository.remove("fileId15"))
     }
 
     "remove orphaned chunks" in  {
-      logger.warn("1 ~~~~~~~~####### Testing Data Cleansing" )
-      val testFiles = RepositoriesHelper.createTestDataForDataCleansing(rasFilesRepository).map(_.id.asInstanceOf[BSONObjectID])
+      val uploadedFile1: ResultsFile = await(rasFilesRepository.saveFile("user14","envelope14",createFile,"fileId14"))
+      val uploadedFile2: ResultsFile = await(rasFilesRepository.saveFile("user15","envelope15",createFile,"fileId15"))
+      val uploadedFiles = List(uploadedFile1.getObjectId, uploadedFile2.getObjectId)
 
+      val filesCollection: MongoCollection[Document] = rasFilesRepository.mongoComponent.database.getCollection("resultsFiles.files")
+      await(filesCollection.findOneAndDelete(Document("_id" -> uploadedFile1.getObjectId)).toFuture())
+      await(filesCollection.findOneAndDelete(Document("_id" -> uploadedFile2.getObjectId)).toFuture())
       val result = await(dataCleansingService.removeOrphanedChunks())
-      logger.warn("7 ~~~~~~~~####### results complete" )
-
-      result shouldEqual  testFiles
+      result shouldEqual uploadedFiles
     }
-
   }
-
 }

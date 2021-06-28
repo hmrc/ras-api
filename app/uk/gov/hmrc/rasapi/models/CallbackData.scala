@@ -16,9 +16,9 @@
 
 package uk.gov.hmrc.rasapi.models
 
+import org.mongodb.scala.bson.ObjectId
 import play.api.libs.json.{Format, Json, OFormat}
-import reactivemongo.bson.BSONObjectID
-import uk.gov.hmrc.mongo.json.ReactiveMongoFormats
+import uk.gov.hmrc.mongo.play.json.formats.MongoFormats
 
 case class FileMetadata(id: String, name: Option[String], created: Option[String])
 
@@ -32,17 +32,16 @@ object CallbackData {
   implicit val formats: OFormat[CallbackData] = Json.format[CallbackData]
 }
 
-case class ResultsFileMetaData (id: String, filename: Option[String],uploadDate: Option[Long], chunkSize: Int, length: Long)
+case class ResultsFileMetaData (id: String, filename: String,uploadDate: Long, chunkSize: Int, length: Long)
 
 object ResultsFileMetaData {
   implicit val formats: OFormat[ResultsFileMetaData] = Json.format[ResultsFileMetaData]
-
 }
 
-case class Chunks(_id:BSONObjectID, files_id:BSONObjectID)
+case class Chunks(_id: ObjectId, files_id: ObjectId)
 
 object Chunks {
-  implicit val objectIdformats: Format[BSONObjectID] = ReactiveMongoFormats.objectIdFormats
+  implicit val objectIdformats: Format[ObjectId] = MongoFormats.objectIdFormat
   implicit  val format: OFormat[Chunks] = Json.format[Chunks]
 }
 

@@ -18,6 +18,7 @@ package uk.gov.hmrc.rasapi.metrics
 
 import com.codahale.metrics.{MetricRegistry, Timer}
 import com.kenshoo.play.metrics.{Metrics => KenshooMetrics}
+
 import javax.inject.Inject
 
 class Metrics @Inject()(val metrics: KenshooMetrics){

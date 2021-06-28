@@ -16,7 +16,6 @@
 
 package uk.gov.hmrc.rasapi.services
 
-import javax.inject.Inject
 import play.api.Configuration
 import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.play.audit.AuditExtensions._
@@ -24,6 +23,7 @@ import uk.gov.hmrc.play.audit.http.connector.{AuditConnector, AuditResult}
 import uk.gov.hmrc.play.audit.model.DataEvent
 import uk.gov.hmrc.rasapi.config.AppContext
 
+import javax.inject.Inject
 import scala.concurrent.{ExecutionContext, Future}
 
 class AuditService @Inject()(

@@ -16,8 +16,8 @@
 
 package uk.gov.hmrc.rasapi.services
 
+import org.bson.types.ObjectId
 import play.api.Logging
-import reactivemongo.bson.BSONObjectID
 import uk.gov.hmrc.rasapi.config.AppContext
 import uk.gov.hmrc.rasapi.repository.{RasChunksRepository, RasFilesRepository}
 
@@ -30,18 +30,18 @@ class DataCleansingService @Inject()(
                                       fileRepo: RasFilesRepository)
                                     (implicit val ec: ExecutionContext) extends Logging {
 
-  def removeOrphanedChunks(): Future[Seq[BSONObjectID]] = if(appContext.removeChunksDataExerciseEnabled){
+  def removeOrphanedChunks(): Future[Seq[ObjectId]] = if(appContext.removeChunksDataExerciseEnabled){
     logger.info("[data-cleansing-exercise][removeOrphanedChunks] Starting data exercise for removing of chunks")
     for {
       chunks <- chunksRepo.getAllChunks.map(_.map(_.files_id).distinct)
 
       fileInfoList <- {
         logger.info(s"[data-cleansing-exercise][removeOrphanedChunks] Size of chunks to verify is: ${chunks.size}" )
-        processFutures(chunks)(fileRepo.isFileExists(_))
+        processFutures(chunks)(fileRepo.fetchResultsFile)
       }
 
       chunksDeleted <- {
-        val parentFileIds = fileInfoList.filter(_.isDefined).map(rec => rec.get.id.asInstanceOf[BSONObjectID])
+        val parentFileIds = fileInfoList.filter(_.isDefined).map(rec => rec.get.getObjectId)
         val chunksToBeDeleted = chunks.diff(parentFileIds)
         logger.info(s"[data-cleansing-exercise][removeOrphanedChunks] Size of fileId's to be deleted is: ${chunksToBeDeleted.length}")
 

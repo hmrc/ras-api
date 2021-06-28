@@ -18,12 +18,12 @@ package uk.gov.hmrc.rasapi.controllers
 
 import akka.stream.scaladsl.Source
 import akka.util.ByteString
+import org.bson.types.ObjectId
 import play.api.Logging
 import play.api.http.HttpEntity
 import play.api.libs.iteratee.streams.IterateeStreams
 import play.api.libs.json.Json.toJson
 import play.api.mvc._
-import reactivemongo.bson.BSONObjectID
 import uk.gov.hmrc.auth.core.AuthProvider.GovernmentGateway
 import uk.gov.hmrc.auth.core._
 import uk.gov.hmrc.auth.core.retrieve.v2.Retrievals.authorisedEnrolments
@@ -50,7 +50,12 @@ class FileController @Inject()(
   val fileServe: String = "File-Read"
   private val _contentType: String = "application/csv"
 
-  def parseStringIdToBSONObjectId(id: String): Try[BSONObjectID] = BSONObjectID.parse(id)
+  def parseStringIdToObjectId(id: String): Try[ObjectId] = {
+    Try {
+      logger.info(s"[FileController][parseStringIdToObjectId] Attempting to convert string id $id into an ObjectId")
+      new ObjectId(id)
+    }
+  }
 
   def serveFile(fileName:String): Action[AnyContent] = Action.async {
     implicit request =>
@@ -90,8 +95,8 @@ class FileController @Inject()(
         enrols =>
           val id = getEnrolmentIdentifier(enrols)
           deleteFile(fileName, id).flatMap { res =>
-            (parseStringIdToBSONObjectId(fileName) match {
-              case Success(bsonId) => chunksRepo.removeChunk(bsonId).map { isChunkRemoved =>
+            (parseStringIdToObjectId(fileName) match {
+              case Success(objectId) => chunksRepo.removeChunk(objectId).map { isChunkRemoved =>
                 if (isChunkRemoved) {
                   logger.info(s"[FileController][remove] Chunk deletion succeeded, fileName is: $fileName")
                   auditService.audit(auditType = "FileDeletion",
@@ -111,13 +116,13 @@ class FileController @Inject()(
               }.map(_ => ())
               case Failure(ex) =>
                 logger.warn(s"[FileController][remove] Exception ${ex.getMessage} was thrown," +
-                  s" the following file ($fileName) and userID $id could not be converted to a BSONObjectId.")
+                  s" the following file ($fileName) and userID $id could not be converted to a ObjectId.")
 
                 auditService.audit(auditType = "FileDeletion", path = request.path,
                   auditData = Map("userIdentifier" -> id,
                     "fileName" -> fileName,
                     "chunkDeletionSuccess" -> "false",
-                    "reason" -> "fileName could not be converted to BSONObjectId"
+                    "reason" -> "fileName could not be converted to ObjectId"
                   )
                 )
                 Future.successful(())

@@ -18,7 +18,7 @@ package uk.gov.hmrc.rasapi.models
 
 import org.joda.time.DateTime
 import play.api.libs.functional.syntax._
-import play.api.libs.json.{JsPath, Json, OFormat, Reads, Writes}
+import play.api.libs.json._
 
 case class RawMemberDetails(nino: String = "",
                             firstName: String = "",

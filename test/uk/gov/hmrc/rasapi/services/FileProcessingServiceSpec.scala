@@ -27,31 +27,33 @@ import org.scalatestplus.play.guice.GuiceOneAppPerSuite
 import play.api.libs.json.Json
 import play.api.mvc.AnyContentAsEmpty
 import play.api.test.FakeRequest
+import play.api.test.Helpers.{await, defaultAwaitTimeout}
 import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.http.cache.client.CacheMap
-import uk.gov.hmrc.mongo.Awaiting
+import uk.gov.hmrc.mongo.test.DefaultPlayMongoRepositorySupport
 import uk.gov.hmrc.rasapi.config.AppContext
 import uk.gov.hmrc.rasapi.connectors.{DesConnector, FileUploadConnector}
 import uk.gov.hmrc.rasapi.helpers.ResidencyYearResolver
 import uk.gov.hmrc.rasapi.metrics.Metrics
 import uk.gov.hmrc.rasapi.models._
-import uk.gov.hmrc.rasapi.repositories.RepositoriesHelper.{getAll, rasFileRepository}
+import uk.gov.hmrc.rasapi.repositories.RepositoriesHelper.getAll
 import uk.gov.hmrc.rasapi.repositories.TestFileWriter
 import uk.gov.hmrc.rasapi.repository.RasFilesRepository
 
 import java.io.{ByteArrayInputStream, FileInputStream}
 import java.nio.charset.StandardCharsets
 import java.nio.file.{Files, Path}
+import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.{Random, Try}
 
 class FileProcessingServiceSpec extends WordSpecLike
   with Matchers
-  with Awaiting
   with GuiceOneAppPerSuite
   with ScalaFutures
   with MockitoSugar
-  with BeforeAndAfter {
+  with BeforeAndAfter
+  with DefaultPlayMongoRepositorySupport[Chunks] {
 
   implicit val hc: HeaderCarrier = HeaderCarrier()
   implicit val fakeReq: FakeRequest[AnyContentAsEmpty.type] = FakeRequest("POST", "/residency-status")
@@ -71,7 +73,7 @@ class FileProcessingServiceSpec extends WordSpecLike
   val STATUS_SERVICE_UNAVAILABLE: String = "SERVICE_UNAVAILABLE"
   val STATUS_FILE_PROCESSING_MATCHING_FAILED: String = "cannot_provide_status"
   val STATUS_FILE_PROCESSING_INTERNAL_SERVER_ERROR: String = "problem-getting-status"
-  val rasFileRepo: RasFilesRepository = rasFileRepository(app.injector.instanceOf[RasFilesRepository])
+  override lazy val repository = new RasFilesRepository(mongoComponent, appContext)
 
   val SUT: FileProcessingService = new FileProcessingService (
     mockFileUploadConnector,
@@ -79,7 +81,7 @@ class FileProcessingServiceSpec extends WordSpecLike
     mockResidencyYearResolver,
     mockAuditService,
     mockSessionCache,
-    rasFileRepo,
+    repository,
     appContext,
     metrics,
     ExecutionContext.global
@@ -131,7 +133,7 @@ class FileProcessingServiceSpec extends WordSpecLike
           mockResidencyYearResolver,
           mockAuditService,
           mockSessionCache,
-          rasFileRepo,
+          repository,
           appContext,
           metrics,
           ExecutionContext.global
@@ -182,7 +184,7 @@ class FileProcessingServiceSpec extends WordSpecLike
 
         Thread.sleep(5000)
 
-        val res = await(rasFileRepo.fetchFile(fileId, userId))
+        val res = await(repository.fetchFile(fileId, userId))
         var result = new String("")
         await(res.get.data run getAll map { bytes => result = result.concat(new String(bytes)) })
         result.replaceAll("(\\r|\\n)", "") shouldBe expectedResultsFile.mkString
@@ -212,7 +214,7 @@ class FileProcessingServiceSpec extends WordSpecLike
           mockResidencyYearResolver,
           mockAuditService,
           mockSessionCache,
-          rasFileRepo,
+          repository,
           appContext,
           metrics,
           ExecutionContext.global
@@ -263,7 +265,7 @@ class FileProcessingServiceSpec extends WordSpecLike
 
         Thread.sleep(20000)
 
-        val res = await(rasFileRepo.fetchFile(fileId, userId))
+        val res = await(repository.fetchFile(fileId, userId))
         var result = new String("")
         await(res.get.data run getAll map { bytes => result = result.concat(new String(bytes)) })
         result.replaceAll("(\\r|\\n)", "") shouldBe expectedResultsFile.mkString
@@ -292,7 +294,7 @@ class FileProcessingServiceSpec extends WordSpecLike
           mockResidencyYearResolver,
           mockAuditService,
           mockSessionCache,
-          rasFileRepo,
+          repository,
           appContext,
           metrics,
           ExecutionContext.global
@@ -343,7 +345,7 @@ class FileProcessingServiceSpec extends WordSpecLike
 
         Thread.sleep(20000)
 
-        val res = await(rasFileRepo.fetchFile(fileId, userId))
+        val res = await(repository.fetchFile(fileId, userId))
         var result = new String("")
         await(res.get.data run getAll map { bytes => result = result.concat(new String(bytes)) })
         result.replaceAll("(\\r|\\n)", "") shouldBe expectedResultsFile.mkString
@@ -371,7 +373,7 @@ class FileProcessingServiceSpec extends WordSpecLike
           mockResidencyYearResolver,
           mockAuditService,
           mockSessionCache,
-          rasFileRepo,
+          repository,
           appContext,
           metrics,
           ExecutionContext.global
@@ -422,7 +424,7 @@ class FileProcessingServiceSpec extends WordSpecLike
 
         Thread.sleep(20000)
 
-        val res = await(rasFileRepo.fetchFile(fileId, userId))
+        val res = await(repository.fetchFile(fileId, userId))
         var result = new String("")
         await(res.get.data run getAll map { bytes => result = result.concat(new String(bytes)) })
         result.replaceAll("(\\r|\\n)", "") shouldBe expectedResultsFile.mkString
@@ -450,7 +452,7 @@ class FileProcessingServiceSpec extends WordSpecLike
           mockResidencyYearResolver,
           mockAuditService,
           mockSessionCache,
-          rasFileRepo,
+          repository,
           appContext,
           metrics,
           ExecutionContext.global
@@ -501,7 +503,7 @@ class FileProcessingServiceSpec extends WordSpecLike
 
         Thread.sleep(20000)
 
-        val res = await(rasFileRepo.fetchFile(fileId, userId))
+        val res = await(repository.fetchFile(fileId, userId))
         var result = new String("")
         await(res.get.data run getAll map { bytes => result = result.concat(new String(bytes)) })
         result.replaceAll("(\\r|\\n)", "") shouldBe expectedResultsFile.mkString
@@ -528,7 +530,7 @@ class FileProcessingServiceSpec extends WordSpecLike
           mockResidencyYearResolver,
           mockAuditService,
           mockSessionCache,
-          rasFileRepo,
+          repository,
           appContext,
           metrics,
           ExecutionContext.global
@@ -579,7 +581,7 @@ class FileProcessingServiceSpec extends WordSpecLike
 
         Thread.sleep(20000)
 
-        val res = await(rasFileRepo.fetchFile(fileId, userId))
+        val res = await(repository.fetchFile(fileId, userId))
         var result = new String("")
         await(res.get.data run getAll map { bytes => result = result.concat(new String(bytes)) })
         result.replaceAll("(\\r|\\n)", "") shouldBe expectedResultsFile.mkString
@@ -811,7 +813,7 @@ class FileProcessingServiceSpec extends WordSpecLike
 
         Thread.sleep(5000)
 
-        val res = await(rasFileRepository(app.injector.instanceOf[RasFilesRepository]).fetchFile(fileId, userId))
+        val res = await(repository.fetchFile(fileId, userId))
         var result = new String("")
         await(res.get.data run getAll map { bytes => result = result.concat(new String(bytes)) })
         result.replaceAll("(\\r|\\n)", "") shouldBe expectedResultsFile.mkString

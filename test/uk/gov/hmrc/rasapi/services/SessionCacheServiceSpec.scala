@@ -24,16 +24,15 @@ import org.scalatest.{BeforeAndAfter, Matchers, WordSpecLike}
 import org.scalatestplus.mockito.MockitoSugar
 import org.scalatestplus.play.guice.GuiceOneServerPerSuite
 import play.api.libs.json.{JsValue, Json, Writes}
+import play.api.test.Helpers.{await, defaultAwaitTimeout}
 import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.http.cache.client.{CacheMap, ShortLivedHttpCaching}
-import uk.gov.hmrc.mongo.Awaiting
 import uk.gov.hmrc.rasapi.models.{CallbackData, FileMetadata, FileSession, ResultsFileMetaData}
 
 import scala.concurrent.{ExecutionContext, Future}
 
 class SessionCacheServiceSpec extends WordSpecLike
   with Matchers
-  with Awaiting
   with GuiceOneServerPerSuite
   with ScalaFutures
   with MockitoSugar
@@ -45,7 +44,7 @@ class SessionCacheServiceSpec extends WordSpecLike
   val originalFileName = "originalFileName"
   val reason: Option[String] = None
   val callbackData: CallbackData = CallbackData("1234", fileId, fileStatus, reason)
-  val resultsFile: ResultsFileMetaData = ResultsFileMetaData(fileId,Some("fileName.csv"),Some(1234L),123,1234L)
+  val resultsFile: ResultsFileMetaData = ResultsFileMetaData(fileId,"fileName.csv",1234L,123,1234L)
   val fileMetadata: FileMetadata = FileMetadata(fileId, None, None)
   val rasSession: FileSession = FileSession(Some(callbackData), Some(resultsFile), "userId", Some(DateTime.now().getMillis), Some(fileMetadata))
   val json: JsValue = Json.toJson(rasSession)

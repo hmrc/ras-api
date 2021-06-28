@@ -16,37 +16,46 @@
 
 package uk.gov.hmrc.rasapi.repositories
 
-
+import org.mockito.Mockito.when
+import org.mongodb.scala.Document
+import org.mongodb.scala.bson.{BsonInt32, BsonInt64, BsonString}
 import org.scalatest.{BeforeAndAfter, Matchers, WordSpecLike}
 import org.scalatestplus.mockito.MockitoSugar
-import org.scalatestplus.play.guice.GuiceOneAppPerSuite
-import play.modules.reactivemongo.ReactiveMongoComponent
-import reactivemongo.bson.BSONLong
-import uk.gov.hmrc.mongo.Awaiting
+import play.api.test.Helpers.{await, defaultAwaitTimeout}
+import uk.gov.hmrc.mongo.test.DefaultPlayMongoRepositorySupport
 import uk.gov.hmrc.rasapi.config.AppContext
+import uk.gov.hmrc.rasapi.models.Chunks
+import uk.gov.hmrc.rasapi.repositories.RepositoriesHelper.createFile
 import uk.gov.hmrc.rasapi.repository.RasFilesRepository
 
-class GridFsTTLIndexingSpec extends WordSpecLike with Matchers with Awaiting with MockitoSugar with GuiceOneAppPerSuite
-  with BeforeAndAfter {
-  val mockMongo: ReactiveMongoComponent = app.injector.instanceOf[ReactiveMongoComponent]
-  val mockAppContext: AppContext = app.injector.instanceOf[AppContext]
+import scala.concurrent.ExecutionContext.Implicits.global
 
-  val rasFileRepository: RasFilesRepository = new RasFilesRepository (
-    mockMongo,
-    mockAppContext
-  )(ec)
+class GridFsTTLIndexingSpec extends WordSpecLike
+    with Matchers
+    with MockitoSugar
+    with BeforeAndAfter
+    with DefaultPlayMongoRepositorySupport[Chunks] {
 
-  before{
-    rasFileRepository.removeAll()(ec)
-  }
+  val mockAppContext: AppContext = mock[AppContext]
+  when(mockAppContext.resultsExpriyTime).thenReturn(3600)
 
-  "GridFsTTLIndexingSpec" should {
-  "ensure indexes and create if not available" in {
-    val defaultTTL = BSONLong(3600)
-    val res =  await(rasFileRepository.gridFSG.files.indexesManager(ec).list())
+  override lazy val repository = new RasFilesRepository(mongoComponent, mockAppContext)
+  lazy val LastUpdatedIndex = "lastUpdatedIndex"
+  lazy val OptExpireAfterSeconds = "expireAfterSeconds"
+  lazy val UploadDate = "uploadDate"
 
-    res.filter(_.name.get == "lastUpdatedIndex")
-      .head.options.get("expireAfterSeconds").get shouldBe defaultTTL
+  "GridFsTTLIndexing" should {
+    "Add the lastUpdatedIndex with TTL option to a collection" in {
+      await(repository.saveFile("user111","envelope111",createFile,"file111"))
+      val indexes: Seq[Document] = await(repository.mongoComponent.database.getCollection("resultsFiles.files").listIndexes().toFuture())
+      val expectedIndex: Document = Document(
+        "v" -> BsonInt32(value = 2),
+        "key" -> "uploadDate: 1",
+        "name" -> BsonString(LastUpdatedIndex),
+        "ns" -> BsonString("test-GridFsTTLIndexingSpec.resultsFiles.files"),
+        OptExpireAfterSeconds -> BsonInt64(repository.expireAfterSeconds)
+      )
+      indexes contains expectedIndex
     }
   }
 }

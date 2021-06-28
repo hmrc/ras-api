@@ -16,9 +16,10 @@
 
 package uk.gov.hmrc.rasapi.utils
 
-import javax.inject.Inject
 import play.api.libs.json.{JsPath, JsonValidationError}
 import uk.gov.hmrc.rasapi.controllers.ErrorValidation
+
+import javax.inject.Inject
 
 class ErrorConverter @Inject()() {
 

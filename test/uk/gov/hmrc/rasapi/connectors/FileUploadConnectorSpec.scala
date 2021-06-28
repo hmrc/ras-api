@@ -27,15 +27,15 @@ import org.scalatestplus.mockito.MockitoSugar
 import org.scalatestplus.play.guice.GuiceOneAppPerSuite
 import play.api.libs.json.Json
 import play.api.libs.ws.WSResponse
+import play.api.test.Helpers.{await, defaultAwaitTimeout}
 import uk.gov.hmrc.http.{HeaderCarrier, HttpResponse, RequestTimeoutException}
-import uk.gov.hmrc.mongo.Awaiting
 import uk.gov.hmrc.rasapi.config.{AppContext, WSHttp}
 import uk.gov.hmrc.rasapi.models.FileMetadata
 
 import java.io.{BufferedReader, InputStreamReader}
 import scala.concurrent.{ExecutionContext, Future}
 
-class FileUploadConnectorSpec extends WordSpecLike with Matchers with Awaiting with GuiceOneAppPerSuite with MockitoSugar {
+class FileUploadConnectorSpec extends WordSpecLike with Matchers with GuiceOneAppPerSuite with MockitoSugar {
 
   implicit val hc: HeaderCarrier = HeaderCarrier()
 
