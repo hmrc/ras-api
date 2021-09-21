@@ -19,7 +19,9 @@ package uk.gov.hmrc.rasapi.repositories
 import org.mockito.Mockito.when
 import org.mongodb.scala.Document
 import org.mongodb.scala.bson.{BsonInt32, BsonInt64, BsonString}
-import org.scalatest.{BeforeAndAfter, Matchers, WordSpecLike}
+import org.scalatest.BeforeAndAfter
+import org.scalatest.matchers.should.Matchers
+import org.scalatest.wordspec.AnyWordSpecLike
 import org.scalatestplus.mockito.MockitoSugar
 import play.api.test.Helpers.{await, defaultAwaitTimeout}
 import uk.gov.hmrc.mongo.test.DefaultPlayMongoRepositorySupport
@@ -30,7 +32,7 @@ import uk.gov.hmrc.rasapi.repository.RasFilesRepository
 
 import scala.concurrent.ExecutionContext.Implicits.global
 
-class GridFsTTLIndexingSpec extends WordSpecLike
+class GridFsTTLIndexingSpec extends AnyWordSpecLike
     with Matchers
     with MockitoSugar
     with BeforeAndAfter

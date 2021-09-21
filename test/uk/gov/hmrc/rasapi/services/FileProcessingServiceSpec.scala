@@ -21,7 +21,9 @@ import org.mockito.ArgumentCaptor
 import org.mockito.ArgumentMatchers.{eq => Meq, _}
 import org.mockito.Mockito._
 import org.scalatest.concurrent.ScalaFutures
-import org.scalatest.{BeforeAndAfter, Matchers, WordSpecLike}
+import org.scalatest.BeforeAndAfter
+import org.scalatest.matchers.should.Matchers
+import org.scalatest.wordspec.AnyWordSpecLike
 import org.scalatestplus.mockito.MockitoSugar
 import org.scalatestplus.play.guice.GuiceOneAppPerSuite
 import play.api.libs.json.Json
@@ -47,7 +49,7 @@ import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.{Random, Try}
 
-class FileProcessingServiceSpec extends WordSpecLike
+class FileProcessingServiceSpec extends AnyWordSpecLike
   with Matchers
   with GuiceOneAppPerSuite
   with ScalaFutures
