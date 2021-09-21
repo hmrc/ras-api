@@ -17,7 +17,7 @@
 package uk.gov.hmrc.rasapi.connectors
 
 import akka.actor.ActorSystem
-import akka.stream.ActorMaterializer
+import akka.stream.{ActorMaterializer, Materializer}
 import akka.stream.scaladsl.StreamConverters
 import play.api.Logging
 import uk.gov.hmrc.http.HeaderCarrier

@@ -18,7 +18,9 @@ package uk.gov.hmrc.rasapi.controllers
 
 import org.mockito.ArgumentMatchers.{any, eq => Meq}
 import org.mockito.Mockito._
-import org.scalatest.{BeforeAndAfter, Matchers, WordSpecLike}
+import org.scalatest.BeforeAndAfter
+import org.scalatest.matchers.should.Matchers
+import org.scalatest.wordspec.AnyWordSpecLike
 import org.scalatestplus.mockito.MockitoSugar
 import org.scalatestplus.play.guice.GuiceOneAppPerSuite
 import play.api.Application
@@ -34,7 +36,7 @@ import uk.gov.hmrc.rasapi.services.{FileProcessingService, SessionCacheService}
 import scala.concurrent.ExecutionContext
 import scala.util.Random
 
-class FileProcessingControllerSpec extends WordSpecLike with Matchers with MockitoSugar with GuiceOneAppPerSuite with BeforeAndAfter {
+class FileProcessingControllerSpec extends AnyWordSpecLike with Matchers with MockitoSugar with GuiceOneAppPerSuite with BeforeAndAfter {
 
   val envelopeId = "0b215ey97-11d4-4006-91db-c067e74fc653"
   val fileId = "file-id-1"

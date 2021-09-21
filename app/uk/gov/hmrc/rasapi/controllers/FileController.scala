@@ -22,8 +22,8 @@ import org.bson.types.ObjectId
 import play.api.Logging
 import play.api.http.HttpEntity
 import play.api.libs.iteratee.streams.IterateeStreams
-import play.api.libs.json.Json.toJson
 import play.api.mvc._
+import uk.gov.hmrc.api.controllers.{ErrorInternalServerError => ErrorInternalServerErrorHmrc, ErrorResponse}
 import uk.gov.hmrc.auth.core.AuthProvider.GovernmentGateway
 import uk.gov.hmrc.auth.core._
 import uk.gov.hmrc.auth.core.retrieve.v2.Retrievals.authorisedEnrolments
@@ -75,7 +75,7 @@ class FileController @Inject()(
             }
             else {
               logger.error(s"[FileController][serverFile] Requested File not found to serve fileName is $fileName")
-              NotFound(toJson(ErrorNotFound))
+              NotFound(errorResponseWrites.writes(ErrorNotFound))
             }
 
           }.recover {
@@ -143,12 +143,12 @@ class FileController @Inject()(
   private def handleAuthFailure(implicit request: Request[_]): PartialFunction[Throwable, Future[Result]] = {
       case _: InsufficientEnrolments => logger.warn("[FileController][handleAuthFailure] Insufficient privileges")
         metrics.registry.counter(UNAUTHORIZED.toString)
-        Future.successful(Unauthorized(toJson(Unauthorised)))
+        Future.successful(Unauthorized(errorResponseWrites.writes(Unauthorised)))
       case _: NoActiveSession => logger.warn("[FileController][handleAuthFailure] Inactive session")
         metrics.registry.counter(UNAUTHORIZED.toString)
-        Future.successful(Unauthorized(toJson(InvalidCredentials)))
+        Future.successful(Unauthorized(errorResponseWrites.writes(InvalidCredentials)))
       case ex => logger.error(s"[FileController][handleAuthFailure] Exception ${ex.getMessage} was thrown from auth", ex)
-        Future.successful(InternalServerError(toJson(ErrorInternalServerError)))
+        Future.successful(InternalServerError(ErrorResponse.writes.writes(ErrorInternalServerErrorHmrc)))
   }
 
   // $COVERAGE-OFF$Trivial and never going to be called by a test that uses it's own object implementation

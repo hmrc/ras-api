@@ -17,11 +17,13 @@
 package uk.gov.hmrc.rasapi.helpers
 
 import org.joda.time.DateTime
-import org.scalatest.{BeforeAndAfter, Matchers, WordSpecLike}
+import org.scalatest.BeforeAndAfter
+import org.scalatest.matchers.should.Matchers
+import org.scalatest.wordspec.AnyWordSpecLike
 import org.scalatestplus.mockito.MockitoSugar
 import org.scalatestplus.play.guice.GuiceOneAppPerTest
 
-class ResidencyYearResolverSpec extends WordSpecLike with Matchers with MockitoSugar with GuiceOneAppPerTest with BeforeAndAfter {
+class ResidencyYearResolverSpec extends AnyWordSpecLike with Matchers with MockitoSugar with GuiceOneAppPerTest with BeforeAndAfter {
 
   "isBetweenJanAndApril" should {
 

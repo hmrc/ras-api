@@ -17,7 +17,9 @@
 package uk.gov.hmrc.rasapi.services
 
 import org.scalatest.concurrent.ScalaFutures
-import org.scalatest.{BeforeAndAfter, Matchers, WordSpecLike}
+import org.scalatest.BeforeAndAfter
+import org.scalatest.matchers.should.Matchers
+import org.scalatest.wordspec.AnyWordSpecLike
 import org.scalatestplus.mockito.MockitoSugar
 import org.scalatestplus.play.guice.GuiceOneServerPerSuite
 
@@ -25,7 +27,7 @@ import java.nio.file.Files
 import scala.collection.mutable.ListBuffer
 import scala.io.Source
 
-class RasFileWriterSpec extends WordSpecLike with Matchers with GuiceOneServerPerSuite with ScalaFutures with MockitoSugar with BeforeAndAfter {
+class RasFileWriterSpec extends AnyWordSpecLike with Matchers with GuiceOneServerPerSuite with ScalaFutures with MockitoSugar with BeforeAndAfter {
   object fileWriter extends RasFileWriter
 
   val resultsArr: Array[String] = Array("456C,John,Smith,1990-02-21,nino-INVALID_FORMAT",

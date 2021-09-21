@@ -20,7 +20,9 @@ import org.joda.time.DateTime
 import org.mockito.ArgumentMatchers._
 import org.mockito.Mockito._
 import org.scalatest.concurrent.ScalaFutures
-import org.scalatest.{BeforeAndAfter, Matchers, WordSpecLike}
+import org.scalatest.BeforeAndAfter
+import org.scalatest.matchers.should.Matchers
+import org.scalatest.wordspec.AnyWordSpecLike
 import org.scalatestplus.mockito.MockitoSugar
 import org.scalatestplus.play.guice.GuiceOneServerPerSuite
 import play.api.libs.json.{JsValue, Json, Writes}
@@ -31,7 +33,7 @@ import uk.gov.hmrc.rasapi.models.{CallbackData, FileMetadata, FileSession, Resul
 
 import scala.concurrent.{ExecutionContext, Future}
 
-class SessionCacheServiceSpec extends WordSpecLike
+class SessionCacheServiceSpec extends AnyWordSpecLike
   with Matchers
   with GuiceOneServerPerSuite
   with ScalaFutures
