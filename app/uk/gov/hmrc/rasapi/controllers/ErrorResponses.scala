@@ -16,9 +16,12 @@
 
 package uk.gov.hmrc.rasapi.controllers
 
+import play.api.http.Status._
+import play.api.libs.json.{Json, Writes}
+
 sealed abstract class ErrorResponse(
                                        val httpStatusCode: Int,
-                                       val  errorCode: String,
+                                       val errorCode: String,
                                        val message: String)
 
 sealed abstract class ErrorResponseWithErrors( val httpStatusCode: Int,
@@ -26,45 +29,46 @@ sealed abstract class ErrorResponseWithErrors( val httpStatusCode: Int,
                                                val message: String,
                                                val errors: Option[List[ErrorValidation]] = None)
 
-case class ErrorValidation( errorCode: String,
+case class ErrorValidation(errorCode: String,
                             message: String,
                             path: Option[String] = None)
 
 case class ErrorBadRequestResponse(errs: List[ErrorValidation]) extends ErrorResponseWithErrors(
-  400,
+  BAD_REQUEST,
   "BAD_REQUEST",
   "Bad Request",
   errors = Some(errs))
 
 case object BadRequestResponse extends ErrorResponse(
-  400,
+  BAD_REQUEST,
   "BAD_REQUEST",
   "Bad Request")
 
 case object Unauthorised extends ErrorResponse(
-  401,
+  UNAUTHORIZED,
   "UNAUTHORIZED",
   "Supplied OAuth token not authorised to access data for given tax identifier(s)")
 
 case object InvalidCredentials extends ErrorResponse(
-  401,
+  UNAUTHORIZED,
   "INVALID_CREDENTIALS",
   "Invalid OAuth token supplied for user-restricted or application-restricted resource (including expired token)")
 
 case class IndividualNotFound(matchingFailedStatus: String) extends ErrorResponse(
-  403,
+  FORBIDDEN,
   matchingFailedStatus,
   "Cannot provide a residency status for this pension scheme member.")
 
 case class TooManyRequestsResponse(tooManyRequestsStatus: String) extends ErrorResponse(
-  429,
+  TOO_MANY_REQUESTS,
   tooManyRequestsStatus,
   "Request could not be sent 429 (Too Many Requests) was sent from the HoD.")
 
-case object ErrorInternalServerError extends
-  ErrorResponse(500, "INTERNAL_SERVER_ERROR", "Internal server error")
+object TooManyRequestsResponse {
+  implicit val writes: Writes[TooManyRequestsResponse] = Json.writes[TooManyRequestsResponse]
+}
 
 case object ErrorServiceUnavailable extends
-  ErrorResponse(httpStatusCode = 503, errorCode = "SERVER_ERROR", message = "Service unavailable")
+  ErrorResponse(httpStatusCode = SERVICE_UNAVAILABLE, errorCode = "SERVER_ERROR", message = "Service unavailable")
 
-case object ErrorNotFound extends ErrorResponse(404, "NOT_FOUND", "Resource Not Found")
+case object ErrorNotFound extends ErrorResponse(NOT_FOUND, "NOT_FOUND", "Resource Not Found")

@@ -46,45 +46,50 @@ DefaultBuildSettings.integrationTestSettings()
 unmanagedResourceDirectories in Compile += baseDirectory.value / "resources"
 
 // dependencies
-val akkaVersion = "2.6.14"
+val akkaVersion = "2.6.16"
 val excludeIteratees = ExclusionRule("com.typesafe.play", "play-iteratees_2.12")
 lazy val silencerVersion = "1.7.1"
 
 //compile dependencies
 libraryDependencies ++= Seq(
   ws,
-  "uk.gov.hmrc"       %% "bootstrap-backend-play-27"    % "5.2.0",
-  "uk.gov.hmrc"       %% "domain"                       % "5.11.0-play-27",
-  "uk.gov.hmrc.mongo" %% "hmrc-mongo-play-27"           % "0.50.0",
-  "uk.gov.hmrc"       %% "json-encryption"              % "4.10.0-play-27",
-  "uk.gov.hmrc"       %% "play-hmrc-api"                % "6.2.0-play-27",
-  "uk.gov.hmrc"       %% "http-caching-client"          % "9.4.0-play-27",
+  "uk.gov.hmrc"       %% "bootstrap-backend-play-28"    % "5.14.0",
+  "uk.gov.hmrc"       %% "domain"                       % "6.2.0-play-28",
+  "uk.gov.hmrc.mongo" %% "hmrc-mongo-play-28"           % "0.54.0",
+  "uk.gov.hmrc"       %% "json-encryption"              % "4.10.0-play-28",
+  "uk.gov.hmrc"       %% "play-hmrc-api"                % "6.4.0-play-28",
+  "uk.gov.hmrc"       %% "http-caching-client"          % "9.5.0-play-28",
   "com.typesafe.play" %% "play-iteratees-reactive-streams" % "2.6.1",
-  "joda-time"         % "joda-time"                     % "2.10.9",
+  "joda-time"         % "joda-time"                     % "2.10.10",
   compilerPlugin("com.github.ghik"          % "silencer-plugin" % silencerVersion cross CrossVersion.full),
                               "com.github.ghik"         % "silencer-lib"    % silencerVersion % Provided cross CrossVersion.full
 )
 
 dependencyOverrides ++= Seq(
-  "com.typesafe.akka" %% "akka-actor_2.12" % akkaVersion force(),
-  "com.typesafe.akka" %% "akka-stream"     % akkaVersion force(),
-  "com.typesafe.akka" %% "akka-protobuf"   % akkaVersion force(),
-  "com.typesafe.akka" %% "akka-slf4j"      % akkaVersion force(),
-  "com.typesafe.akka" %% "akka-actor"      % akkaVersion force()
+  "com.typesafe.akka" %% "akka-actor_2.12"                  % akkaVersion force(),
+  "com.typesafe.akka" %% "akka-stream"                      % akkaVersion force(),
+  "com.typesafe.akka" %% "akka-protobuf"                    % akkaVersion force(),
+  "com.typesafe.akka" %% "akka-slf4j"                       % akkaVersion force(),
+  "com.typesafe.akka" %% "akka-actor-typed"                 % akkaVersion force(),
+  "com.typesafe.akka" %% "akka-serialization-jackson"       % akkaVersion force(),
+  "com.typesafe.akka" %% "akka-actor"                       % akkaVersion force(),
+  "com.fasterxml.jackson.module" %% "jackson-module-scala"  % "2.12.0" force(),
 )
 
 // test dependencies
 val scope = "test,it"
 
 libraryDependencies ++= Seq(
-  "org.scalatest"             %% "scalatest"                  % "3.0.9"          % scope,
-  "org.pegdown"               %  "pegdown"                    % "1.6.0"          % scope,
-  "uk.gov.hmrc.mongo"         %%  "hmrc-mongo-test-play-27"   % "0.50.0"         % scope,
-  "org.scalatestplus.play"    %% "scalatestplus-play"         % "4.0.0"          % scope,
-  "org.mockito"               %  "mockito-core"               % "3.9.0"          % scope,
-  "com.typesafe.akka"         %  "akka-testkit_2.12"          % akkaVersion      % scope,
-  "de.leanovate.play-mockws"  %% "play-mockws"                % "2.6.6"          % scope excludeAll excludeIteratees,
-  "com.github.tomakehurst"    %  "wiremock-jre8"              % "2.21.0"         % scope
+  "org.scalatest"             %% "scalatest"                  % "3.2.10"          % scope,
+  "org.scalatestplus"         %% "mockito-3-4"                % "3.2.10.0"        % scope,
+  "org.scalatestplus.play"    %% "scalatestplus-play"         % "5.1.0"           % scope,
+  "org.pegdown"               %  "pegdown"                    % "1.6.0"           % scope,
+  "uk.gov.hmrc.mongo"         %% "hmrc-mongo-test-play-28"    % "0.54.0"          % scope,
+  "com.typesafe.akka"         %  "akka-testkit_2.12"          % akkaVersion       % scope,
+  "de.leanovate.play-mockws"  %% "play-mockws"                % "2.8.1"           % scope excludeAll excludeIteratees,
+  "com.github.tomakehurst"    %  "wiremock-jre8"              % "2.31.0"          % scope,
+  "com.vladsch.flexmark"      %  "flexmark-all"               % "0.62.2"         % scope
+
 )
 
 scalacOptions ++= Seq(

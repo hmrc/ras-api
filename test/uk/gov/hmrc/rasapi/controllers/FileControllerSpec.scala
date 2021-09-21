@@ -21,7 +21,9 @@ import akka.stream.ActorMaterializer
 import org.bson.types.ObjectId
 import org.mockito.ArgumentMatchers.{any, eq => Meq}
 import org.mockito.Mockito.{reset, verify, when}
-import org.scalatest.{BeforeAndAfter, Matchers, WordSpecLike}
+import org.scalatest.BeforeAndAfter
+import org.scalatest.matchers.should.Matchers
+import org.scalatest.wordspec.AnyWordSpecLike
 import org.scalatestplus.mockito.MockitoSugar
 import org.scalatestplus.play.guice.GuiceOneAppPerSuite
 import play.api.Application
@@ -41,7 +43,7 @@ import uk.gov.hmrc.rasapi.services.AuditService
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.{Failure, Try}
 
-class FileControllerSpec extends WordSpecLike with Matchers with MockitoSugar with GuiceOneAppPerSuite with BeforeAndAfter {
+class FileControllerSpec extends AnyWordSpecLike with Matchers with MockitoSugar with GuiceOneAppPerSuite with BeforeAndAfter {
 
   implicit val hc: HeaderCarrier = HeaderCarrier()
 

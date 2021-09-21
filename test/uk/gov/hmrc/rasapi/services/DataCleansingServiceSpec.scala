@@ -17,7 +17,9 @@
 package uk.gov.hmrc.rasapi.services
 
 import org.mongodb.scala.{Document, MongoCollection}
-import org.scalatest.{BeforeAndAfter, Matchers, WordSpecLike}
+import org.scalatest.BeforeAndAfter
+import org.scalatest.matchers.should.Matchers
+import org.scalatest.wordspec.AnyWordSpecLike
 import org.scalatestplus.mockito.MockitoSugar
 import org.scalatestplus.play.guice.GuiceOneAppPerSuite
 import play.api.inject.guice.GuiceApplicationBuilder
@@ -27,7 +29,7 @@ import uk.gov.hmrc.rasapi.models.ResultsFile
 import uk.gov.hmrc.rasapi.repositories.RepositoriesHelper.createFile
 import uk.gov.hmrc.rasapi.repository.RasFilesRepository
 
-class DataCleansingServiceSpec extends WordSpecLike with Matchers with MockitoSugar with GuiceOneAppPerSuite
+class DataCleansingServiceSpec extends AnyWordSpecLike with Matchers with MockitoSugar with GuiceOneAppPerSuite
 with BeforeAndAfter with Logging {
 
   lazy val dataCleansingService: DataCleansingService = app.injector.instanceOf[DataCleansingService]

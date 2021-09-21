@@ -22,7 +22,9 @@ import org.mockito.Mockito.when
 import org.mongodb.scala.MongoDatabase
 import org.mongodb.scala.gridfs.{GridFSBucket, GridFSUploadObservable}
 import org.scalatest.concurrent.Eventually
-import org.scalatest.{BeforeAndAfter, Matchers, WordSpecLike}
+import org.scalatest.BeforeAndAfter
+import org.scalatest.matchers.should.Matchers
+import org.scalatest.wordspec.AnyWordSpecLike
 import org.scalatestplus.mockito.MockitoSugar
 import org.scalatestplus.play.guice.GuiceOneAppPerSuite
 import play.api.Logging
@@ -36,7 +38,7 @@ import uk.gov.hmrc.rasapi.repository.{FileData, RasFilesRepository}
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 
-class RasFileRepositorySpec extends WordSpecLike with Matchers with MockitoSugar with GuiceOneAppPerSuite
+class RasFileRepositorySpec extends AnyWordSpecLike with Matchers with MockitoSugar with GuiceOneAppPerSuite
   with BeforeAndAfter with Eventually with Logging with DefaultPlayMongoRepositorySupport[Chunks] {
 
   val mockAppContext: AppContext = mock[AppContext]

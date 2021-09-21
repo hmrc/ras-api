@@ -19,7 +19,9 @@ package uk.gov.hmrc.rasapi.connectors
 import org.joda.time.DateTime
 import org.mockito.ArgumentMatchers.{eq => Meq, _}
 import org.mockito.Mockito.{reset, times, verify, when}
-import org.scalatest.{BeforeAndAfter, Matchers, WordSpecLike}
+import org.scalatest.matchers.should.Matchers
+import org.scalatest.BeforeAndAfter
+import org.scalatest.wordspec.AnyWordSpecLike
 import org.scalatestplus.mockito.MockitoSugar
 import org.scalatestplus.play.guice.GuiceOneAppPerSuite
 import play.api.libs.json.{JsValue, Json, OFormat}
@@ -32,7 +34,7 @@ import uk.gov.hmrc.rasapi.services.AuditService
 
 import scala.concurrent.{ExecutionContext, Future}
 
-class DesConnectorSpec extends WordSpecLike with Matchers with GuiceOneAppPerSuite with BeforeAndAfter with MockitoSugar {
+class DesConnectorSpec extends AnyWordSpecLike with Matchers with GuiceOneAppPerSuite with BeforeAndAfter with MockitoSugar {
 
   implicit val hc: HeaderCarrier = HeaderCarrier()
 

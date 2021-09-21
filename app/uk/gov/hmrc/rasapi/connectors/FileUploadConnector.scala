@@ -17,7 +17,6 @@
 package uk.gov.hmrc.rasapi.connectors
 
 import akka.actor.ActorSystem
-import akka.stream.ActorMaterializer
 import akka.stream.scaladsl.StreamConverters
 import play.api.Logging
 import uk.gov.hmrc.http.HeaderCarrier
@@ -39,8 +38,7 @@ class FileUploadConnector @Inject()(val wsHttp: WSHttp,
 
   def getFile(envelopeId: String, fileId: String, userId: String)(implicit hc: HeaderCarrier): Future[Option[InputStream]] = {
     implicit val system: ActorSystem = ActorSystem()
-    implicit val materializer: ActorMaterializer = ActorMaterializer()
-    
+
     logger.info(s"[FileUploadConnector][getFile] Get to file-upload with URI : /file-upload/envelopes/$envelopeId/files/$fileId/content for userId ($userId).")
     wsHttp.buildRequestWithStream(s"$serviceUrl/$fileUploadUrlSuffix/$envelopeId/files/$fileId/content").map { res =>
       Some(res.bodyAsSource.runWith(StreamConverters.asInputStream()))

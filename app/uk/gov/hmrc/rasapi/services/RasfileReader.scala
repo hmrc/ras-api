@@ -17,7 +17,6 @@
 package uk.gov.hmrc.rasapi.services
 
 import akka.actor.ActorSystem
-import akka.stream.ActorMaterializer
 import play.api.Logging
 import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.rasapi.connectors.FileUploadConnector
@@ -30,17 +29,13 @@ import scala.util.Try
 
 trait RasFileReader extends Logging {
   implicit val system: ActorSystem = ActorSystem()
-  implicit val materializer: ActorMaterializer = ActorMaterializer()
   implicit val ec: ExecutionContext
 
   val fileUploadConnector: FileUploadConnector
 
   def readFile(envelopeId: String, fileId: String, userId: String)(implicit hc: HeaderCarrier): Future[Iterator[String]] = {
 
-    implicit val codec = Codec.ISO8859
-    //implicit val codec = Codec.UTF8
-    //codec.onMalformedInput(CodingErrorAction.REPLACE)
-    //codec.onUnmappableCharacter(CodingErrorAction.REPLACE)
+    implicit val codec: Codec = Codec.ISO8859
 
     fileUploadConnector.getFile(envelopeId, fileId, userId).map{
 

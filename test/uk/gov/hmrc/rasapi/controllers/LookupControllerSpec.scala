@@ -20,7 +20,9 @@ import org.joda.time.DateTime
 import org.mockito.ArgumentMatchers
 import org.mockito.ArgumentMatchers.{eq => Meq, _}
 import org.mockito.Mockito._
-import org.scalatest.{BeforeAndAfter, Matchers, WordSpecLike}
+import org.scalatest.BeforeAndAfter
+import org.scalatest.matchers.should.Matchers
+import org.scalatest.wordspec.AnyWordSpecLike
 import org.scalatestplus.mockito.MockitoSugar
 import org.scalatestplus.play.guice.GuiceOneAppPerSuite
 import play.api.Application
@@ -31,7 +33,7 @@ import play.api.mvc.{BodyParsers, ControllerComponents}
 import play.api.test.Helpers._
 import play.api.test.{FakeRequest, Helpers}
 import play.mvc.Http.HeaderNames
-import uk.gov.hmrc.api.controllers.ErrorAcceptHeaderInvalid
+import uk.gov.hmrc.api.controllers.{ErrorAcceptHeaderInvalid, ErrorResponse}
 import uk.gov.hmrc.auth.core._
 import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.rasapi.config.AppContext
@@ -44,7 +46,7 @@ import uk.gov.hmrc.rasapi.utils.ErrorConverter
 
 import scala.concurrent.{ExecutionContext, Future}
 
-class LookupControllerSpec extends WordSpecLike with Matchers with MockitoSugar with GuiceOneAppPerSuite with BeforeAndAfter {
+class LookupControllerSpec extends AnyWordSpecLike with Matchers with MockitoSugar with GuiceOneAppPerSuite with BeforeAndAfter {
 
   override implicit lazy val app: Application = new GuiceApplicationBuilder()
     .configure("api-v2_0.enabled" -> "true")
@@ -381,7 +383,7 @@ class LookupControllerSpec extends WordSpecLike with Matchers with MockitoSugar 
             .withJsonBody(Json.toJson(individualDetails)(individualDetailssWrites)))
 
           status(result) shouldBe NOT_ACCEPTABLE
-          contentAsJson(result) shouldBe Json.toJson(ErrorAcceptHeaderInvalid)
+          contentAsJson(result) shouldBe ErrorResponse.writes.writes(ErrorAcceptHeaderInvalid)
         }
       }
 

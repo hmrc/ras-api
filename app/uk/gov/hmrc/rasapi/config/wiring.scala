@@ -17,16 +17,17 @@
 package uk.gov.hmrc.rasapi.config
 
 import play.api.http.Status.{BAD_REQUEST, NOT_FOUND, UNAUTHORIZED}
-import play.api.libs.json.Json
+import play.api.libs.json.{JsValue, Json, Writes}
 import play.api.mvc.Results.{BadRequest, InternalServerError, NotFound, Unauthorized}
 import play.api.mvc.{RequestHeader, Result}
 import play.api.{Configuration, Logging}
+import uk.gov.hmrc.api.controllers.{ErrorInternalServerError, ErrorResponse => ErrorResponseHmrcApi}
 import uk.gov.hmrc.http.cache.client.ShortLivedHttpCaching
 import uk.gov.hmrc.play.audit.http.connector.AuditConnector
 import uk.gov.hmrc.play.bootstrap.backend.http.JsonErrorHandler
 import uk.gov.hmrc.play.bootstrap.config.HttpAuditEvent
 import uk.gov.hmrc.play.bootstrap.http.DefaultHttpClient
-import uk.gov.hmrc.rasapi.controllers.{BadRequestResponse, ErrorInternalServerError, ErrorNotFound, Unauthorised}
+import uk.gov.hmrc.rasapi.controllers.{BadRequestResponse, ErrorNotFound, ErrorResponse, Unauthorised}
 
 import javax.inject.Inject
 import scala.concurrent.{ExecutionContext, Future}
@@ -47,14 +48,18 @@ class RasErrorHandler @Inject()(configuration: Configuration,
                                 implicit val ec: ExecutionContext
                             ) extends JsonErrorHandler(auditConnector, httpAuditEvent, configuration) with Logging {
 
+  implicit val errorResponseWrites: Writes[ErrorResponse] = new Writes[ErrorResponse] {
+    def writes(e: ErrorResponse): JsValue = Json.obj("code" -> e.errorCode, "message" -> e.message)
+  }
+
   override def onClientError(request: RequestHeader, statusCode: Int, message: String): Future[Result] = super.onClientError(request, statusCode, message).map(
     result => statusCode match {
       case NOT_FOUND =>
         logger.info("[RasErrorHandler] [onClientError] MicroserviceGlobal onHandlerNotFound called")
-        NotFound(Json.toJson(ErrorNotFound))
+        NotFound(errorResponseWrites.writes(ErrorNotFound))
       case BAD_REQUEST =>
         logger.info("[RasErrorHandler] [onClientError] MicroserviceGlobal onBadRequest called")
-        BadRequest(Json.toJson(BadRequestResponse))
+        BadRequest(errorResponseWrites.writes(BadRequestResponse))
       case _ => result
     }
   )
@@ -63,8 +68,8 @@ class RasErrorHandler @Inject()(configuration: Configuration,
     logger.info("[RasErrorHandler] [onServerError] MicroserviceGlobal onError called")
     super.onServerError(request, ex) map (res => {
       res.header.status match {
-        case UNAUTHORIZED => Unauthorized(Json.toJson(Unauthorised))
-        case _ => InternalServerError(Json.toJson(ErrorInternalServerError))
+        case UNAUTHORIZED => Unauthorized(errorResponseWrites.writes(Unauthorised))
+        case _ => InternalServerError(ErrorResponseHmrcApi.writes.writes(ErrorInternalServerError))
       }
     })
   }

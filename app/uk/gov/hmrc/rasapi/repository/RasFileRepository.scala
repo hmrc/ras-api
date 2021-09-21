@@ -104,7 +104,7 @@ class RasFilesRepository @Inject()(val mongoComponent: MongoComponent,
     gridFSG.find(Document("_id" -> fileId)).headOption.recover {
       case ex: Throwable =>
         log.error(s"[RasFileRepository][isFileExists] Error trying to find if parent file record exists for id: $fileId. Exception: ${ex.getMessage}")
-        throw new RuntimeException("Failed to check file exists due to error ${ex.getMessage}")
+        throw new RuntimeException(s"Failed to check file exists due to error ${ex.getMessage}")
     }
   }
 
