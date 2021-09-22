@@ -104,6 +104,9 @@ class DesConnector @Inject()( httpPost: DefaultHttpClient,
     val payload = Json.toJson(Json.toJson[IndividualDetails](member)
       .as[JsObject] + ("pensionSchemeOrganisationID" -> Json.toJson(userId)))
 
+    logger.info(s"[DAN] The payload - $payload")
+
+
     val result = httpPost.POST[JsValue, HttpResponse](uri, payload, desHeaders)
     (implicitly[Writes[IndividualDetails]], implicitly[HttpReads[HttpResponse]], rasHeaders, ec)
 
@@ -132,6 +135,7 @@ class DesConnector @Inject()( httpPost: DefaultHttpClient,
           Right(ResidencyStatusFailure(error_InternalServerError, "Internal server error."))
         }
       case th: Throwable =>
+        logger.error(s"[DAN] $th")
         logger.error(s"[DesConnector][getResidencyStatus] Caught error occurred when calling the HoD. userId ($userId).Exception message: ${th.getMessage}.")
         Right(ResidencyStatusFailure(error_InternalServerError, "Internal server error."))
     }
