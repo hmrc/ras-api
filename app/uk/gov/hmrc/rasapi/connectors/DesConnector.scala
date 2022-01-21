@@ -1,5 +1,5 @@
 /*
- * Copyright 2021 HM Revenue & Customs
+ * Copyright 2022 HM Revenue & Customs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,6 +23,8 @@ import uk.gov.hmrc.play.bootstrap.http.DefaultHttpClient
 import uk.gov.hmrc.rasapi.config.AppContext
 import uk.gov.hmrc.rasapi.models._
 import uk.gov.hmrc.rasapi.services.AuditService
+import java.util.UUID.randomUUID
+import uk.gov.hmrc.http.HeaderCarrier
 
 import javax.inject.Inject
 import scala.concurrent.{ExecutionContext, Future}
@@ -73,7 +75,9 @@ class DesConnector @Inject()( httpPost: DefaultHttpClient,
     val desHeaders = Seq("Environment" -> desUrlHeaderEnv,
       "OriginatorId" -> "DA_RAS",
       "Content-Type" -> "application/json",
-      "authorization" -> s"Bearer $desAuthToken")
+      "authorization" -> s"Bearer $desAuthToken",
+      "CorrelationId" -> correlationId
+    )
 
     def getResultAndProcess(memberDetails: IndividualDetails, retryCount: Int = 1): Future[Either[ResidencyStatus, ResidencyStatusFailure]] = {
 
@@ -92,6 +96,19 @@ class DesConnector @Inject()( httpPost: DefaultHttpClient,
     }
 
     getResultAndProcess(member)
+  }
+
+  def generateNewUUID: String = randomUUID.toString
+
+  def correlationId(implicit hc: HeaderCarrier): String = {
+    val CorrelationIdPattern = """.*([A-Za-z0-9]{8}-[A-Za-z0-9]{4}-[A-Za-z0-9]{4}-[A-Za-z0-9]{4}).*""".r
+    hc.requestId match {
+      case Some(requestId) => requestId.value match {
+        case CorrelationIdPattern(prefix) => prefix + "-" + generateNewUUID.substring(24)
+        case _ => generateNewUUID
+      }
+      case _ => generateNewUUID
+    }
   }
 
   private def sendResidencyStatusRequest(uri: String,

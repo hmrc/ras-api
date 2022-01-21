@@ -1,5 +1,5 @@
 /*
- * Copyright 2021 HM Revenue & Customs
+ * Copyright 2022 HM Revenue & Customs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -48,6 +48,8 @@ class DesConnectorSpec extends AnyWordSpecLike with Matchers with GuiceOneAppPer
     reset(mockHttp)
   }
 
+  val uuid = "123e4567-e89b-42d3-a456-556642440000"
+
   object TestDesConnector extends DesConnector(mockHttp, mockAuditService, appContext, ExecutionContext.global) {
     override lazy val desBaseUrl = ""
     override val auditService: AuditService = mockAuditService
@@ -58,6 +60,7 @@ class DesConnectorSpec extends AnyWordSpecLike with Matchers with GuiceOneAppPer
     override lazy val desAuthToken: String = "DES AUTH TOKEN"
     override lazy val isRetryEnabled: Boolean = true
     override lazy val isBulkRetryEnabled: Boolean = false
+    override def generateNewUUID: String = uuid
   }
 
   val individualDetails: IndividualDetails = IndividualDetails("LE241131B", "Joe", "Bloggs", new DateTime("1990-12-03"))
@@ -455,6 +458,24 @@ class DesConnectorSpec extends AnyWordSpecLike with Matchers with GuiceOneAppPer
 
         verify(mockHttp, times(3)).POST[JsValue, HttpResponse](any(), Meq[JsValue](expectedPayload), any())(any(), any(), any(), any())
       }
+    }
+  }
+
+  "DESConnector correlationID" when {
+    "requestID is present in the headerCarrier" should {
+      "return new ID pre-appending the requestID when the requestID matches the format(8-4-4-4)" in {
+        val requestId = "abcd0000-dh12-fg34-ij56"
+        TestDesConnector.correlationId(HeaderCarrier(requestId = Some(RequestId(requestId)))) shouldBe s"$requestId-${uuid.substring(24)}"
+      }
+
+      "return new ID when the requestID does not match the format(8-4-4-4)" in {
+        val requestId = "1a2b-dh12-fg34-ij56"
+        TestDesConnector.correlationId(HeaderCarrier(requestId = Some(RequestId(requestId)))) shouldBe uuid
+      }
+    }
+
+    "requestID is not present in the headerCarrier should return a new ID" in {
+      TestDesConnector.correlationId(HeaderCarrier()) shouldBe uuid
     }
   }
 }
