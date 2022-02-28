@@ -60,7 +60,7 @@ libraryDependencies ++= Seq(
   "uk.gov.hmrc"       %% "play-hmrc-api"                % "6.4.0-play-28",
   "uk.gov.hmrc"       %% "http-caching-client"          % "9.5.0-play-28",
   "com.typesafe.play" %% "play-iteratees-reactive-streams" % "2.6.1",
-  "joda-time"         % "joda-time"                     % "2.10.10",
+  "joda-time"         % "joda-time"                     % "2.10.13",
   compilerPlugin("com.github.ghik"          % "silencer-plugin" % silencerVersion cross CrossVersion.full),
                               "com.github.ghik"         % "silencer-lib"    % silencerVersion % Provided cross CrossVersion.full
 )
@@ -80,7 +80,7 @@ dependencyOverrides ++= Seq(
 val scope = "test,it"
 
 libraryDependencies ++= Seq(
-  "org.scalatest"             %% "scalatest"                  % "3.2.10"          % scope,
+  "org.scalatest"             %% "scalatest"                  % "3.2.11"          % scope,
   "org.scalatestplus"         %% "mockito-3-4"                % "3.2.10.0"        % scope,
   "org.scalatestplus.play"    %% "scalatestplus-play"         % "5.1.0"           % scope,
   "org.pegdown"               %  "pegdown"                    % "1.6.0"           % scope,
@@ -89,7 +89,6 @@ libraryDependencies ++= Seq(
   "de.leanovate.play-mockws"  %% "play-mockws"                % "2.8.1"           % scope excludeAll excludeIteratees,
   "com.github.tomakehurst"    %  "wiremock-jre8"              % "2.31.0"          % scope,
   "com.vladsch.flexmark"      %  "flexmark-all"               % "0.62.2"         % scope
-
 )
 
 scalacOptions ++= Seq(
