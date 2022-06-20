@@ -39,6 +39,7 @@ trait WireMockServerHelper extends BeforeAndAfterAll {
     .willReturn(
       aResponse()
         .withStatus(OK)
+        .withHeader("Authorization","Bearer 123")
         .withBody(
           """{
             | "authorisedEnrolments": [

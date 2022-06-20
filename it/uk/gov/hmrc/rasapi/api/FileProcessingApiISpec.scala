@@ -30,6 +30,9 @@ import uk.gov.hmrc.rasapi.itUtils.WireMockServerHelper
 import uk.gov.hmrc.rasapi.models.ResultsFile
 import uk.gov.hmrc.rasapi.repository.RasFilesRepository
 import play.api.test.Helpers.OK
+import uk.gov.hmrc.http.HttpClient
+import scala.concurrent.ExecutionContext.Implicits.global
+import uk.gov.hmrc.play.bootstrap.http.DefaultHttpClient
 
 import scala.io.{BufferedSource, Source}
 import scala.concurrent.duration._
@@ -45,6 +48,7 @@ class FileProcessingApiISpec extends PlaySpec with ScalaFutures
 
   lazy val rasFileRepository: RasFilesRepository = app.injector.instanceOf[RasFilesRepository]
   lazy val ws: WSClient = app.injector.instanceOf[WSClient]
+  lazy val client:HttpClient = app.injector.instanceOf[HttpClient]
 
   class Setup(filename: String) {
     val largeFile: File = new File("it/resources/testFiles/bulk.csv")
@@ -66,8 +70,7 @@ class FileProcessingApiISpec extends PlaySpec with ScalaFutures
       insertFile()
 
       authMocks
-
-      val response: WSResponse = await(ws.url(s"http://localhost:$port/ras-api/file/getFile/file-name-1").get())
+      val response = await(client.doGet(s"http://localhost:$port/ras-api/file/getFile/file-name-1", Seq(("Authorization", "Bearer123"))))
 
       val testSource: BufferedSource = Source.fromFile("it/resources/testFiles/bulk.csv")
 
