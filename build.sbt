@@ -55,7 +55,7 @@ libraryDependencies ++= Seq(
   ws,
   "uk.gov.hmrc"       %% "bootstrap-backend-play-28"    % "5.24.0",
   "uk.gov.hmrc"       %% "domain"                       % "6.2.0-play-28",
-  "uk.gov.hmrc.mongo" %% "hmrc-mongo-play-28"           % "0.54.0",
+  "uk.gov.hmrc.mongo" %% "hmrc-mongo-play-28"           % "0.68.0",
   "uk.gov.hmrc"       %% "json-encryption"              % "4.10.0-play-28",
   "uk.gov.hmrc"       %% "play-hmrc-api"                % "6.4.0-play-28",
   "uk.gov.hmrc"       %% "http-caching-client"          % "9.5.0-play-28",
