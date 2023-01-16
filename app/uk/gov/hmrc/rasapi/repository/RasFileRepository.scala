@@ -28,10 +28,12 @@ import uk.gov.hmrc.rasapi.models.{Chunks, ResultsFile}
 import java.nio.ByteBuffer
 import java.nio.file.{Files, Path}
 import javax.inject.Inject
+import javax.inject.Singleton
 import scala.concurrent.{ExecutionContext, Future}
 
 case class FileData(length: Long = 0, data: Enumerator[Array[Byte]] = Enumerator.empty)
 
+@Singleton
 class RasFilesRepository @Inject()(val mongoComponent: MongoComponent,
                                    val appContext: AppContext)
                                    (implicit val ec: ExecutionContext) extends PlayMongoRepository[Chunks](
