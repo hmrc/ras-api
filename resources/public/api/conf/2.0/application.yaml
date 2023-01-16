@@ -158,7 +158,7 @@ components:
       - otherUKResident
       type: string
     error-codeType:
-      title: errorCodeType
+      title: Error code type
       enum:
       - BAD_REQUEST
       - STATUS_UNAVAILABLE
