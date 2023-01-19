@@ -39,7 +39,7 @@ class Documentation @Inject()(appContext: AppContext,
     Ok(txt.definition(appContext.apiContext, appContext.apiStatus, appContext.endpointsEnabled, appContext.apiV2_0Enabled))
   }
 
-  def raml(version: String, file: String): Action[AnyContent] = {
+  def specification(version: String, file: String): Action[AnyContent] = {
     assets.at(s"/public/api/conf/$version", file)
   }
 }

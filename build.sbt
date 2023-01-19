@@ -26,7 +26,7 @@ ScoverageKeys.coverageExcludedPackages  := "<empty>;" +
 ScoverageKeys.coverageMinimum           := 80
 ScoverageKeys.coverageFailOnMinimum     := false
 ScoverageKeys.coverageHighlighting      := true
-parallelExecution in Test               := false
+Test / parallelExecution                := false
 
 // build settings
 majorVersion := 1
@@ -37,26 +37,26 @@ PlayKeys.playDefaultPort := 9669
 
 scalaVersion                      := "2.12.12"
 retrieveManaged                   := true
-evictionWarningOptions in update  := EvictionWarningOptions.default.withWarnScalaVersionEviction(false)
+update / evictionWarningOptions   := EvictionWarningOptions.default.withWarnScalaVersionEviction(false)
 routesGenerator                   := InjectedRoutesGenerator
 
 // IT Settings
 DefaultBuildSettings.integrationTestSettings()
 
-unmanagedResourceDirectories in Compile += baseDirectory.value / "resources"
+Compile / unmanagedResourceDirectories += baseDirectory.value / "resources"
 
 // dependencies
 val akkaVersion = "2.6.16"
 val excludeIteratees = ExclusionRule("com.typesafe.play", "play-iteratees_2.12")
 lazy val silencerVersion = "1.7.1"
+val hmrcMongoVersion = "0.68.0"
 
 //compile dependencies
 libraryDependencies ++= Seq(
   ws,
   "uk.gov.hmrc"       %% "bootstrap-backend-play-28"    % "5.24.0",
   "uk.gov.hmrc"       %% "domain"                       % "6.2.0-play-28",
-  "uk.gov.hmrc.mongo" %% "hmrc-mongo-play-28"           % "0.68.0",
-  "uk.gov.hmrc"       %% "json-encryption"              % "4.10.0-play-28",
+  "uk.gov.hmrc.mongo" %% "hmrc-mongo-play-28"           % hmrcMongoVersion,
   "uk.gov.hmrc"       %% "play-hmrc-api"                % "6.4.0-play-28",
   "uk.gov.hmrc"       %% "http-caching-client"          % "9.5.0-play-28",
   "com.typesafe.play" %% "play-iteratees-reactive-streams" % "2.6.1",
@@ -84,7 +84,7 @@ libraryDependencies ++= Seq(
   "org.scalatestplus"         %% "mockito-3-4"                % "3.2.10.0"        % scope,
   "org.scalatestplus.play"    %% "scalatestplus-play"         % "5.1.0"           % scope,
   "org.pegdown"               %  "pegdown"                    % "1.6.0"           % scope,
-  "uk.gov.hmrc.mongo"         %% "hmrc-mongo-test-play-28"    % "0.54.0"          % scope,
+  "uk.gov.hmrc.mongo"         %% "hmrc-mongo-test-play-28"    % hmrcMongoVersion  % scope,
   "com.typesafe.akka"         %  "akka-testkit_2.12"          % akkaVersion       % scope,
   "de.leanovate.play-mockws"  %% "play-mockws"                % "2.8.1"           % scope excludeAll excludeIteratees,
   "com.github.tomakehurst"    %  "wiremock-jre8"              % "2.31.0"          % scope,

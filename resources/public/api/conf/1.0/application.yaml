@@ -1,0 +1,175 @@
+openapi: 3.0.3
+info:
+  title: Residency status for relief at source
+  version: '1.0'
+servers:
+- url: https://test-api.service.hmrc.gov.uk
+  description: Sandbox
+- url: https://api.service.hmrc.gov.uk
+  description: Production
+paths:
+  /individuals/relief-at-source/residency-status:
+    post:
+      summary: Check if an individual is a Scottish resident
+      description: |
+        Find out if a scheme member pays tax in Scotland or in the rest of the UK, to tell you the rate of tax to use for their relief at source contributions.
+        From 1 January to 5 April each year you will get currentYearResidencyStatus and nextYearForecastResidencyStatus within the response json.
+        From 6 April to 31 December each year you will only get currentYearResidencyStatus within the response json.
+      operationId: checkIndividualResidency
+      parameters:
+        - $ref: '#/components/parameters/acceptHeader'
+        - $ref: '#/components/parameters/contentTypeHeader'
+        - $ref: '#/components/parameters/authorizationHeader'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              allOf:
+              - $ref: '#/components/schemas/residencyStatusRequest'
+            example:
+              nino: BB123456B
+              firstName: John
+              lastName: Smith
+              dateOfBirth: 1975-05-25
+        required: true
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                allOf:
+                - $ref: '#/components/schemas/residencyStatusResponse'
+              example:
+                currentYearResidencyStatus: otherUKResident
+                nextYearForecastResidencyStatus: scotResident
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                allOf:
+                - $ref: '#/components/schemas/errorResponse'
+              example:
+                code: BAD_REQUEST
+                message: Bad Request
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                allOf:
+                - $ref: '#/components/schemas/errorResponse'
+                - description: The pension scheme member's details do not match with HMRC's records.
+              example:
+                code: STATUS_UNAVAILABLE
+                message: Cannot provide a residency status for this pension scheme member.
+      deprecated: false
+      security:
+        - user-restricted:
+            - read:ras
+components:
+  parameters:
+    acceptHeader:
+      name: Accept
+      in: header
+      description: Specifies the response format and the [version](/api-documentation/docs/reference-guide#versioning) of the API to be used.
+      style: simple
+      schema:
+        type: string
+        enum:
+          - application/vnd.hmrc.1.0+json
+      required: true
+    contentTypeHeader:
+      name: Content-Type
+      in: header
+      description: Specifies the format of the request body, which must be JSON.
+      style: simple
+      schema:
+        type: string
+        enum:
+          - application/json
+      required: true
+    authorizationHeader:
+      name: Authorization
+      in: header
+      description: An [OAuth 2.0 Bearer Token](/api-documentation/docs/authorisation/user-restricted-endpoints) with the `read:ras` scope.
+      style: simple
+      schema:
+        type: string
+        example: Bearer bb7fed3fe10dd235a2ccda3d50fb
+      required: true
+  securitySchemes:
+    user-restricted:
+      type: oauth2
+      description: HMRC supports OAuth 2.0 for authenticating [user-restricted](https://developer.service.hmrc.gov.uk/api-documentation/docs/authorisation/user-restricted-endpoints) API requests using an OAuth 2.0 Bearer Token in the Authorization header.
+      flows:
+        authorizationCode:
+          authorizationUrl: https://api.service.hmrc.gov.uk/oauth/authorize
+          tokenUrl: https://api.service.hmrc.gov.uk/oauth/token
+          refreshUrl: https://api.service.hmrc.gov.uk/oauth/refresh
+          scopes:
+            read:ras: Access to Relief At Source API's
+  schemas:
+    residencyStatusRequest:
+      title: Residency status request
+      required:
+      - nino
+      - firstName
+      - lastName
+      - dateOfBirth
+      type: object
+      properties:
+        nino:
+          pattern: ^((?!(BG|GB|KN|NK|NT|TN|ZZ)|(D|F|I|Q|U|V)[A-Z]|[A-Z](D|F|I|O|Q|U|V))[A-Z]{2})[0-9]{6}[A-D]$
+          type: string
+          description: The pension scheme member’s National Insurance number.
+          example: BB123456B
+        firstName:
+          pattern: ^[a-zA-Z &`\-\'^]{1,35}$
+          type: string
+          description: The pension scheme member’s first name.
+          example: John
+        lastName:
+          pattern: ^[a-zA-Z &`\-\'^]{1,35}$
+          type: string
+          description: The pension scheme member’s last name.
+          example: Smith
+        dateOfBirth:
+          pattern: ^\d{4}-\d{2}-\d{2}$
+          type: string
+          description: The pension scheme member’s date of birth. This cannot be in the future.
+          example: 1975-05-25
+    residencyStatusResponse:
+      title: Relief at source residency status response
+      required:
+      - currentYearResidencyStatus
+      type: object
+      properties:
+        currentYearResidencyStatus:
+          $ref: '#/components/schemas/UKResidencyStatusType'
+        nextYearForecastResidencyStatus:
+          $ref: '#/components/schemas/UKResidencyStatusType'
+    UKResidencyStatusType:
+      title: UK residency status type
+      enum:
+      - scotResident
+      - otherUKResident
+      type: string
+    error-codeType:
+      title: Error code type
+      enum:
+      - BAD_REQUEST
+      - STATUS_UNAVAILABLE
+      type: string
+    errorResponse:
+      title: Error response
+      required:
+      - code
+      - message
+      type: object
+      properties:
+        code:
+          $ref: '#/components/schemas/error-codeType'
+        message:
+          type: string

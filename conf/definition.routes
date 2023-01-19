@@ -2,4 +2,4 @@ GET        /api/definition                                  uk.gov.hmrc.rasapi.c
 
 GET        /api/documentation/:version/:endpointName        uk.gov.hmrc.rasapi.controllers.Documentation.documentation(version,endpointName)
 
-GET        /api/conf/:version/*file                         uk.gov.hmrc.rasapi.controllers.Documentation.raml(version, file)
+GET        /api/conf/:version/*file                         uk.gov.hmrc.rasapi.controllers.Documentation.specification(version, file)

@@ -21,9 +21,10 @@ import uk.gov.hmrc.mongo.MongoComponent
 import uk.gov.hmrc.mongo.play.json.PlayMongoRepository
 import uk.gov.hmrc.rasapi.models.Chunks
 
-import javax.inject.Inject
+import javax.inject.{Inject, Singleton}
 import scala.concurrent.{ExecutionContext, Future}
 
+@Singleton
 class RasChunksRepository @Inject()(val mongoComponent: MongoComponent)(implicit val ec: ExecutionContext) extends PlayMongoRepository[Chunks](
   mongoComponent = mongoComponent,
   collectionName = "resultsFiles.chunks",
