@@ -77,7 +77,7 @@ class LookupController @Inject()(
   def getResidencyStatus: Action[AnyContent] = validateAccept(acceptHeaderValidationRules).async {
     implicit request =>
       val apiMetrics = metrics.responseTimer.time
-      authorised(AuthProviders(GovernmentGateway) and (Enrolment(PSA_ENROLMENT) or Enrolment(PP_ENROLMENT))).retrieve(authorisedEnrolments) {
+      authorised(AuthProviders(GovernmentGateway) and (Enrolment(PSA_ENROLMENT) or Enrolment(PP_ENROLMENT) or Enrolment(PSA_PODS_ENROLMENT) or Enrolment(PSP_ENROLMENT))).retrieve(authorisedEnrolments) {
         enrols =>
           val id = getEnrolmentIdentifier(enrols)
 

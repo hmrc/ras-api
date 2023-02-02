@@ -36,9 +36,11 @@ package object controllers {
   // Auth Constants
   val PSA_ENROLMENT = "HMRC-PSA-ORG"
   val PP_ENROLMENT = "HMRC-PP-ORG"
+  val PSA_PODS_ENROLMENT = "HMRC-PODS-ORG"
+  val PSP_ENROLMENT = "HMRC-PODSPP-ORG"
 
   def getEnrolmentIdentifier(enrols:Enrolments): String = {
-    enrols.enrolments.filter(res => res.key == PSA_ENROLMENT || res.key == PP_ENROLMENT).map(
+    enrols.enrolments.filter(res => res.key == PSA_ENROLMENT || res.key == PP_ENROLMENT || res.key == PSA_PODS_ENROLMENT || res.key == PSP_ENROLMENT).map(
       res => res.identifiers.head.value).head
   }
 }
