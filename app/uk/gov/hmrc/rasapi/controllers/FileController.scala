@@ -60,7 +60,7 @@ class FileController @Inject()(
   def serveFile(fileName:String): Action[AnyContent] = Action.async {
     implicit request =>
       val apiMetrics = metrics.register(fileServe).time
-      authorised(AuthProviders(GovernmentGateway) and (Enrolment(PSA_ENROLMENT) or Enrolment(PP_ENROLMENT))).retrieve(authorisedEnrolments) {
+      authorised(AuthProviders(GovernmentGateway) and (Enrolment(PSA_ENROLMENT) or Enrolment(PP_ENROLMENT) or Enrolment(PSA_PODS_ENROLMENT) or Enrolment(PSP_ENROLMENT))).retrieve(authorisedEnrolments) {
         enrols =>
           val id = getEnrolmentIdentifier(enrols)
           getFile(fileName, id).map { fileData =>
@@ -91,7 +91,7 @@ class FileController @Inject()(
   def remove(fileName: String, userId: String):  Action[AnyContent] = Action.async {
     implicit request =>
       val apiMetrics = metrics.register(fileRemove).time
-      authorised(AuthProviders(GovernmentGateway) and (Enrolment(PSA_ENROLMENT) or Enrolment(PP_ENROLMENT))).retrieve(authorisedEnrolments) {
+      authorised(AuthProviders(GovernmentGateway) and (Enrolment(PSA_ENROLMENT) or Enrolment(PP_ENROLMENT) or Enrolment(PSA_PODS_ENROLMENT) or Enrolment(PSP_ENROLMENT))).retrieve(authorisedEnrolments) {
         enrols =>
           val id = getEnrolmentIdentifier(enrols)
           deleteFile(fileName, id).flatMap { res =>
