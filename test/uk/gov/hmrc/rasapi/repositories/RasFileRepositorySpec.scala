@@ -21,8 +21,8 @@ import org.mockito.ArgumentMatchers.{any, anyString}
 import org.mockito.Mockito.when
 import org.mongodb.scala.MongoDatabase
 import org.mongodb.scala.gridfs.{GridFSBucket, GridFSUploadObservable}
-import org.scalatest.concurrent.Eventually
 import org.scalatest.BeforeAndAfter
+import org.scalatest.concurrent.Eventually
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpecLike
 import org.scalatestplus.mockito.MockitoSugar

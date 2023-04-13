@@ -19,8 +19,8 @@ package uk.gov.hmrc.rasapi.connectors
 import org.joda.time.DateTime
 import org.mockito.ArgumentMatchers.{eq => Meq, _}
 import org.mockito.Mockito.{reset, times, verify, when}
-import org.scalatest.matchers.should.Matchers
 import org.scalatest.BeforeAndAfter
+import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpecLike
 import org.scalatestplus.mockito.MockitoSugar
 import org.scalatestplus.play.guice.GuiceOneAppPerSuite
