@@ -48,15 +48,16 @@ DefaultBuildSettings.integrationTestSettings()
 Compile / unmanagedResourceDirectories += baseDirectory.value / "resources"
 
 // dependencies
-val akkaVersion = "2.8.0"
+val akkaVersion = "2.6.16"
 val excludeIteratees = ExclusionRule("com.typesafe.play", "play-iteratees_2.12")
 lazy val silencerVersion = "1.7.1"
 val hmrcMongoVersion = "0.68.0"
+val boostrapVersion = "7.15.0"
 
 //compile dependencies
 libraryDependencies ++= Seq(
   ws,
-  "uk.gov.hmrc"       %% "bootstrap-backend-play-28"    % "7.15.0",
+  "uk.gov.hmrc"       %% "bootstrap-backend-play-28"    % boostrapVersion,
   "uk.gov.hmrc"       %% "domain"                       % "8.2.0-play-28",
   "uk.gov.hmrc.mongo" %% "hmrc-mongo-play-28"           % hmrcMongoVersion,
   "uk.gov.hmrc"       %% "play-hmrc-api"                % "7.2.0-play-28",
