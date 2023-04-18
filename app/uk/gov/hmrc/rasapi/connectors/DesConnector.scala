@@ -18,14 +18,13 @@ package uk.gov.hmrc.rasapi.connectors
 
 import play.api.Logging
 import play.api.libs.json.{JsObject, JsValue, Json, Writes}
-import uk.gov.hmrc.http._
+import uk.gov.hmrc.http.{HeaderCarrier, _}
 import uk.gov.hmrc.play.bootstrap.http.DefaultHttpClient
 import uk.gov.hmrc.rasapi.config.AppContext
 import uk.gov.hmrc.rasapi.models._
 import uk.gov.hmrc.rasapi.services.AuditService
-import java.util.UUID.randomUUID
-import uk.gov.hmrc.http.HeaderCarrier
 
+import java.util.UUID.randomUUID
 import javax.inject.Inject
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.{Failure, Success, Try}

@@ -21,7 +21,7 @@ import play.api.Logging
 import play.api.libs.json.Json._
 import play.api.libs.json._
 import play.api.mvc._
-import uk.gov.hmrc.api.controllers.{ErrorAcceptHeaderInvalid, ErrorInternalServerError => ErrorInternalServerErrorHmrc, ErrorResponse => ErrorResponseHmrc, HeaderValidator}
+import uk.gov.hmrc.api.controllers.{ErrorAcceptHeaderInvalid, HeaderValidator, ErrorInternalServerError => ErrorInternalServerErrorHmrc, ErrorResponse => ErrorResponseHmrc}
 import uk.gov.hmrc.auth.core.AuthProvider.GovernmentGateway
 import uk.gov.hmrc.auth.core._
 import uk.gov.hmrc.auth.core.retrieve.v2.Retrievals._

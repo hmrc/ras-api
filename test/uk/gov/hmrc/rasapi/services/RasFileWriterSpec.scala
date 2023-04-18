@@ -16,8 +16,8 @@
 
 package uk.gov.hmrc.rasapi.services
 
-import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.BeforeAndAfter
+import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpecLike
 import org.scalatestplus.mockito.MockitoSugar

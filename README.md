@@ -76,12 +76,17 @@ Running Locally
 
 Install [Service Manager](https://github.com/hmrc/service-manager), then start dependencies:
 
-    sm --start RAS_ALL -r
+    sm2 --start RAS_ALL
 
 Start the app:
 
     sbt "run 9669"
 
+All tests
+---------
+Prior to raising a PR use the following script to run Unit and Integration tests with coverage and generate a report:
+
+    ./run_all_tests.sh
 
 License
 -------

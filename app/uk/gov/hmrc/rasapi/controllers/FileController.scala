@@ -23,7 +23,7 @@ import play.api.Logging
 import play.api.http.HttpEntity
 import play.api.libs.iteratee.streams.IterateeStreams
 import play.api.mvc._
-import uk.gov.hmrc.api.controllers.{ErrorInternalServerError => ErrorInternalServerErrorHmrc, ErrorResponse}
+import uk.gov.hmrc.api.controllers.{ErrorResponse, ErrorInternalServerError => ErrorInternalServerErrorHmrc}
 import uk.gov.hmrc.auth.core.AuthProvider.GovernmentGateway
 import uk.gov.hmrc.auth.core._
 import uk.gov.hmrc.auth.core.retrieve.v2.Retrievals.authorisedEnrolments

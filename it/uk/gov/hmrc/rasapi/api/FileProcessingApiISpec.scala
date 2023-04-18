@@ -16,26 +16,24 @@
 
 package uk.gov.hmrc.rasapi.api
 
-import java.io.File
-
 import akka.util.Timeout
 import org.scalatest.concurrent.{Eventually, ScalaFutures}
 import org.scalatestplus.play.PlaySpec
 import org.scalatestplus.play.guice.GuiceOneServerPerSuite
 import play.api.Application
 import play.api.inject.guice.GuiceApplicationBuilder
-import play.api.libs.ws.{WSClient, WSResponse}
+import play.api.libs.ws.WSClient
+import play.api.test.Helpers.OK
 import play.api.test.{DefaultAwaitTimeout, FutureAwaits}
+import uk.gov.hmrc.http.HttpClient
 import uk.gov.hmrc.rasapi.itUtils.WireMockServerHelper
 import uk.gov.hmrc.rasapi.models.ResultsFile
 import uk.gov.hmrc.rasapi.repository.RasFilesRepository
-import play.api.test.Helpers.OK
-import uk.gov.hmrc.http.HttpClient
-import scala.concurrent.ExecutionContext.Implicits.global
-import uk.gov.hmrc.play.bootstrap.http.DefaultHttpClient
 
-import scala.io.{BufferedSource, Source}
+import java.io.File
+import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration._
+import scala.io.{BufferedSource, Source}
 
 class FileProcessingApiISpec extends PlaySpec with ScalaFutures
   with GuiceOneServerPerSuite with FutureAwaits with DefaultAwaitTimeout with Eventually with WireMockServerHelper {
