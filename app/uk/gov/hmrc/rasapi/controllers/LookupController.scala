@@ -85,10 +85,12 @@ class LookupController @Inject()(
             individualDetails => {
               desConnector.getResidencyStatus(individualDetails, id, request.getVersion).map {
                 case Left(residencyStatusResponse) =>
-                  val residencyStatus = if (residencyYearResolver.isBetweenJanAndApril)
-                                          updateResidencyResponse(residencyStatusResponse)
-                                        else
-                                          residencyStatusResponse.copy(nextYearForecastResidencyStatus = None)
+                  val residencyStatus =
+                    if (residencyYearResolver.isBetweenJanAndApril) {
+                      updateResidencyResponse(residencyStatusResponse)
+                    } else {
+                      residencyStatusResponse.copy(nextYearForecastResidencyStatus = None)
+                    }
                   auditResponse(failureReason = None,
                     nino = Some(individualDetails.nino),
                     residencyStatus = Some(residencyStatus),
@@ -174,10 +176,11 @@ class LookupController @Inject()(
 
   private def updateResidencyResponse(residencyStatus: ResidencyStatus): ResidencyStatus = {
 
-    if (getCurrentDate.isBefore(new DateTime(2018, 4, 6, 0, 0, 0, 0)) && allowDefaultRUK)
+    if (getCurrentDate.isBefore(new DateTime(2018, 4, 6, 0, 0, 0, 0)) && allowDefaultRUK) {
       residencyStatus.copy(currentYearResidencyStatus = desConnector.otherUk)
-    else
+    } else {
       residencyStatus
+    }
   }
 
   private def withValidJson (userId: String, onSuccess: IndividualDetails => Future[Result],

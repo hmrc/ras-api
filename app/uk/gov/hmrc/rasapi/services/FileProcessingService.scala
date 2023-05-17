@@ -119,7 +119,7 @@ class FileProcessingService @Inject()(
     }
   }
 
-  def saveFile(filePath: Path, userId: String, callbackData: CallbackData)(implicit hc: HeaderCarrier, request: Request[AnyContent]): Unit = {
+  def saveFile(filePath: Path, userId: String, callbackData: CallbackData)(implicit hc: HeaderCarrier): Unit = {
 
     logger.info("[FileProcessingService][saveFile] Starting to save file...")
     val fileSaveMetrics = metrics.register(fileSave).time
@@ -152,9 +152,10 @@ class FileProcessingService @Inject()(
   def getTaxYearHeadings: String = {
     val currentDate = getCurrentDate
     val currentYear = currentDate.getYear
-    if (currentDate.isAfter(new DateTime(currentYear - 1, 12, 31, 0, 0, 0, 0)) && currentDate.isBefore(new DateTime(currentYear, 4, 6, 0, 0, 0, 0)))
+    if (currentDate.isAfter(new DateTime(currentYear - 1, 12, 31, 0, 0, 0, 0)) && currentDate.isBefore(new DateTime(currentYear, 4, 6, 0, 0, 0, 0))) {
       s"${currentYear - 1} to $currentYear residency status,$currentYear to ${currentYear + 1} residency status"
-    else
+    } else {
       s"$currentYear to ${currentYear + 1} residency status"
+    }
   }
 }

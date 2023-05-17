@@ -33,7 +33,7 @@ import play.api.mvc.{BodyParsers, ControllerComponents}
 import play.api.test.Helpers._
 import play.api.test.{FakeRequest, Helpers}
 import play.mvc.Http.HeaderNames
-import uk.gov.hmrc.api.controllers.{ErrorAcceptHeaderInvalid, ErrorResponse}
+import uk.gov.hmrc.api.controllers.{ErrorAcceptHeaderInvalid, ErrorResponse => ErrorResponseHmrc}
 import uk.gov.hmrc.auth.core._
 import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.rasapi.config.AppContext
@@ -387,7 +387,7 @@ class LookupControllerSpec extends AnyWordSpecLike with Matchers with MockitoSug
             .withJsonBody(Json.toJson(individualDetails)(individualDetailssWrites)))
 
           status(result) shouldBe NOT_ACCEPTABLE
-          contentAsJson(result) shouldBe ErrorResponse.writes.writes(ErrorAcceptHeaderInvalid)
+          contentAsJson(result) shouldBe ErrorResponseHmrc.writes.writes(ErrorAcceptHeaderInvalid)
         }
       }
 

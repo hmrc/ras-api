@@ -17,7 +17,7 @@
 package uk.gov.hmrc.rasapi.controllers
 
 import akka.actor.ActorSystem
-import akka.stream.ActorMaterializer
+import akka.stream.Materializer
 import org.bson.types.ObjectId
 import org.mockito.ArgumentMatchers.{any, eq => Meq}
 import org.mockito.Mockito.{reset, verify, when}
@@ -86,7 +86,7 @@ class FileControllerSpec extends AnyWordSpecLike with Matchers with MockitoSugar
       .build()
 
   implicit val actorSystem: ActorSystem = ActorSystem()
-  implicit val materializer: ActorMaterializer = ActorMaterializer()
+  implicit val materializer: Materializer = app.materializer
 
   when(mockRasFileRepository.removeFile(any(), any())).thenReturn(Future.successful(true))
 

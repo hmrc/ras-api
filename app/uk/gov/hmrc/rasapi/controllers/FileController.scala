@@ -23,7 +23,7 @@ import play.api.Logging
 import play.api.http.HttpEntity
 import play.api.libs.iteratee.streams.IterateeStreams
 import play.api.mvc._
-import uk.gov.hmrc.api.controllers.{ErrorResponse, ErrorInternalServerError => ErrorInternalServerErrorHmrc}
+import uk.gov.hmrc.api.controllers.{ErrorResponse => ErrorResponseHmrc, ErrorInternalServerError => ErrorInternalServerErrorHmrc}
 import uk.gov.hmrc.auth.core.AuthProvider.GovernmentGateway
 import uk.gov.hmrc.auth.core._
 import uk.gov.hmrc.auth.core.retrieve.v2.Retrievals.authorisedEnrolments
@@ -140,7 +140,7 @@ class FileController @Inject()(
       }
   }
 
-  private def handleAuthFailure(implicit request: Request[_]): PartialFunction[Throwable, Future[Result]] = {
+  private def handleAuthFailure: PartialFunction[Throwable, Future[Result]] = {
       case _: InsufficientEnrolments => logger.warn("[FileController][handleAuthFailure] Insufficient privileges")
         metrics.registry.counter(UNAUTHORIZED.toString)
         Future.successful(Unauthorized(errorResponseWrites.writes(Unauthorised)))
@@ -148,7 +148,7 @@ class FileController @Inject()(
         metrics.registry.counter(UNAUTHORIZED.toString)
         Future.successful(Unauthorized(errorResponseWrites.writes(InvalidCredentials)))
       case ex => logger.error(s"[FileController][handleAuthFailure] Exception ${ex.getMessage} was thrown from auth", ex)
-        Future.successful(InternalServerError(ErrorResponse.writes.writes(ErrorInternalServerErrorHmrc)))
+        Future.successful(InternalServerError(ErrorResponseHmrc.writes.writes(ErrorInternalServerErrorHmrc)))
   }
 
   // $COVERAGE-OFF$Trivial and never going to be called by a test that uses it's own object implementation

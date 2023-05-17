@@ -66,10 +66,11 @@ class RasFilesRepository @Inject()(val mongoComponent: MongoComponent,
     gridFSG.uploadFromObservable(fileId, observableToUploadFrom, options).head().flatMap { res =>
       log.warn(s"[RasFileRepository][saveFile] Saved file $fileId for user $userId")
       checkAndEnsureTTL(mongoComponent.database, s"$bucketName.files").flatMap { ttlIndexExists =>
-        if (ttlIndexExists)
+        if (ttlIndexExists) {
           gridFSG.find(Document("_id" -> res)).head()
-        else
+        } else {
           throw new RuntimeException("Failed to checkAndEnsureTTL.")
+        }
       }
     }.recover {
       case e: Throwable =>

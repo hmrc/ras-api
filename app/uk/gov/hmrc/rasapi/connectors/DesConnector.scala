@@ -18,6 +18,7 @@ package uk.gov.hmrc.rasapi.connectors
 
 import play.api.Logging
 import play.api.libs.json.{JsObject, JsValue, Json, Writes}
+import uk.gov.hmrc.http.HttpReads.Implicits._
 import uk.gov.hmrc.http.{HeaderCarrier, _}
 import uk.gov.hmrc.play.bootstrap.http.DefaultHttpClient
 import uk.gov.hmrc.rasapi.config.AppContext

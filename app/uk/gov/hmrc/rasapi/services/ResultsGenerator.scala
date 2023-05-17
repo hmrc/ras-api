@@ -55,8 +55,12 @@ trait ResultsGenerator {
 
         result match {
           case Left(residencyStatus) =>
-            val resStatus = if (residencyYearResolver.isBetweenJanAndApril) updateResidencyResponse(residencyStatus)
-            else residencyStatus.copy(nextYearForecastResidencyStatus = None)
+            val resStatus =
+              if (residencyYearResolver.isBetweenJanAndApril) {
+                updateResidencyResponse(residencyStatus)
+              } else {
+                residencyStatus.copy(nextYearForecastResidencyStatus = None)
+              }
             auditResponse(failureReason = None, nino = memberDetails.nino,
               residencyStatus = Some(resStatus), userId = userId, fileId = fileId)
             inputRow + comma + resStatus.toString
@@ -90,10 +94,11 @@ trait ResultsGenerator {
 
   private def updateResidencyResponse(residencyStatus: ResidencyStatus): ResidencyStatus = {
 
-    if (getCurrentDate.isBefore(new DateTime(2018, 4, 6, 0, 0, 0, 0)) && allowDefaultRUK)
+    if (getCurrentDate.isBefore(new DateTime(2018, 4, 6, 0, 0, 0, 0)) && allowDefaultRUK) {
       residencyStatus.copy(currentYearResidencyStatus = desConnector.otherUk)
-    else
+    } else {
       residencyStatus
+    }
   }
 
   /**
