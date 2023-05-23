@@ -21,9 +21,8 @@ import akka.util.ByteString
 import org.bson.types.ObjectId
 import play.api.Logging
 import play.api.http.HttpEntity
-import play.api.libs.iteratee.streams.IterateeStreams
 import play.api.mvc._
-import uk.gov.hmrc.api.controllers.{ErrorResponse => ErrorResponseHmrc, ErrorInternalServerError => ErrorInternalServerErrorHmrc}
+import uk.gov.hmrc.api.controllers.{ErrorInternalServerError => ErrorInternalServerErrorHmrc, ErrorResponse => ErrorResponseHmrc}
 import uk.gov.hmrc.auth.core.AuthProvider.GovernmentGateway
 import uk.gov.hmrc.auth.core._
 import uk.gov.hmrc.auth.core.retrieve.v2.Retrievals.authorisedEnrolments
@@ -66,9 +65,9 @@ class FileController @Inject()(
           getFile(fileName, id).map { fileData =>
             if (fileData.isDefined) {
               logger.debug("[FileController][serverFile] File repo enumerator received")
-              val byteArray = Source.fromPublisher(IterateeStreams.enumeratorToPublisher(fileData.get.data.map(ByteString.fromArray)))
+              val bodySource: Source[ByteString, _] = fileData.get.data.map(ByteString.fromArray)
               apiMetrics.stop()
-              Ok.sendEntity(HttpEntity.Streamed(byteArray, Some(fileData.get.length), Some(_contentType)))
+              Ok.sendEntity(HttpEntity.Streamed(bodySource, Some(fileData.get.length), Some(_contentType)))
                 .withHeaders(CONTENT_DISPOSITION -> s"""attachment; filename="$fileName"""",
                   CONTENT_LENGTH -> s"${fileData.get.length}",
                   CONTENT_TYPE -> _contentType)

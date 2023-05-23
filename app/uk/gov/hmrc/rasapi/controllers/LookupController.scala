@@ -184,7 +184,7 @@ class LookupController @Inject()(
   }
 
   private def withValidJson (userId: String, onSuccess: IndividualDetails => Future[Result],
-                             invalidCallback: Seq[(JsPath, Seq[JsonValidationError])] => Future[Result])
+                             invalidCallback: scala.collection.Seq[(JsPath, scala.collection.Seq[JsonValidationError])] => Future[Result])
                             (implicit request: Request[AnyContent]): Future[Result] = {
 
     request.body.asJson match {

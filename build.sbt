@@ -24,7 +24,7 @@ ScoverageKeys.coverageExcludedPackages  := "<empty>;" +
   "dev.*;" +
   "matching.*"
 ScoverageKeys.coverageMinimumStmtTotal  := 80
-ScoverageKeys.coverageFailOnMinimum     := false
+ScoverageKeys.coverageFailOnMinimum     := true
 ScoverageKeys.coverageHighlighting      := true
 Test / parallelExecution                := false
 libraryDependencies ++= AppDependencies()
@@ -36,7 +36,7 @@ majorVersion := 1
 DefaultBuildSettings.defaultSettings()
 PlayKeys.playDefaultPort := 9669
 
-scalaVersion                      := "2.12.12"
+scalaVersion                      := "2.13.10"
 // To resolve a bug with version 2.x.x of the scoverage plugin - https://github.com/sbt/sbt/issues/6997
 // Try to remove when sbt 1.8.0+ and scoverage is 2.0.7+
 ThisBuild / libraryDependencySchemes += "org.scala-lang.modules" %% "scala-xml" % VersionScheme.Always
@@ -48,5 +48,7 @@ routesGenerator                   := InjectedRoutesGenerator
 DefaultBuildSettings.integrationTestSettings()
 
 Compile / unmanagedResourceDirectories += baseDirectory.value / "resources"
+
+scalacOptions ++= Seq("-Wconf:src=routes/.*:s")
 
 addCommandAlias("scalastyleAll", "all scalastyle test:scalastyle it:scalastyle")

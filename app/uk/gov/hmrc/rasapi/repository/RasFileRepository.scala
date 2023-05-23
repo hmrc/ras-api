@@ -15,11 +15,12 @@
  */
 
 package uk.gov.hmrc.rasapi.repository
+import akka.NotUsed
+import akka.stream.scaladsl.{Sink, Source}
 import org.mongodb.scala.bson.{Document, ObjectId}
 import org.mongodb.scala.gridfs.{GridFSBucket, GridFSUploadOptions}
 import org.mongodb.scala.{Observable, ObservableFuture}
 import play.api.Logger
-import play.api.libs.iteratee.Enumerator
 import uk.gov.hmrc.mongo.MongoComponent
 import uk.gov.hmrc.mongo.play.json.PlayMongoRepository
 import uk.gov.hmrc.rasapi.config.AppContext
@@ -30,7 +31,7 @@ import java.nio.file.{Files, Path}
 import javax.inject.{Inject, Singleton}
 import scala.concurrent.{ExecutionContext, Future}
 
-case class FileData(length: Long = 0, data: Enumerator[Array[Byte]] = Enumerator.empty)
+case class FileData(length: Long = 0, data: Source[Array[Byte], NotUsed] = Source.empty)
 
 @Singleton
 class RasFilesRepository @Inject()(val mongoComponent: MongoComponent,
@@ -89,7 +90,7 @@ class RasFilesRepository @Inject()(val mongoComponent: MongoComponent,
           .map(seq => seq.map(bb => bb.array).reduceLeft(_ ++ _))
           .map(array => {
             log.info(s"[RasFileRepository][fetchFile] Successfully downloaded ${_fileName} for userId ($userId).")
-            Some(FileData(file.getLength, Enumerator(array)))
+            Some(FileData(file.getLength, Source.single(array)))
           })
       case None =>
         log.warn(s"[RasFileRepository][fetchFile] Unable to find ${_fileName} for userId ($userId).")
