@@ -38,7 +38,7 @@ trait RasFileReader extends Logging {
 
     fileUploadConnector.getFile(envelopeId, fileId, userId).map{
 
-      case Some(inputStream) => Source.fromInputStream(inputStream).getLines
+      case Some(inputStream) => Source.fromInputStream(inputStream).getLines()
       case None => logger.error(s"[RasFileReader][readFile] File Processing: the file ($fileId) could not be found for userId ($userId).")
         throw new FileNotFoundException
     }

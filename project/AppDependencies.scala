@@ -35,14 +35,14 @@ object AppDependencies {
 
   val test: Seq[ModuleID] = Seq(
     "org.scalatest"             %% "scalatest"                % "3.2.16",
-    "org.mockito"               %% "mockito-scala-scalatest"  % "1.17.14",
+    "org.scalatestplus"         %% "mockito-3-4"              % "3.2.10.0",
     "org.scalatestplus.play"    %% "scalatestplus-play"       % "5.1.0",
     "org.pegdown"               %  "pegdown"                  % "1.6.0",
     "uk.gov.hmrc.mongo"         %% "hmrc-mongo-test-play-28"  % hmrcMongoVersion,
     "com.typesafe.akka"         %  "akka-testkit_2.13"        % akkaVersion,
     "de.leanovate.play-mockws"  %% "play-mockws"              % "2.8.1",
     "com.github.tomakehurst"    %  "wiremock-jre8"            % "2.35.0",
-    "com.vladsch.flexmark"      %  "flexmark-all"             % "0.64.0"
+    "com.vladsch.flexmark"      %  "flexmark-all"             % "0.64.8"
   ).map(_ % "it, test")
 
   val overrides: Seq[ModuleID] = Seq(

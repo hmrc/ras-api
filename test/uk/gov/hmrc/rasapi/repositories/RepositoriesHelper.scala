@@ -16,12 +16,13 @@
 
 package uk.gov.hmrc.rasapi.repositories
 
+import akka.stream.scaladsl.Sink
 import play.api.Logging
-import play.api.libs.iteratee.Iteratee
 import uk.gov.hmrc.rasapi.services.RasFileWriter
 
 import java.io.{BufferedWriter, FileWriter}
 import java.nio.file.{Files, Path}
+import scala.concurrent.Future
 import scala.util.Random
 
 object TestFileWriter extends RasFileWriter with Logging {
@@ -49,7 +50,9 @@ object RepositoriesHelper {
   val resultsArr: Array[String] = Array("456C,John,Smith,1990-02-21,nino-INVALID_FORMAT",
     "AB123456C,John,Smith,1990-02-21,NOT_MATCHED",
     "AB123456C,John,Smith,1990-02-21,otherUKResident,scotResident")
-  def getAll: Iteratee[Array[Byte], Array[Byte]] = Iteratee.consume[Array[Byte]]()
+  def getAll: Sink[Array[Byte], Future[Array[Byte]]] = {
+    Sink.fold[Array[Byte], Array[Byte]](Array()) { (result, chunk) => result ++ chunk }
+  }
 }
 
 

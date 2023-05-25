@@ -16,11 +16,12 @@
 
 package uk.gov.hmrc.rasapi.repositories
 
+import akka.stream.scaladsl.Sink
+import mockws.MockWSHelpers.materializer
 import org.scalatest.concurrent.PatienceConfiguration.{Interval, Timeout}
 import org.scalatest.concurrent.{Eventually, ScalaFutures}
 import org.scalatestplus.play.PlaySpec
 import org.scalatestplus.play.guice.GuiceOneAppPerSuite
-import play.api.libs.iteratee.Iteratee
 import play.api.test.{DefaultAwaitTimeout, FutureAwaits}
 import uk.gov.hmrc.rasapi.repository.{FileData, RasChunksRepository, RasFilesRepository}
 
@@ -60,7 +61,7 @@ class RasFileRepositoryISpec extends PlaySpec with ScalaFutures with GuiceOneApp
         fileId = filename
       ))
 
-      eventually(Timeout(5 seconds), Interval(1 second)) {
+      eventually(Timeout(5.seconds), Interval(1.second)) {
         fileCount mustBe 1
         chunksCount mustBe 7
       }
@@ -79,13 +80,22 @@ class RasFileRepositoryISpec extends PlaySpec with ScalaFutures with GuiceOneApp
 
       val receiveFile: Option[FileData] = await(rasFileRepository.fetchFile(filename, "userid-1"))
 
-      val convertedToString: Future[String] = receiveFile.map {
-        x => Iteratee.flatten(x.data.map(new String(_)) apply Iteratee.consume()).run
-      }.getOrElse(Future.successful("failed"))
+      def getAll: Sink[Array[Byte], Future[Array[Byte]]] = {
+        Sink.fold[Array[Byte], Array[Byte]](Array()) { (result, chunk) => result ++ chunk }
+      }
+
+      var result = new String("")
+
+      await(receiveFile.get.data.runWith(getAll.mapMaterializedValue {
+        _.map { bytes =>
+          result =
+            result.concat(new String(bytes))
+        }
+      }))
 
       val testSource: BufferedSource = Source.fromFile("it/resources/testFiles/bulk.csv")
 
-      await(convertedToString) mustBe testSource.getLines().toList.mkString("\n")
+      result mustBe testSource.getLines().toList.mkString("\n")
 
       testSource.close()
     }
@@ -98,7 +108,7 @@ class RasFileRepositoryISpec extends PlaySpec with ScalaFutures with GuiceOneApp
       val deleteFile: Boolean = await(rasFileRepository.removeFile(filename, "userid-1"))
       deleteFile mustBe true
 
-      eventually(Timeout(5 seconds), Interval(1 second)) {
+      eventually(Timeout(5.seconds), Interval(1.second)) {
         fileCount mustBe 0
         chunksCount mustBe 0
       }

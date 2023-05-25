@@ -18,7 +18,6 @@ package uk.gov.hmrc.rasapi.connectors
 
 import play.api.Logging
 import play.api.libs.json.{JsObject, JsValue, Json, Writes}
-import uk.gov.hmrc.http.HttpReads.Implicits._
 import uk.gov.hmrc.http.{HeaderCarrier, _}
 import uk.gov.hmrc.play.bootstrap.http.DefaultHttpClient
 import uk.gov.hmrc.rasapi.config.AppContext
@@ -133,7 +132,7 @@ class DesConnector @Inject()( httpPost: DefaultHttpClient,
         Right(ResidencyStatusFailure(error_DoNotReProcess, "Internal server error."))
       case _: NotFoundException =>
         Right(ResidencyStatusFailure(error_MatchingFailed, "Cannot provide a residency status for this pension scheme member."))
-      case Upstream4xxResponse(_, 429, _, _) =>
+      case UpstreamErrorResponse(_, 429, _, _) =>
         logger.error(s"[DesConnector][getResidencyStatus] Request could not be sent 429 (Too Many Requests) was sent " +
           s"from the HoD. userId ($userId).")
         Right(ResidencyStatusFailure(error_TooManyRequests, "Too Many Requests."))

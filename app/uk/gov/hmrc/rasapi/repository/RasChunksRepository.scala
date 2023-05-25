@@ -35,7 +35,7 @@ class RasChunksRepository @Inject()(val mongoComponent: MongoComponent)(implicit
   val log: Logger = Logger(getClass)
 
   def getAllChunks: Future[Seq[Chunks]] = {
-    collection.find(Document("files_id" -> Document("$ne" -> 1))).projection(Document("_id" -> 1, "files_id" -> 2)).collect.head.recover {
+    collection.find(Document("files_id" -> Document("$ne" -> 1))).projection(Document("_id" -> 1, "files_id" -> 2)).collect().head().recover {
       case ex: Throwable =>
           log.error(s"[RasChunksRepository][getAllChunks] Error getting chunks: ${ex.getMessage}. Trace: $ex")
           Seq.empty
@@ -43,7 +43,7 @@ class RasChunksRepository @Inject()(val mongoComponent: MongoComponent)(implicit
   }
 
   def removeChunk(filesId: ObjectId): Future[Boolean] = {
-    collection.deleteOne(Document("files_id" -> filesId)).head.map(res => res.getDeletedCount != 0).recover {
+    collection.deleteOne(Document("files_id" -> filesId)).head().map(res => res.getDeletedCount != 0).recover {
       case ex: Throwable =>
         log.error(s"Error when attempting to remove chunk for file id $filesId. Exception: ${ex.getMessage}. Trace: $ex")
         false

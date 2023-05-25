@@ -23,7 +23,7 @@ import org.mockito.Mockito._
 import org.scalatest.BeforeAndAfter
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpecLike
-import org.mockito.MockitoSugar
+import org.scalatestplus.mockito.MockitoSugar
 import org.scalatestplus.play.guice.GuiceOneAppPerSuite
 import play.api.Application
 import play.api.inject.guice.GuiceApplicationBuilder
@@ -590,11 +590,6 @@ class LookupControllerSpec extends AnyWordSpecLike with Matchers with MockitoSug
               |  "message": "Bad Request",
               |  "errors": [
               |     {
-              |       "code": "INVALID_FORMAT",
-              |       "message": "Invalid format has been used",
-              |       "path": "/nino"
-              |     },
-              |     {
               |       "code": "MISSING_FIELD",
               |       "message": "This field is required",
               |       "path": "/lastName"
@@ -603,6 +598,11 @@ class LookupControllerSpec extends AnyWordSpecLike with Matchers with MockitoSug
               |       "code": "MISSING_FIELD",
               |       "message": "This field is required",
               |       "path": "/dateOfBirth"
+              |     },
+              |     {
+              |       "code": "INVALID_FORMAT",
+              |       "message": "Invalid format has been used",
+              |       "path": "/nino"
               |     }
               |  ]
               |}

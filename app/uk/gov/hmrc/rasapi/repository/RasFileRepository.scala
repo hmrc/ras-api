@@ -16,7 +16,7 @@
 
 package uk.gov.hmrc.rasapi.repository
 import akka.NotUsed
-import akka.stream.scaladsl.{Sink, Source}
+import akka.stream.scaladsl.Source
 import org.mongodb.scala.bson.{Document, ObjectId}
 import org.mongodb.scala.gridfs.{GridFSBucket, GridFSUploadOptions}
 import org.mongodb.scala.{Observable, ObservableFuture}
@@ -86,7 +86,7 @@ class RasFilesRepository @Inject()(val mongoComponent: MongoComponent,
       case Some(file) =>
         log.info(s"[RasFileRepository][fetchFile] Found ${_fileName} for userId ($userId).")
         gridFSG.downloadToObservable(file.getObjectId)
-          .toFuture
+          .toFuture()
           .map(seq => seq.map(bb => bb.array).reduceLeft(_ ++ _))
           .map(array => {
             log.info(s"[RasFileRepository][fetchFile] Successfully downloaded ${_fileName} for userId ($userId).")
@@ -104,7 +104,7 @@ class RasFilesRepository @Inject()(val mongoComponent: MongoComponent,
 
   def fetchResultsFile(fileId: ObjectId): Future[Option[ResultsFile]] = {
     log.debug(s"[RasFileRepository][isFileExists] Checking if file exists with id: $fileId ")
-    gridFSG.find(Document("_id" -> fileId)).headOption.recover {
+    gridFSG.find(Document("_id" -> fileId)).headOption().recover {
       case ex: Throwable =>
         log.error(s"[RasFileRepository][isFileExists] Error trying to find if parent file record exists for id: $fileId. Exception: ${ex.getMessage}")
         throw new RuntimeException(s"Failed to check file exists due to error ${ex.getMessage}")
@@ -113,7 +113,7 @@ class RasFilesRepository @Inject()(val mongoComponent: MongoComponent,
 
   def removeFile(fileName: String, userId: String): Future[Boolean] = {
     log.debug(s"[RasFileRepository][removeFile] File to remove => fileName: $fileName for userId ($userId).")
-    gridFSG.find(Document("filename" -> fileName)).headOption.flatMap {
+    gridFSG.find(Document("filename" -> fileName)).headOption().flatMap {
       case Some(file) =>
         val objectId: ObjectId = file.getObjectId
         log.info(s"[RasFileRepository][removeFile] Successfully retrieved ObjectId: $objectId")

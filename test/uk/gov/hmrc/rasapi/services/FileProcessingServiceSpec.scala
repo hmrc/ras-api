@@ -16,6 +16,8 @@
 
 package uk.gov.hmrc.rasapi.services
 
+import akka.stream.Materializer
+import mockws.MockWSHelpers
 import org.joda.time.DateTime
 import org.mockito.ArgumentCaptor
 import org.mockito.ArgumentMatchers.{eq => Meq, _}
@@ -24,7 +26,7 @@ import org.scalatest.BeforeAndAfter
 import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpecLike
-import org.mockito.MockitoSugar
+import org.scalatestplus.mockito.MockitoSugar
 import org.scalatestplus.play.guice.GuiceOneAppPerSuite
 import play.api.libs.json.Json
 import play.api.mvc.AnyContentAsEmpty
@@ -59,6 +61,7 @@ class FileProcessingServiceSpec extends AnyWordSpecLike
 
   implicit val hc: HeaderCarrier = HeaderCarrier()
   implicit val fakeReq: FakeRequest[AnyContentAsEmpty.type] = FakeRequest("POST", "/residency-status")
+  implicit val materializers: Materializer = MockWSHelpers.materializer
 
   val mockFileUploadConnector: FileUploadConnector = mock[FileUploadConnector]
 
@@ -188,7 +191,12 @@ class FileProcessingServiceSpec extends AnyWordSpecLike
 
         val res = await(repository.fetchFile(fileId, userId))
         var result = new String("")
-        await(res.get.data run getAll map { bytes => result = result.concat(new String(bytes)) })
+        await(res.get.data.runWith(getAll.mapMaterializedValue {
+          _.map { bytes =>
+            result =
+              result.concat(new String(bytes))
+          }
+        }))
         result.replaceAll("(\\r|\\n)", "") shouldBe expectedResultsFile.mkString
 
         Files.deleteIfExists(testFilePath)
@@ -269,7 +277,12 @@ class FileProcessingServiceSpec extends AnyWordSpecLike
 
         val res = await(repository.fetchFile(fileId, userId))
         var result = new String("")
-        await(res.get.data run getAll map { bytes => result = result.concat(new String(bytes)) })
+        await(res.get.data.runWith(getAll.mapMaterializedValue {
+          _.map { bytes =>
+            result =
+              result.concat(new String(bytes))
+          }
+        }))
         result.replaceAll("(\\r|\\n)", "") shouldBe expectedResultsFile.mkString
         Files.deleteIfExists(testFilePath)
 
@@ -349,7 +362,12 @@ class FileProcessingServiceSpec extends AnyWordSpecLike
 
         val res = await(repository.fetchFile(fileId, userId))
         var result = new String("")
-        await(res.get.data run getAll map { bytes => result = result.concat(new String(bytes)) })
+        await(res.get.data.runWith(getAll.mapMaterializedValue {
+          _.map { bytes =>
+            result =
+              result.concat(new String(bytes))
+          }
+        }))
         result.replaceAll("(\\r|\\n)", "") shouldBe expectedResultsFile.mkString
         Files.deleteIfExists(testFilePath)
 
@@ -428,7 +446,12 @@ class FileProcessingServiceSpec extends AnyWordSpecLike
 
         val res = await(repository.fetchFile(fileId, userId))
         var result = new String("")
-        await(res.get.data run getAll map { bytes => result = result.concat(new String(bytes)) })
+        await(res.get.data.runWith(getAll.mapMaterializedValue {
+          _.map { bytes =>
+            result =
+              result.concat(new String(bytes))
+          }
+        }))
         result.replaceAll("(\\r|\\n)", "") shouldBe expectedResultsFile.mkString
         Files.deleteIfExists(testFilePath)
 
@@ -507,7 +530,12 @@ class FileProcessingServiceSpec extends AnyWordSpecLike
 
         val res = await(repository.fetchFile(fileId, userId))
         var result = new String("")
-        await(res.get.data run getAll map { bytes => result = result.concat(new String(bytes)) })
+        await(res.get.data.runWith(getAll.mapMaterializedValue {
+          _.map { bytes =>
+            result =
+              result.concat(new String(bytes))
+          }
+        }))
         result.replaceAll("(\\r|\\n)", "") shouldBe expectedResultsFile.mkString
         Files.deleteIfExists(testFilePath)
 
@@ -585,7 +613,12 @@ class FileProcessingServiceSpec extends AnyWordSpecLike
 
         val res = await(repository.fetchFile(fileId, userId))
         var result = new String("")
-        await(res.get.data run getAll map { bytes => result = result.concat(new String(bytes)) })
+        await(res.get.data.runWith(getAll.mapMaterializedValue {
+          _.map { bytes =>
+            result =
+              result.concat(new String(bytes))
+          }
+        }))
         result.replaceAll("(\\r|\\n)", "") shouldBe expectedResultsFile.mkString
         Files.deleteIfExists(testFilePath)
 
@@ -628,7 +661,7 @@ class FileProcessingServiceSpec extends AnyWordSpecLike
 
         val result = SUT.createMatchingData(inputData)
 
-        result shouldBe Right(List("nino-MISSING_FIELD", "lastName-INVALID_FORMAT", "dateOfBirth-INVALID_FORMAT"))
+        result shouldBe Right(List("lastName-INVALID_FORMAT", "dateOfBirth-INVALID_FORMAT", "nino-MISSING_FIELD"))
       }
 
       "parse line as raw data and convert to RawMemberDetails object when there are less than 3 columns" in {
@@ -636,7 +669,7 @@ class FileProcessingServiceSpec extends AnyWordSpecLike
 
         val result = SUT.createMatchingData(inputData)
 
-        result shouldBe Right(List("nino-INVALID_FORMAT", "lastName-INVALID_FORMAT", "dateOfBirth-MISSING_FIELD", "firstName-INVALID_FORMAT"))
+        result shouldBe Right(List("firstName-INVALID_FORMAT", "lastName-INVALID_FORMAT", "dateOfBirth-MISSING_FIELD", "nino-INVALID_FORMAT"))
       }
 
       "parse empty line as raw data and convert to RawMemberDetails object" in {
@@ -644,7 +677,7 @@ class FileProcessingServiceSpec extends AnyWordSpecLike
 
         val result = SUT.createMatchingData(inputData)
 
-        result shouldBe Right(List("nino-MISSING_FIELD", "lastName-MISSING_FIELD", "dateOfBirth-MISSING_FIELD", "firstName-MISSING_FIELD"))
+        result shouldBe Right(List("firstName-MISSING_FIELD", "lastName-MISSING_FIELD", "dateOfBirth-MISSING_FIELD", "nino-MISSING_FIELD"))
       }
 
       "date format is dd/mm/yyyy" when {
@@ -817,7 +850,12 @@ class FileProcessingServiceSpec extends AnyWordSpecLike
 
         val res = await(repository.fetchFile(fileId, userId))
         var result = new String("")
-        await(res.get.data run getAll map { bytes => result = result.concat(new String(bytes)) })
+        await(res.get.data.runWith(getAll.mapMaterializedValue {
+          _.map { bytes =>
+            result =
+              result.concat(new String(bytes))
+          }
+        }))
         result.replaceAll("(\\r|\\n)", "") shouldBe expectedResultsFile.mkString
         Files.deleteIfExists(testFilePath)
       }
