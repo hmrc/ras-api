@@ -36,7 +36,7 @@ import uk.gov.hmrc.rasapi.repositories.RepositoriesHelper.createFile
 import uk.gov.hmrc.rasapi.repository.{FileData, RasFilesRepository}
 
 import scala.concurrent.ExecutionContext.Implicits.global
-import scala.concurrent.Future
+import scala.concurrent.{ExecutionContext, Future}
 
 class RasFileRepositorySpec extends AnyWordSpecLike with Matchers with MockitoSugar with GuiceOneAppPerSuite
   with BeforeAndAfter with Eventually with Logging with DefaultPlayMongoRepositorySupport[Chunks] {
@@ -60,7 +60,7 @@ class RasFileRepositorySpec extends AnyWordSpecLike with Matchers with MockitoSu
     "saveFile should return a RuntimeException if checkAndEnsureTTL is false" in {
       val testRepository = new RasFilesRepository(mongoComponent, mockAppContext) {
         override val gridFSG: GridFSBucket = mock[GridFSBucket]
-        override def checkAndEnsureTTL(mdb: MongoDatabase, collectionName: String): Future[Boolean] = Future.successful(false)
+        override def checkAndEnsureTTL(mdb: MongoDatabase, collectionName: String)(implicit ec: ExecutionContext): Future[Boolean] = Future.successful(false)
       }
       val mockGridFSUploadObservable: GridFSUploadObservable[ObjectId] = mock[GridFSUploadObservable[ObjectId]]
 

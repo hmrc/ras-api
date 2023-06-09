@@ -21,8 +21,7 @@ import org.mongodb.scala.bson.{BsonInt64, Document}
 import org.mongodb.scala.model.IndexOptions
 import play.api.Logger
 
-import scala.concurrent.ExecutionContext.Implicits.global
-import scala.concurrent.Future
+import scala.concurrent.{ExecutionContext, Future}
 import scala.concurrent.duration.SECONDS
 
 trait GridFsTTLIndexing {
@@ -68,7 +67,7 @@ trait GridFsTTLIndexing {
         ).toFuture()
   }
 
-  def checkAndEnsureTTL(mdb: MongoDatabase, collectionName: String): Future[Boolean] = {
+  def checkAndEnsureTTL(mdb: MongoDatabase, collectionName: String)(implicit ec: ExecutionContext): Future[Boolean] = {
     listAllIndexes(mdb, collectionName).flatMap { indexes =>
       for {
         _ <- if (indexes.exists(index => index.containsValue(LastUpdatedIndex))) {
