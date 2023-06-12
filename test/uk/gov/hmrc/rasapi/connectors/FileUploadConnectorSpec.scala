@@ -35,6 +35,7 @@ import uk.gov.hmrc.rasapi.models.FileMetadata
 
 import java.io.{BufferedReader, InputStreamReader}
 import scala.concurrent.{ExecutionContext, Future}
+import scala.language.postfixOps
 
 class FileUploadConnectorSpec extends AnyWordSpecLike with Matchers with GuiceOneAppPerSuite with MockitoSugar {
 
@@ -44,7 +45,7 @@ class FileUploadConnectorSpec extends AnyWordSpecLike with Matchers with GuiceOn
   val appContext: AppContext = app.injector.instanceOf[AppContext]
   val wsResponseMock: WSResponse = mock[WSResponse]
 
-  val bodyAsSource: Source[ByteString, _] = Source(Seq(ByteString("Test"),  ByteString("\r\n"), ByteString("Passed")).to[scala.collection.immutable.Iterable])
+  val bodyAsSource: Source[ByteString, _] = Source(Seq(ByteString("Test"),  ByteString("\r\n"), ByteString("Passed")))
   val headers = Map("CONTENT_TYPE" -> Seq("application/octet-stream"))
 
   private def createMockResponse(bodyAsSource: Source[ByteString, _], headers: Map[String, Seq[String]]): WSResponse = {

@@ -21,7 +21,7 @@ import play.api.libs.json.{Json, OFormat}
 case class ResidencyStatus(currentYearResidencyStatus: String = "", nextYearForecastResidencyStatus: Option[String] = None)
 {
   override def toString: String = if(nextYearForecastResidencyStatus.nonEmpty) {
-    s"$currentYearResidencyStatus${","+nextYearForecastResidencyStatus.get}"
+    s"$currentYearResidencyStatus${"," + nextYearForecastResidencyStatus.get}"
   } else {
     currentYearResidencyStatus
   }

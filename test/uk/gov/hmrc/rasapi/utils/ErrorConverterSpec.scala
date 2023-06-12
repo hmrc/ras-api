@@ -23,7 +23,6 @@ import org.scalatestplus.mockito.MockitoSugar
 import org.scalatestplus.play.guice.GuiceOneAppPerSuite
 import play.api.libs.json.{JsPath, JsonValidationError}
 import uk.gov.hmrc.rasapi.controllers.ErrorValidation
-import uk.gov.hmrc.rasapi.utils.ErrorConverter
 
 class ErrorConverterSpec extends AnyWordSpecLike with Matchers with GuiceOneAppPerSuite with BeforeAndAfter with MockitoSugar {
   "Convert method in a " should {

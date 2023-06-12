@@ -17,7 +17,8 @@
 package uk.gov.hmrc.rasapi.controllers
 
 import akka.actor.ActorSystem
-import akka.stream.ActorMaterializer
+import akka.stream.Materializer
+import akka.stream.scaladsl.Source
 import org.bson.types.ObjectId
 import org.mockito.ArgumentMatchers.{any, eq => Meq}
 import org.mockito.Mockito.{reset, verify, when}
@@ -30,7 +31,6 @@ import play.api.Application
 import play.api.http.Status
 import play.api.http.Status.UNAUTHORIZED
 import play.api.inject.guice.GuiceApplicationBuilder
-import play.api.libs.iteratee.Enumerator
 import play.api.mvc.ControllerComponents
 import play.api.test.Helpers.{await, defaultAwaitTimeout, status}
 import play.api.test.{FakeRequest, Helpers}
@@ -65,7 +65,7 @@ class FileControllerSpec extends AnyWordSpecLike with Matchers with MockitoSugar
   val mockMetrics: Metrics = app.injector.instanceOf[Metrics]
   val mockCC: ControllerComponents = app.injector.instanceOf[ControllerComponents]
 
-  val fileData: FileData = FileData(length = 124L,Enumerator("TEST START ".getBytes))
+  val fileData: FileData = FileData(length = 124L,Source.single("TEST START ".getBytes))
 
   val fileController: FileController = new FileController(
     mockRasFileRepository,
@@ -86,7 +86,7 @@ class FileControllerSpec extends AnyWordSpecLike with Matchers with MockitoSugar
       .build()
 
   implicit val actorSystem: ActorSystem = ActorSystem()
-  implicit val materializer: ActorMaterializer = ActorMaterializer()
+  implicit val materializer: Materializer = app.materializer
 
   when(mockRasFileRepository.removeFile(any(), any())).thenReturn(Future.successful(true))
 

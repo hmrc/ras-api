@@ -18,7 +18,6 @@ package uk.gov.hmrc.rasapi.services
 
 import akka.actor.ActorSystem
 import play.api.Logging
-import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.rasapi.connectors.FileUploadConnector
 
 import java.io._
@@ -33,13 +32,13 @@ trait RasFileReader extends Logging {
 
   val fileUploadConnector: FileUploadConnector
 
-  def readFile(envelopeId: String, fileId: String, userId: String)(implicit hc: HeaderCarrier): Future[Iterator[String]] = {
+  def readFile(envelopeId: String, fileId: String, userId: String): Future[Iterator[String]] = {
 
     implicit val codec: Codec = Codec.ISO8859
 
     fileUploadConnector.getFile(envelopeId, fileId, userId).map{
 
-      case Some(inputStream) => Source.fromInputStream(inputStream).getLines
+      case Some(inputStream) => Source.fromInputStream(inputStream).getLines()
       case None => logger.error(s"[RasFileReader][readFile] File Processing: the file ($fileId) could not be found for userId ($userId).")
         throw new FileNotFoundException
     }
@@ -82,6 +81,7 @@ trait RasFileWriter extends Logging {
   }
 
   def clearFile(path:Path, userId: String) :Unit =
-    if (!Files.deleteIfExists(path))
+    if (!Files.deleteIfExists(path)) {
       logger.error(s"[RasFileReader][clearFile] error deleting file or file $path doesn't exist for userId ($userId).")
+    }
 }

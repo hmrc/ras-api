@@ -107,7 +107,7 @@ class DesConnectorSpec extends AnyWordSpecLike with Matchers with GuiceOneAppPer
 
       val result = await(TestDesConnector.getResidencyStatus(individualDetails, userId, V2_0))
       result.isLeft shouldBe true
-      result.left.get shouldBe ResidencyStatus("otherUKResident", Some("scotResident"))
+      result.left.getOrElse("Get Failed") shouldBe ResidencyStatus("otherUKResident", Some("scotResident"))
 
       verify(mockHttp, times(1)).POST[JsValue, HttpResponse](any(), Meq[JsValue](expectedPayload), any())(any(), any(), any(), any())
     }
@@ -206,7 +206,7 @@ class DesConnectorSpec extends AnyWordSpecLike with Matchers with GuiceOneAppPer
 
       val result = await(TestDesConnector.getResidencyStatus(individualDetails, userId, V2_0))
       result.isLeft shouldBe true
-      result.left.get shouldBe ResidencyStatus("otherUKResident", None)
+      result.left.getOrElse("Get Failed") shouldBe ResidencyStatus("otherUKResident", None)
 
       verify(mockHttp, times(1)).POST[JsValue, HttpResponse](any(), Meq[JsValue](expectedPayload), any())(any(), any(), any(), any())
     }
@@ -243,7 +243,7 @@ class DesConnectorSpec extends AnyWordSpecLike with Matchers with GuiceOneAppPer
       val result = await(TestDesConnector.getResidencyStatus(individualDetails, userId, V2_0, isBulkRequest = true))
 
       result.isRight shouldBe false
-      result.left.get shouldBe ResidencyStatus("otherUKResident", Some("scotResident"))
+      result.left.getOrElse("Get Failed") shouldBe ResidencyStatus("otherUKResident", Some("scotResident"))
 
       verify(mockHttp, times(2)).POST[JsValue, HttpResponse](any(), Meq[JsValue](expectedPayload), any())(any(), any(), any(), any())
     }
@@ -277,7 +277,7 @@ class DesConnectorSpec extends AnyWordSpecLike with Matchers with GuiceOneAppPer
       val result = await(TestDesConnector.getResidencyStatus(individualDetails, userId, V2_0, isBulkRequest = true))
 
       result.isLeft shouldBe false
-      result.right.get shouldBe errorResponse
+      result.getOrElse("Get Failed") shouldBe errorResponse
 
       verify(mockHttp, times(1)).POST[JsValue, HttpResponse](any(), Meq[JsValue](expectedPayload), any())(any(), any(), any(), any())
     }
@@ -311,7 +311,7 @@ class DesConnectorSpec extends AnyWordSpecLike with Matchers with GuiceOneAppPer
       val result = await(TestDesConnector.getResidencyStatus(individualDetails, userId, V2_0))
 
       result.isLeft shouldBe false
-      result.right.get shouldBe errorResponse
+      result.getOrElse("Get Failed") shouldBe errorResponse
 
       verify(mockHttp, times(1)).POST[JsValue, HttpResponse](any(), Meq[JsValue](expectedPayload), any())(any(), any(), any(), any())
     }
@@ -330,7 +330,7 @@ class DesConnectorSpec extends AnyWordSpecLike with Matchers with GuiceOneAppPer
       val result = await(TestDesConnector.getResidencyStatus(individualDetails, userId, V2_0))
 
       result.isLeft shouldBe false
-      result.right.get shouldBe errorResponse
+      result.getOrElse("Get Failed") shouldBe errorResponse
 
       verify(mockHttp, times(1)).POST[JsValue, HttpResponse](any(), Meq[JsValue](expectedPayload), any())(any(), any(), any(), any())
     }
@@ -351,7 +351,7 @@ class DesConnectorSpec extends AnyWordSpecLike with Matchers with GuiceOneAppPer
       val result = await(TestDesConnector.getResidencyStatus(individualDetails, userId, V2_0))
 
       result.isLeft shouldBe false
-      result.right.get shouldBe expectedResult
+      result.getOrElse("Get Failed") shouldBe expectedResult
 
       verify(mockHttp, times(1)).POST[JsValue, HttpResponse](any(), Meq[JsValue](expectedPayload), any())(any(), any(), any(), any())
     }
@@ -370,7 +370,7 @@ class DesConnectorSpec extends AnyWordSpecLike with Matchers with GuiceOneAppPer
       val result = await(TestDesConnector.getResidencyStatus(individualDetails, userId, V2_0))
 
       result.isLeft shouldBe false
-      result.right.get shouldBe errorResponse
+      result.getOrElse("Get Failed") shouldBe errorResponse
 
       verify(mockHttp, times(3)).POST[JsValue, HttpResponse](any(), Meq[JsValue](expectedPayload), any())(any(), any(), any(), any())
     }
@@ -388,7 +388,7 @@ class DesConnectorSpec extends AnyWordSpecLike with Matchers with GuiceOneAppPer
       val result = await(TestDesConnector.getResidencyStatus(individualDetails, userId, V2_0))
 
       result.isLeft shouldBe false
-      result.right.get shouldBe errorResponse
+      result.getOrElse("Get Failed") shouldBe errorResponse
 
       verify(mockHttp, times(3)).POST[JsValue, HttpResponse](any(), Meq[JsValue](expectedPayload), any())(any(), any(), any(), any())
     }
@@ -408,7 +408,7 @@ class DesConnectorSpec extends AnyWordSpecLike with Matchers with GuiceOneAppPer
       val result = await(TestDesConnector.getResidencyStatus(individualDetails, userId, V2_0))
 
       result.isLeft shouldBe false
-      result.right.get shouldBe expectedErrorResponse
+      result.getOrElse("Get Failed") shouldBe expectedErrorResponse
 
       verify(mockHttp, times(1)).POST[JsValue, HttpResponse](any(), Meq[JsValue](expectedPayload), any())(any(), any(), any(), any())
     }
@@ -433,7 +433,7 @@ class DesConnectorSpec extends AnyWordSpecLike with Matchers with GuiceOneAppPer
         val result = await(TestDesConnector.getResidencyStatus(
           individualDetails, userId, V2_0))
 
-        result.left.get shouldBe ResidencyStatus("otherUKResident")
+        result.left.getOrElse("Get Failed") shouldBe ResidencyStatus("otherUKResident")
         result.isRight shouldBe false
 
         verify(mockHttp, times(2)).POST[JsValue, HttpResponse](any(), Meq[JsValue](expectedPayload), any())(any(), any(), any(), any())
@@ -454,7 +454,7 @@ class DesConnectorSpec extends AnyWordSpecLike with Matchers with GuiceOneAppPer
 
         val result = await(TestDesConnector.getResidencyStatus(individualDetails, userId, V2_0))
         result.isLeft shouldBe false
-        result.right.get shouldBe errorResponse
+        result.getOrElse("Get Failed") shouldBe errorResponse
 
         verify(mockHttp, times(3)).POST[JsValue, HttpResponse](any(), Meq[JsValue](expectedPayload), any())(any(), any(), any(), any())
       }

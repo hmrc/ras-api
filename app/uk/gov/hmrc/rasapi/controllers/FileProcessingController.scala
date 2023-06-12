@@ -44,7 +44,7 @@ class FileProcessingController @Inject()(
         case "2.0" => Some(V2_0)
         case _ => None
       }
-      (optVersion, withValidJson) match {
+      (optVersion, withValidJson()) match {
         case (Some(apiVersion), Some(callbackData)) =>
           callbackData.status match {
             case STATUS_AVAILABLE =>
@@ -64,7 +64,7 @@ class FileProcessingController @Inject()(
       }
   }
 
-  private def handleInvalidRequest(optVersion: Option[ApiVersion], optCallBackData: Option[CallbackData])(implicit request: Request[_]): Future[Result] = {
+  private def handleInvalidRequest(optVersion: Option[ApiVersion], optCallBackData: Option[CallbackData]): Future[Result] = {
     (optVersion, optCallBackData) match {
       case (None, _) => logger.warn("[FileProcessingController][handleInvalidRequest] Unsupported api version supplied")
       case _ => logger.warn("[FileProcessingController][handleInvalidRequest] Invalid Json supplied")

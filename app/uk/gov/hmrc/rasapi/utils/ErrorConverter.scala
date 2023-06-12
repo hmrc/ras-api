@@ -23,7 +23,7 @@ import javax.inject.Inject
 
 class ErrorConverter @Inject()() {
 
-  def convert(error: Seq[(JsPath, Seq[JsonValidationError])]):List[ErrorValidation] = {
+  def convert(error: scala.collection.Seq[(JsPath, scala.collection.Seq[JsonValidationError])]):List[ErrorValidation] = {
     error.map(e => {
       val details = getErrorDetails(e._2.head.message)
 

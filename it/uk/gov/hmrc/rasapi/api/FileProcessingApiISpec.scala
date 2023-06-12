@@ -38,7 +38,7 @@ import scala.io.{BufferedSource, Source}
 class FileProcessingApiISpec extends PlaySpec with ScalaFutures
   with GuiceOneServerPerSuite with FutureAwaits with DefaultAwaitTimeout with Eventually with WireMockServerHelper {
 
-  override implicit def defaultAwaitTimeout: Timeout = 20 seconds
+  override implicit def defaultAwaitTimeout: Timeout = 20.seconds
 
   override implicit lazy val app: Application = new GuiceApplicationBuilder()
     .configure("microservice.services.auth.port" -> mockPort)

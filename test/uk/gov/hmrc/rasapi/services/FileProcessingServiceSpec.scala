@@ -16,6 +16,8 @@
 
 package uk.gov.hmrc.rasapi.services
 
+import akka.stream.Materializer
+import mockws.MockWSHelpers
 import org.joda.time.DateTime
 import org.mockito.ArgumentCaptor
 import org.mockito.ArgumentMatchers.{eq => Meq, _}
@@ -59,6 +61,7 @@ class FileProcessingServiceSpec extends AnyWordSpecLike
 
   implicit val hc: HeaderCarrier = HeaderCarrier()
   implicit val fakeReq: FakeRequest[AnyContentAsEmpty.type] = FakeRequest("POST", "/residency-status")
+  implicit val materializers: Materializer = MockWSHelpers.materializer
 
   val mockFileUploadConnector: FileUploadConnector = mock[FileUploadConnector]
 
@@ -152,8 +155,8 @@ class FileProcessingServiceSpec extends AnyWordSpecLike
           override val SERVICE_UNAVAILABLE: String = STATUS_SERVICE_UNAVAILABLE
         }
 
-        when(mockFileUploadConnector.getFile(any(), any(), any())(any())).thenReturn(Future.successful(Some(new FileInputStream(testFilePath.toFile))))
-        when(mockFileUploadConnector.deleteUploadedFile(any(), any(), any())(any())).thenReturn(Future.successful(true))
+        when(mockFileUploadConnector.getFile(any(), any(), any())).thenReturn(Future.successful(Some(new FileInputStream(testFilePath.toFile))))
+        when(mockFileUploadConnector.deleteUploadedFile(any(), any(), any())).thenReturn(Future.successful(true))
 
         when(mockDesConnector.otherUk).thenReturn("otherUKResident")
         when(mockDesConnector.scotRes).thenReturn("scotResident")
@@ -172,7 +175,7 @@ class FileProcessingServiceSpec extends AnyWordSpecLike
 
         val fileMetaData = FileMetadata(fileId, Some(fileId), Some("2018-07-28"))
 
-        when(mockFileUploadConnector.getFileMetadata(any(), any(), any())(any())).thenReturn(Future.successful(Some(fileMetaData)))
+        when(mockFileUploadConnector.getFileMetadata(any(), any(), any())).thenReturn(Future.successful(Some(fileMetaData)))
 
         when(mockSessionCache.updateFileSession(any(), any(), any(), any())(any()))
           .thenReturn(Future.successful(CacheMap("sessionValue", Map("user1234" -> Json.toJson(callbackData)))))
@@ -188,7 +191,12 @@ class FileProcessingServiceSpec extends AnyWordSpecLike
 
         val res = await(repository.fetchFile(fileId, userId))
         var result = new String("")
-        await(res.get.data run getAll map { bytes => result = result.concat(new String(bytes)) })
+        await(res.get.data.runWith(getAll.mapMaterializedValue {
+          _.map { bytes =>
+            result =
+              result.concat(new String(bytes))
+          }
+        }))
         result.replaceAll("(\\r|\\n)", "") shouldBe expectedResultsFile.mkString
 
         Files.deleteIfExists(testFilePath)
@@ -233,8 +241,8 @@ class FileProcessingServiceSpec extends AnyWordSpecLike
           override val SERVICE_UNAVAILABLE: String = STATUS_SERVICE_UNAVAILABLE
         }
 
-        when(mockFileUploadConnector.getFile(any(), any(), any())(any())).thenReturn(Future.successful(Some(new FileInputStream(testFilePath.toFile))))
-        when(mockFileUploadConnector.deleteUploadedFile(any(), any(), any())(any())).thenReturn(Future.successful(true))
+        when(mockFileUploadConnector.getFile(any(), any(), any())).thenReturn(Future.successful(Some(new FileInputStream(testFilePath.toFile))))
+        when(mockFileUploadConnector.deleteUploadedFile(any(), any(), any())).thenReturn(Future.successful(true))
 
         when(mockDesConnector.otherUk).thenReturn("otherUKResident")
         when(mockDesConnector.scotRes).thenReturn("scotResident")
@@ -253,7 +261,7 @@ class FileProcessingServiceSpec extends AnyWordSpecLike
 
         val fileMetaData = FileMetadata(fileId, Some(fileId), Some("2018-07-28"))
 
-        when(mockFileUploadConnector.getFileMetadata(any(), any(), any())(any())).thenReturn(Future.successful(Some(fileMetaData)))
+        when(mockFileUploadConnector.getFileMetadata(any(), any(), any())).thenReturn(Future.successful(Some(fileMetaData)))
 
         when(mockSessionCache.updateFileSession(any(), any(), any(), any())(any()))
           .thenReturn(Future.successful(CacheMap("sessionValue", Map("user1234" -> Json.toJson(callbackData)))))
@@ -269,7 +277,12 @@ class FileProcessingServiceSpec extends AnyWordSpecLike
 
         val res = await(repository.fetchFile(fileId, userId))
         var result = new String("")
-        await(res.get.data run getAll map { bytes => result = result.concat(new String(bytes)) })
+        await(res.get.data.runWith(getAll.mapMaterializedValue {
+          _.map { bytes =>
+            result =
+              result.concat(new String(bytes))
+          }
+        }))
         result.replaceAll("(\\r|\\n)", "") shouldBe expectedResultsFile.mkString
         Files.deleteIfExists(testFilePath)
 
@@ -313,8 +326,8 @@ class FileProcessingServiceSpec extends AnyWordSpecLike
           override val SERVICE_UNAVAILABLE: String = STATUS_SERVICE_UNAVAILABLE
         }
 
-        when(mockFileUploadConnector.getFile(any(), any(), any())(any())).thenReturn(Future.successful(Some(new FileInputStream(testFilePath.toFile))))
-        when(mockFileUploadConnector.deleteUploadedFile(any(), any(), any())(any())).thenReturn(Future.successful(true))
+        when(mockFileUploadConnector.getFile(any(), any(), any())).thenReturn(Future.successful(Some(new FileInputStream(testFilePath.toFile))))
+        when(mockFileUploadConnector.deleteUploadedFile(any(), any(), any())).thenReturn(Future.successful(true))
 
         when(mockDesConnector.otherUk).thenReturn("otherUKResident")
         when(mockDesConnector.scotRes).thenReturn("scotResident")
@@ -333,7 +346,7 @@ class FileProcessingServiceSpec extends AnyWordSpecLike
 
         val fileMetaData = FileMetadata(fileId, Some(fileId), Some("2018-07-28"))
 
-        when(mockFileUploadConnector.getFileMetadata(any(), any(), any())(any())).thenReturn(Future.successful(Some(fileMetaData)))
+        when(mockFileUploadConnector.getFileMetadata(any(), any(), any())).thenReturn(Future.successful(Some(fileMetaData)))
 
         when(mockSessionCache.updateFileSession(any(), any(), any(), any())(any()))
           .thenReturn(Future.successful(CacheMap("sessionValue", Map("user1234" -> Json.toJson(callbackData)))))
@@ -349,7 +362,12 @@ class FileProcessingServiceSpec extends AnyWordSpecLike
 
         val res = await(repository.fetchFile(fileId, userId))
         var result = new String("")
-        await(res.get.data run getAll map { bytes => result = result.concat(new String(bytes)) })
+        await(res.get.data.runWith(getAll.mapMaterializedValue {
+          _.map { bytes =>
+            result =
+              result.concat(new String(bytes))
+          }
+        }))
         result.replaceAll("(\\r|\\n)", "") shouldBe expectedResultsFile.mkString
         Files.deleteIfExists(testFilePath)
 
@@ -392,8 +410,8 @@ class FileProcessingServiceSpec extends AnyWordSpecLike
           override val SERVICE_UNAVAILABLE: String = STATUS_SERVICE_UNAVAILABLE
         }
 
-        when(mockFileUploadConnector.getFile(any(), any(), any())(any())).thenReturn(Future.successful(Some(new FileInputStream(testFilePath.toFile))))
-        when(mockFileUploadConnector.deleteUploadedFile(any(), any(), any())(any())).thenReturn(Future.successful(true))
+        when(mockFileUploadConnector.getFile(any(), any(), any())).thenReturn(Future.successful(Some(new FileInputStream(testFilePath.toFile))))
+        when(mockFileUploadConnector.deleteUploadedFile(any(), any(), any())).thenReturn(Future.successful(true))
 
         when(mockDesConnector.otherUk).thenReturn("otherUKResident")
         when(mockDesConnector.scotRes).thenReturn("scotResident")
@@ -412,7 +430,7 @@ class FileProcessingServiceSpec extends AnyWordSpecLike
 
         val fileMetaData = FileMetadata(fileId, Some(fileId), Some("2018-07-28"))
 
-        when(mockFileUploadConnector.getFileMetadata(any(), any(), any())(any())).thenReturn(Future.successful(Some(fileMetaData)))
+        when(mockFileUploadConnector.getFileMetadata(any(), any(), any())).thenReturn(Future.successful(Some(fileMetaData)))
 
         when(mockSessionCache.updateFileSession(any(), any(), any(), any())(any()))
           .thenReturn(Future.successful(CacheMap("sessionValue", Map("user1234" -> Json.toJson(callbackData)))))
@@ -428,7 +446,12 @@ class FileProcessingServiceSpec extends AnyWordSpecLike
 
         val res = await(repository.fetchFile(fileId, userId))
         var result = new String("")
-        await(res.get.data run getAll map { bytes => result = result.concat(new String(bytes)) })
+        await(res.get.data.runWith(getAll.mapMaterializedValue {
+          _.map { bytes =>
+            result =
+              result.concat(new String(bytes))
+          }
+        }))
         result.replaceAll("(\\r|\\n)", "") shouldBe expectedResultsFile.mkString
         Files.deleteIfExists(testFilePath)
 
@@ -471,8 +494,8 @@ class FileProcessingServiceSpec extends AnyWordSpecLike
           override val SERVICE_UNAVAILABLE: String = STATUS_SERVICE_UNAVAILABLE
         }
 
-        when(mockFileUploadConnector.getFile(any(), any(), any())(any())).thenReturn(Future.successful(Some(new FileInputStream(testFilePath.toFile))))
-        when(mockFileUploadConnector.deleteUploadedFile(any(), any(), any())(any())).thenReturn(Future.successful(true))
+        when(mockFileUploadConnector.getFile(any(), any(), any())).thenReturn(Future.successful(Some(new FileInputStream(testFilePath.toFile))))
+        when(mockFileUploadConnector.deleteUploadedFile(any(), any(), any())).thenReturn(Future.successful(true))
 
         when(mockDesConnector.otherUk).thenReturn("otherUKResident")
         when(mockDesConnector.scotRes).thenReturn("scotResident")
@@ -491,7 +514,7 @@ class FileProcessingServiceSpec extends AnyWordSpecLike
 
         val fileMetaData = FileMetadata(fileId, Some(fileId), Some("2018-07-28"))
 
-        when(mockFileUploadConnector.getFileMetadata(any(), any(), any())(any())).thenReturn(Future.successful(Some(fileMetaData)))
+        when(mockFileUploadConnector.getFileMetadata(any(), any(), any())).thenReturn(Future.successful(Some(fileMetaData)))
 
         when(mockSessionCache.updateFileSession(any(), any(), any(), any())(any()))
           .thenReturn(Future.successful(CacheMap("sessionValue", Map("user1234" -> Json.toJson(callbackData)))))
@@ -507,7 +530,12 @@ class FileProcessingServiceSpec extends AnyWordSpecLike
 
         val res = await(repository.fetchFile(fileId, userId))
         var result = new String("")
-        await(res.get.data run getAll map { bytes => result = result.concat(new String(bytes)) })
+        await(res.get.data.runWith(getAll.mapMaterializedValue {
+          _.map { bytes =>
+            result =
+              result.concat(new String(bytes))
+          }
+        }))
         result.replaceAll("(\\r|\\n)", "") shouldBe expectedResultsFile.mkString
         Files.deleteIfExists(testFilePath)
 
@@ -549,8 +577,8 @@ class FileProcessingServiceSpec extends AnyWordSpecLike
           override val SERVICE_UNAVAILABLE: String = STATUS_SERVICE_UNAVAILABLE
         }
 
-        when(mockFileUploadConnector.getFile(any(), any(), any())(any())).thenReturn(Future.successful(Some(new FileInputStream(testFilePath.toFile))))
-        when(mockFileUploadConnector.deleteUploadedFile(any(), any(), any())(any())).thenReturn(Future.successful(true))
+        when(mockFileUploadConnector.getFile(any(), any(), any())).thenReturn(Future.successful(Some(new FileInputStream(testFilePath.toFile))))
+        when(mockFileUploadConnector.deleteUploadedFile(any(), any(), any())).thenReturn(Future.successful(true))
 
         when(mockDesConnector.otherUk).thenReturn("otherUKResident")
         when(mockDesConnector.scotRes).thenReturn("scotResident")
@@ -569,7 +597,7 @@ class FileProcessingServiceSpec extends AnyWordSpecLike
 
         val fileMetaData = FileMetadata(fileId, Some(fileId), Some("2018-07-28"))
 
-        when(mockFileUploadConnector.getFileMetadata(any(), any(), any())(any())).thenReturn(Future.successful(Some(fileMetaData)))
+        when(mockFileUploadConnector.getFileMetadata(any(), any(), any())).thenReturn(Future.successful(Some(fileMetaData)))
 
         when(mockSessionCache.updateFileSession(any(), any(), any(), any())(any()))
           .thenReturn(Future.successful(CacheMap("sessionValue", Map("user1234" -> Json.toJson(callbackData)))))
@@ -585,7 +613,12 @@ class FileProcessingServiceSpec extends AnyWordSpecLike
 
         val res = await(repository.fetchFile(fileId, userId))
         var result = new String("")
-        await(res.get.data run getAll map { bytes => result = result.concat(new String(bytes)) })
+        await(res.get.data.runWith(getAll.mapMaterializedValue {
+          _.map { bytes =>
+            result =
+              result.concat(new String(bytes))
+          }
+        }))
         result.replaceAll("(\\r|\\n)", "") shouldBe expectedResultsFile.mkString
         Files.deleteIfExists(testFilePath)
 
@@ -613,7 +646,7 @@ class FileProcessingServiceSpec extends AnyWordSpecLike
         val row1 = "Johné,Smithè,AB123456C,1990-02-21".getBytes(StandardCharsets.ISO_8859_1)
         val inputStream = new ByteArrayInputStream(row1)
 
-        when(mockFileUploadConnector.getFile(any(), any(), any())(any())).thenReturn(Future.successful(Some(inputStream)))
+        when(mockFileUploadConnector.getFile(any(), any(), any())).thenReturn(Future.successful(Some(inputStream)))
 
         val result = await(SUT.readFile(envelopeId, fileId, userId))
 
@@ -628,7 +661,7 @@ class FileProcessingServiceSpec extends AnyWordSpecLike
 
         val result = SUT.createMatchingData(inputData)
 
-        result shouldBe Right(List("nino-MISSING_FIELD", "lastName-INVALID_FORMAT", "dateOfBirth-INVALID_FORMAT"))
+        result shouldBe Right(List("lastName-INVALID_FORMAT", "dateOfBirth-INVALID_FORMAT", "nino-MISSING_FIELD"))
       }
 
       "parse line as raw data and convert to RawMemberDetails object when there are less than 3 columns" in {
@@ -636,7 +669,7 @@ class FileProcessingServiceSpec extends AnyWordSpecLike
 
         val result = SUT.createMatchingData(inputData)
 
-        result shouldBe Right(List("nino-INVALID_FORMAT", "lastName-INVALID_FORMAT", "dateOfBirth-MISSING_FIELD", "firstName-INVALID_FORMAT"))
+        result shouldBe Right(List("firstName-INVALID_FORMAT", "lastName-INVALID_FORMAT", "dateOfBirth-MISSING_FIELD", "nino-INVALID_FORMAT"))
       }
 
       "parse empty line as raw data and convert to RawMemberDetails object" in {
@@ -644,7 +677,7 @@ class FileProcessingServiceSpec extends AnyWordSpecLike
 
         val result = SUT.createMatchingData(inputData)
 
-        result shouldBe Right(List("nino-MISSING_FIELD", "lastName-MISSING_FIELD", "dateOfBirth-MISSING_FIELD", "firstName-MISSING_FIELD"))
+        result shouldBe Right(List("firstName-MISSING_FIELD", "lastName-MISSING_FIELD", "dateOfBirth-MISSING_FIELD", "nino-MISSING_FIELD"))
       }
 
       "date format is dd/mm/yyyy" when {
@@ -782,8 +815,8 @@ class FileProcessingServiceSpec extends AnyWordSpecLike
 
         val testFilePath = getTestFilePath
 
-        when(mockFileUploadConnector.getFile(any(), any(), any())(any())).thenReturn(Future.successful(Some(new FileInputStream(testFilePath.toFile))))
-        when(mockFileUploadConnector.deleteUploadedFile(any(), any(), any())(any())).thenReturn(Future.successful(true))
+        when(mockFileUploadConnector.getFile(any(), any(), any())).thenReturn(Future.successful(Some(new FileInputStream(testFilePath.toFile))))
+        when(mockFileUploadConnector.deleteUploadedFile(any(), any(), any())).thenReturn(Future.successful(true))
 
         val expectedResultsFile = "National Insurance number,First name,Last name,Date of birth,2017 to 2018 residency status,2018 to 2019 residency status" +
           "LE241131B,Jim,Jimson,1990-02-21,otherUKResident,scotResident" +
@@ -800,7 +833,7 @@ class FileProcessingServiceSpec extends AnyWordSpecLike
 
         val fileMetaData = FileMetadata(fileId, Some(fileId), Some("2018-07-28"))
 
-        when(mockFileUploadConnector.getFileMetadata(any(), any(), any())(any())).thenReturn(Future.successful(Some(fileMetaData)))
+        when(mockFileUploadConnector.getFileMetadata(any(), any(), any())).thenReturn(Future.successful(Some(fileMetaData)))
 
         when(mockSessionCache.updateFileSession(any(), any(), any(), any())(any()))
           .thenReturn(Future.successful(CacheMap("sessionValue", Map("user1234" -> Json.toJson(callbackData)))))
@@ -817,7 +850,12 @@ class FileProcessingServiceSpec extends AnyWordSpecLike
 
         val res = await(repository.fetchFile(fileId, userId))
         var result = new String("")
-        await(res.get.data run getAll map { bytes => result = result.concat(new String(bytes)) })
+        await(res.get.data.runWith(getAll.mapMaterializedValue {
+          _.map { bytes =>
+            result =
+              result.concat(new String(bytes))
+          }
+        }))
         result.replaceAll("(\\r|\\n)", "") shouldBe expectedResultsFile.mkString
         Files.deleteIfExists(testFilePath)
       }

@@ -19,7 +19,6 @@ package uk.gov.hmrc.rasapi.connectors
 import akka.actor.ActorSystem
 import akka.stream.scaladsl.StreamConverters
 import play.api.Logging
-import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.rasapi.config.{AppContext, WSHttp}
 import uk.gov.hmrc.rasapi.models.FileMetadata
 
@@ -36,7 +35,7 @@ class FileUploadConnector @Inject()(val wsHttp: WSHttp,
   lazy val fileUploadUrlSuffix: String = appContext.servicesConfig.getString("file-upload-url-suffix")
 
 
-  def getFile(envelopeId: String, fileId: String, userId: String)(implicit hc: HeaderCarrier): Future[Option[InputStream]] = {
+  def getFile(envelopeId: String, fileId: String, userId: String): Future[Option[InputStream]] = {
     implicit val system: ActorSystem = ActorSystem()
 
     logger.info(s"[FileUploadConnector][getFile] Get to file-upload with URI : /file-upload/envelopes/$envelopeId/files/$fileId/content for userId ($userId).")
@@ -49,7 +48,7 @@ class FileUploadConnector @Inject()(val wsHttp: WSHttp,
     }
   }
 
-  def getFileMetadata(envelopeId: String, fileId: String, userId: String)(implicit hc: HeaderCarrier): Future[Option[FileMetadata]] = {
+  def getFileMetadata(envelopeId: String, fileId: String, userId: String): Future[Option[FileMetadata]] = {
 
     logger.info(s"[FileUploadConnector][getFileMetadata] Get to file-upload with URI : /file-upload/envelopes/$envelopeId/files/$fileId/metadata for userId ($userId).")
     wsHttp.doGet(s"$serviceUrl/$fileUploadUrlSuffix/$envelopeId/files/$fileId/metadata").map { res =>
@@ -68,7 +67,7 @@ class FileUploadConnector @Inject()(val wsHttp: WSHttp,
     }
   }
 
-  def deleteUploadedFile(envelopeId: String, fileId: String, userId: String)(implicit hc: HeaderCarrier): Future[Boolean] = {
+  def deleteUploadedFile(envelopeId: String, fileId: String, userId: String): Future[Boolean] = {
 
     wsHttp.doDelete(s"$serviceUrl/$fileUploadUrlSuffix/$envelopeId/files/$fileId").map { res =>
        if(res.status == 200) {
