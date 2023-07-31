@@ -44,6 +44,7 @@ class RasFilesRepository @Inject()(val mongoComponent: MongoComponent,
   replaceIndexes = false
 ) with GridFsTTLIndexing {
 
+  override lazy val requiresTtlIndex: Boolean = false // custom index logic from GridFsTTLIndexing
   override lazy val expireAfterSeconds: Long = appContext.resultsExpriyTime
   override val log: Logger = Logger(getClass)
   private val contentType =  "text/csv"

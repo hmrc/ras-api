@@ -1,11 +1,10 @@
-
 import scoverage.ScoverageKeys
 import uk.gov.hmrc.DefaultBuildSettings
 
 val appName = "ras-api"
 
 lazy val microservice = Project(appName, file("."))
-  .enablePlugins(Seq(play.sbt.PlayScala, SbtDistributablesPlugin) *)
+  .enablePlugins(play.sbt.PlayScala, SbtDistributablesPlugin)
   .disablePlugins(JUnitXmlReportPlugin)
   .configs(IntegrationTest)
 
@@ -28,7 +27,6 @@ ScoverageKeys.coverageFailOnMinimum     := true
 ScoverageKeys.coverageHighlighting      := true
 Test / parallelExecution                := false
 libraryDependencies ++= AppDependencies()
-dependencyOverrides ++= AppDependencies.overrides
 
 // build settings
 majorVersion := 1
@@ -41,7 +39,6 @@ scalaVersion                      := "2.13.11"
 // Try to remove when sbt 1.8.0+ and scoverage is 2.0.7+
 ThisBuild / libraryDependencySchemes += "org.scala-lang.modules" %% "scala-xml" % VersionScheme.Always
 retrieveManaged                   := true
-update / evictionWarningOptions   := EvictionWarningOptions.default.withWarnScalaVersionEviction(false)
 routesGenerator                   := InjectedRoutesGenerator
 
 // IT Settings
@@ -51,4 +48,4 @@ Compile / unmanagedResourceDirectories += baseDirectory.value / "resources"
 
 scalacOptions ++= Seq("-Wconf:src=routes/.*:s")
 
-addCommandAlias("scalastyleAll", "all scalastyle test:scalastyle it:scalastyle")
+addCommandAlias("scalastyleAll", "all scalastyle Test/scalastyle IntegrationTest/scalastyle")
