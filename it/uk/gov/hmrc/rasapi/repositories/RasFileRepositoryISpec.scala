@@ -39,7 +39,7 @@ class RasFileRepositoryISpec extends PlaySpec with ScalaFutures with GuiceOneApp
     val largeFile: File = new File("it/resources/testFiles/bulk.csv")
 
     val dropAll: Unit = {
-      await(rasFileRepository.gridFSG.drop.head)
+      await(rasFileRepository.gridFSG.drop().head())
       fileCount mustBe 0
       chunksCount mustBe 0
 
@@ -47,11 +47,11 @@ class RasFileRepositoryISpec extends PlaySpec with ScalaFutures with GuiceOneApp
     }
 
     def fileCount: Long = {
-      await(rasFileRepository.gridFSG.find.collect.head.map(res => res.length))
+      await(rasFileRepository.gridFSG.find().collect().head().map(res => res.length))
     }
 
     def chunksCount: Int =
-      await(rasChunksRepository.collection.find.collect.head.map(res => res.length))
+      await(rasChunksRepository.collection.find().collect().head().map(res => res.length))
 
     def saveFile(): Unit = {
       await(rasFileRepository.saveFile(
