@@ -24,7 +24,7 @@ import uk.gov.hmrc.rasapi.config.AppContext
 import uk.gov.hmrc.rasapi.connectors.{DesConnector, FileUploadConnector}
 import uk.gov.hmrc.rasapi.helpers.ResidencyYearResolver
 import uk.gov.hmrc.rasapi.metrics.Metrics
-import uk.gov.hmrc.rasapi.models.{ApiVersion, CallbackData, ResultsFileMetaData}
+import uk.gov.hmrc.rasapi.models.{ApiVersion, CallbackData, FileMetadata, ResultsFileMetaData}
 import uk.gov.hmrc.rasapi.repository.RasFilesRepository
 
 import java.nio.file.Path
@@ -131,13 +131,13 @@ class FileProcessingService @Inject()(
 
               val resultsFileMetaData = Some(ResultsFileMetaData(file.getId.toString, file.getFilename, file.getUploadDate.getTime, file.getChunkSize, file.getLength))
 
-              fileUploadConnector.getFileMetadata(callbackData.envelopeId, callbackData.fileId, userId).onComplete {
-                case Success(metadata) =>
-                  sessionCacheService.updateFileSession(userId, callbackData, resultsFileMetaData, metadata)
-                case Failure(ex) =>
-                  logger.error(s"[FileProcessingService][saveFile] Failed to get File Metadata for file (${file.getId}), for user ID: $userId, message: ${ex.getMessage}", ex)
-                  sessionCacheService.updateFileSession(userId, callbackData, resultsFileMetaData, None)
-              }
+              //fileUploadConnector.getFileMetadata(callbackData.envelopeId, callbackData.fileId, userId).onComplete {
+                //case Success(metadata) =>
+                  sessionCacheService.updateFileSession(userId, callbackData, resultsFileMetaData, Some(FileMetadata.fromCallbackData(callbackData)))
+                //case Failure(ex) =>
+                  //logger.error(s"[FileProcessingService][saveFile] Failed to get File Metadata for file (${file.getId}), for user ID: $userId, message: ${ex.getMessage}", ex)
+                  //sessionCacheService.updateFileSession(userId, callbackData, resultsFileMetaData, None)
+              //}
               logger.info(s"[FileProcessingService][saveFile] Completed saving the file (${file.getId}) for user ID: $userId")
             case Failure(ex) =>
               logger.error(s"[FileProcessingService][saveFile] results file for userId ($userId) generation/saving failed with Exception ${ex.getMessage}", ex)
@@ -145,7 +145,7 @@ class FileProcessingService @Inject()(
             //delete result  a future ind
           }
           fileSaveMetrics.stop
-          fileUploadConnector.deleteUploadedFile(callbackData.envelopeId, callbackData.fileId, userId)
+          //fileUploadConnector.deleteUploadedFile(callbackData.envelopeId, callbackData.fileId, userId)
       }
   }
 

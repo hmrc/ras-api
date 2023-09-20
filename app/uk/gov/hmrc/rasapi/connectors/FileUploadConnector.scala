@@ -31,57 +31,69 @@ class FileUploadConnector @Inject()(val wsHttp: WSHttp,
                                     implicit val ec: ExecutionContext
                                    ) extends Logging {
 
-  lazy val serviceUrl: String = appContext.servicesConfig.baseUrl("file-upload")
-  lazy val fileUploadUrlSuffix: String = appContext.servicesConfig.getString("file-upload-url-suffix")
+  //lazy val serviceUrl: String = appContext.servicesConfig.baseUrl("file-upload")
+  //lazy val fileUploadUrlSuffix: String = appContext.servicesConfig.getString("file-upload-url-suffix")
 
 
-  def getFile(envelopeId: String, fileId: String, userId: String): Future[Option[InputStream]] = {
+//  def getFile(envelopeId: String, fileId: String, userId: String): Future[Option[InputStream]] = {
+//    implicit val system: ActorSystem = ActorSystem()
+//
+//    logger.info(s"[FileUploadConnector][getFile] Get to file-upload with URI : /file-upload/envelopes/$envelopeId/files/$fileId/content for userId ($userId).")
+//    wsHttp.buildRequestWithStream(s"$serviceUrl/$fileUploadUrlSuffix/$envelopeId/files/$fileId/content").map { res =>
+//      Some(res.bodyAsSource.runWith(StreamConverters.asInputStream()))
+//    } recover {
+//      case ex: Throwable =>
+//        logger.error(s"[FileUploadConnector][getFile] Exception thrown while retrieving file / converting to InputStream for userId ($userId). ${ex.getMessage}}.", ex)
+//        throw new RuntimeException("Error Streaming file from file-upload service")
+//    }
+//  }
+
+  def getUpscanFile(reference: String, fileId: String, userId: String): Future[Option[InputStream]] = {
     implicit val system: ActorSystem = ActorSystem()
 
-    logger.info(s"[FileUploadConnector][getFile] Get to file-upload with URI : /file-upload/envelopes/$envelopeId/files/$fileId/content for userId ($userId).")
-    wsHttp.buildRequestWithStream(s"$serviceUrl/$fileUploadUrlSuffix/$envelopeId/files/$fileId/content").map { res =>
+    wsHttp.buildRequestWithStream(uri = s"http://localhost:9570/upscan/download/$fileId").map { res =>
       Some(res.bodyAsSource.runWith(StreamConverters.asInputStream()))
     } recover {
       case ex: Throwable =>
         logger.error(s"[FileUploadConnector][getFile] Exception thrown while retrieving file / converting to InputStream for userId ($userId). ${ex.getMessage}}.", ex)
-        throw new RuntimeException("Error Streaming file from file-upload service")
+        throw new RuntimeException("Error Streaming file from Upscan service")
     }
   }
 
-  def getFileMetadata(envelopeId: String, fileId: String, userId: String): Future[Option[FileMetadata]] = {
+//  def getFileMetadata(envelopeId: String, fileId: String, userId: String): Future[Option[FileMetadata]] = {
+//
+//    logger.info(s"[FileUploadConnector][getFileMetadata] Get to file-upload with URI : /file-upload/envelopes/$envelopeId/files/$fileId/metadata for userId ($userId).")
+//    wsHttp.doGet(s"$serviceUrl/$fileUploadUrlSuffix/$envelopeId/files/$fileId/metadata").map { res =>
+//      if (res.status == 200) {
+//        logger.info(s"[FileUploadConnector][getFileMetadata] File metadata successfully retrieved from file-upload for userId ($userId).")
+//        Some(res.json.as[FileMetadata])
+//      }
+//      else {
+//        logger.error(s"[FileUploadConnector][getFileMetadata] Failed to retrieve file metadata for userId ($userId). Status ${res.status}.")
+//        None
+//      }
+//    } recover {
+//      case ex: Throwable =>
+//        logger.error(s"[FileUploadConnector][getFileMetadata] Exception ${ex.getMessage} was thrown while retrieving file metadata for userId ($userId). Session will continue with a default filename.", ex)
+//        None
+//    }
+//  }
 
-    logger.info(s"[FileUploadConnector][getFileMetadata] Get to file-upload with URI : /file-upload/envelopes/$envelopeId/files/$fileId/metadata for userId ($userId).")
-    wsHttp.doGet(s"$serviceUrl/$fileUploadUrlSuffix/$envelopeId/files/$fileId/metadata").map { res =>
-      if (res.status == 200) {
-        logger.info(s"[FileUploadConnector][getFileMetadata] File metadata successfully retrieved from file-upload for userId ($userId).")
-        Some(res.json.as[FileMetadata])
-      }
-      else {
-        logger.error(s"[FileUploadConnector][getFileMetadata] Failed to retrieve file metadata for userId ($userId). Status ${res.status}.")
-        None
-      }
-    } recover {
-      case ex: Throwable =>
-        logger.error(s"[FileUploadConnector][getFileMetadata] Exception ${ex.getMessage} was thrown while retrieving file metadata for userId ($userId). Session will continue with a default filename.", ex)
-        None
-    }
-  }
-
-  def deleteUploadedFile(envelopeId: String, fileId: String, userId: String): Future[Boolean] = {
-
-    wsHttp.doDelete(s"$serviceUrl/$fileUploadUrlSuffix/$envelopeId/files/$fileId").map { res =>
-       if(res.status == 200) {
-         logger.info(s"[FileUploadConnector][deleteUploadedFile] user file deleted successfully from file-upload for userId ($userId).")
-         true
-       } else {
-         logger.error(s"[FileUploadConnector][deleteUploadedFile] Failed to delete user file" +
-           s" => envelopeID: $envelopeId/files/$fileId for userId ($userId). Status ${res.status}" )
-        false
-       }
-    }.recover{
-      case ex =>
-        logger.error(s"[FileUploadConnector][deleteUploadedFile] Exception ${ex.getMessage} was thrown while trying to delete user file => envelopeID : $envelopeId/files/$fileId for userId ($userId).", ex)
-        false
-    }
-  }
+//  def deleteUploadedFile(envelopeId: String, fileId: String, userId: String): Future[Boolean] = {
+//
+//    wsHttp.doDelete(s"$serviceUrl/$fileUploadUrlSuffix/$envelopeId/files/$fileId").map { res =>
+//       if(res.status == 200) {
+//         logger.info(s"[FileUploadConnector][deleteUploadedFile] user file deleted successfully from file-upload for userId ($userId).")
+//         true
+//       } else {
+//         logger.error(s"[FileUploadConnector][deleteUploadedFile] Failed to delete user file" +
+//           s" => envelopeID: $envelopeId/files/$fileId for userId ($userId). Status ${res.status}" )
+//        false
+//       }
+//    }.recover{
+//      case ex =>
+//        logger.error(s"[FileUploadConnector][deleteUploadedFile] Exception ${ex.getMessage} was thrown while trying to delete user file => envelopeID : $envelopeId/files/$fileId for userId ($userId).", ex)
+//        false
+//    }
+//  }
 }

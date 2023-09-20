@@ -36,7 +36,7 @@ trait RasFileReader extends Logging {
 
     implicit val codec: Codec = Codec.ISO8859
 
-    fileUploadConnector.getFile(envelopeId, fileId, userId).map{
+    fileUploadConnector.getUpscanFile(envelopeId, fileId, userId).map{
 
       case Some(inputStream) => Source.fromInputStream(inputStream).getLines()
       case None => logger.error(s"[RasFileReader][readFile] File Processing: the file ($fileId) could not be found for userId ($userId).")

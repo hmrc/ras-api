@@ -20,16 +20,53 @@ import org.mongodb.scala.bson.ObjectId
 import play.api.libs.json.{Format, Json, OFormat}
 import uk.gov.hmrc.mongo.play.json.formats.MongoFormats
 
+import java.time.Instant
+import java.util.regex.{Matcher, Pattern}
+import scala.util.matching.Regex
+
 case class FileMetadata(id: String, name: Option[String], created: Option[String])
 
 object FileMetadata {
+  def fromCallbackData(cd: CallbackData): FileMetadata =
+    FileMetadata(
+      cd.fileId,
+      Some(cd.uploadDetails.getOrElse(UploadDetails.empty).fileName),
+      Some(cd.uploadDetails.getOrElse(UploadDetails.empty).uploadTimestamp.toString)
+    )
+
   implicit val format: OFormat[FileMetadata] = Json.format[FileMetadata]
 }
 
-case class CallbackData(envelopeId: String, fileId: String, status: String, reason: Option[String])
+case class CallbackData(envelopeId: String, fileId: String, status: String, reason: Option[String], uploadDetails: Option[UploadDetails] = None)
+
+case class UploadDetails(uploadTimestamp: Instant, checksum: String, fileMimeType: String, fileName: String, size: Int)
+
+object UploadDetails {
+  val empty: UploadDetails = UploadDetails(Instant.now(), "", "", "", 0)
+  implicit val formats: OFormat[UploadDetails] = Json.format[UploadDetails]
+}
+case class UpscanCallbackData(reference: String, downloadUrl: String, fileStatus: String, uploadDetails: UploadDetails) {
+  val fileIdPattern: Regex = """[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{12}""".r
+
+  val fileId: String = fileIdPattern.findFirstIn(downloadUrl).getOrElse(throw new IllegalArgumentException("dupa o!"))
+}
 
 object CallbackData {
+
+  def fromUpscanCallbackData(ucd: UpscanCallbackData): CallbackData =
+    CallbackData(
+      ucd.reference,
+      ucd.fileId,
+      ucd.fileStatus,
+      None,
+      Some(ucd.uploadDetails)
+    )
+
   implicit val formats: OFormat[CallbackData] = Json.format[CallbackData]
+}
+
+object UpscanCallbackData {
+  implicit val formats: OFormat[UpscanCallbackData] = Json.format[UpscanCallbackData]
 }
 
 case class ResultsFileMetaData (id: String, filename: String,uploadDate: Long, chunkSize: Int, length: Long)

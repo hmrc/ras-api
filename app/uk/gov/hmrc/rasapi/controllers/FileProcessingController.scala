@@ -20,12 +20,12 @@ import play.api.Logging
 import play.api.libs.json.JsSuccess
 import play.api.mvc._
 import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
-import uk.gov.hmrc.rasapi.models.{ApiVersion, CallbackData, V1_0, V2_0}
+import uk.gov.hmrc.rasapi.models.{ApiVersion, CallbackData, UpscanCallbackData, V1_0, V2_0}
 import uk.gov.hmrc.rasapi.services.{FileProcessingService, RasFilesSessionService}
 
 import javax.inject.Inject
 import scala.concurrent.{ExecutionContext, Future}
-import scala.util.{Success, Try}
+import scala.util.{Failure, Success, Try}
 
 class FileProcessingController @Inject()(
                                           val sessionCacheService: RasFilesSessionService,
@@ -34,7 +34,7 @@ class FileProcessingController @Inject()(
                                           implicit val ec: ExecutionContext
                                         ) extends BackendController(cc) with Logging {
 
-  val STATUS_AVAILABLE: String = "AVAILABLE"
+  val STATUS_AVAILABLE: String = "READY"
   val STATUS_ERROR: String = "ERROR"
 
   def statusCallback(userId: String, version: String): Action[AnyContent] = Action.async {
@@ -75,9 +75,12 @@ class FileProcessingController @Inject()(
   private def withValidJson()(implicit request: Request[AnyContent]): Option[CallbackData] = {
     request.body.asJson match {
       case Some(json) =>
-        Try(json.validate[CallbackData]) match {
-          case Success(JsSuccess(payload, _)) => Some(payload)
-          case _ => logger.warn(s"[FileProcessingController][withValidJson] Json could not be parsed. Json Data: $json"); None
+        Try(json.validate[UpscanCallbackData]) match {
+          case Success(JsSuccess(payload, _)) => Some(CallbackData.fromUpscanCallbackData(payload))
+          case Failure(exception)=> {
+            logger.warn(s"[FileProcessingController][withValidJson] Json could not be parsed. Json Data: $json, exception: ${exception.getMessage}")
+          }
+            None
         }
       case _ => logger.warn("[FileProcessingController][withValidJson] No json provided."); None
     }
