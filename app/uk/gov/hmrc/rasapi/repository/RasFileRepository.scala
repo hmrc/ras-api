@@ -51,22 +51,22 @@ class RasFilesRepository @Inject()(val mongoComponent: MongoComponent,
   private val bucketName: String = "resultsFiles"
   val gridFSG: GridFSBucket = GridFSBucket(mongoComponent.database, bucketName)
 
-  def saveFile(userId:String, envelopeId: String, filePath: Path, fileId: String): Future[ResultsFile] = {
+  def saveFile(userId: String, reference: String, filePath: Path): Future[ResultsFile] = {
     log.info("[RasFilesRepository][saveFile] Starting to save file")
 
     val observableToUploadFrom: Observable[ByteBuffer] = Observable(
       Seq(ByteBuffer.wrap(Files.readAllBytes(filePath))
-    ))
+      ))
 
     val options: GridFSUploadOptions = new GridFSUploadOptions()
       .metadata(Document(
-        "envelopeId" -> envelopeId,
-        "fileId" -> fileId,
+        "reference" -> reference,
+        "fileId" -> reference,
         "userId" -> userId,
         "contentType" -> contentType))
 
-    gridFSG.uploadFromObservable(fileId, observableToUploadFrom, options).head().flatMap { res =>
-      log.warn(s"[RasFilesRepository][saveFile] Saved file $fileId for user $userId")
+    gridFSG.uploadFromObservable(reference, observableToUploadFrom, options).head().flatMap { res =>
+      log.warn(s"[RasFilesRepository][saveFile] Saved file $reference for user $userId")
       checkAndEnsureTTL(mongoComponent.database, s"$bucketName.files").flatMap { ttlIndexExists =>
         if (ttlIndexExists) {
           gridFSG.find(Document("_id" -> res)).head()
@@ -76,7 +76,7 @@ class RasFilesRepository @Inject()(val mongoComponent: MongoComponent,
       }
     }.recover {
       case e: Throwable =>
-        log.error(s"[RasFilesRepository][saveFile] Error saving the file $fileId for user $userId. Exception: ${e.getMessage}")
+        log.error(s"[RasFilesRepository][saveFile] Error saving the file $reference for user $userId. Exception: ${e.getMessage}")
         throw new RuntimeException(s"Failed to save file due to error: ${e.getMessage}")
     }
   }

@@ -48,7 +48,7 @@ class GridFsTTLIndexingSpec extends AnyWordSpecLike
 
   "GridFsTTLIndexing" should {
     "Add the lastUpdatedIndex with TTL option to a collection" in {
-      await(repository.saveFile("user111","envelope111",createFile,"file111"))
+      await(repository.saveFile("user111","reference111",createFile))
       val indexes: Seq[Document] = await(repository.mongoComponent.database.getCollection("resultsFiles.files").listIndexes().toFuture())
       val expectedIndex: Document = Document(
         "v" -> BsonInt32(value = 2),

@@ -44,15 +44,15 @@ with BeforeAndAfterEach with Logging {
   "DataCleansingService" should{
 
     "not remove chunks that are not orphaned" in {
-      await(rasFilesRepository.saveFile("user14","envelope14",createFile,"fileId14"))
-      await(rasFilesRepository.saveFile("user15","envelope15",createFile,"fileId15"))
+      await(rasFilesRepository.saveFile("user14","reference14",createFile))
+      await(rasFilesRepository.saveFile("user15","reference15",createFile))
       val result = await(dataCleansingService.removeOrphanedChunks())
       result.size shouldEqual 0
     }
 
     "remove orphaned chunks" in  {
-      val uploadedFile1: ResultsFile = await(rasFilesRepository.saveFile("user14","envelope14",createFile,"fileId14"))
-      val uploadedFile2: ResultsFile = await(rasFilesRepository.saveFile("user15","envelope15",createFile,"fileId15"))
+      val uploadedFile1: ResultsFile = await(rasFilesRepository.saveFile("user14","reference14",createFile))
+      val uploadedFile2: ResultsFile = await(rasFilesRepository.saveFile("user15","reference15",createFile))
       val uploadedFiles = List(uploadedFile1.getObjectId, uploadedFile2.getObjectId)
 
       val filesCollection: MongoCollection[Document] = rasFilesRepository.mongoComponent.database.getCollection("resultsFiles.files")
