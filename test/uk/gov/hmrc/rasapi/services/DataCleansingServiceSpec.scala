@@ -17,7 +17,7 @@
 package uk.gov.hmrc.rasapi.services
 
 import org.mongodb.scala.{Document, MongoCollection}
-import org.scalatest.BeforeAndAfter
+import org.scalatest.BeforeAndAfterEach
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpecLike
 import org.scalatestplus.mockito.MockitoSugar
@@ -30,7 +30,7 @@ import uk.gov.hmrc.rasapi.repositories.RepositoriesHelper.createFile
 import uk.gov.hmrc.rasapi.repository.RasFilesRepository
 
 class DataCleansingServiceSpec extends AnyWordSpecLike with Matchers with MockitoSugar with GuiceOneAppPerSuite
-with BeforeAndAfter with Logging {
+with BeforeAndAfterEach with Logging {
 
   lazy val dataCleansingService: DataCleansingService = app.injector.instanceOf[DataCleansingService]
   implicit lazy val rasFilesRepository: RasFilesRepository = app.injector.instanceOf[RasFilesRepository]
@@ -38,9 +38,12 @@ with BeforeAndAfter with Logging {
     .configure("remove-chunks-data-exercise.enabled" -> true)
     .build()
 
+  override protected def beforeEach(): Unit =
+    rasFilesRepository.collection.drop()
+
   "DataCleansingService" should{
 
-    " not remove chunks that are not orphoned" in {
+    "not remove chunks that are not orphaned" in {
       await(rasFilesRepository.saveFile("user14","envelope14",createFile,"fileId14"))
       await(rasFilesRepository.saveFile("user15","envelope15",createFile,"fileId15"))
       val result = await(dataCleansingService.removeOrphanedChunks())

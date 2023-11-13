@@ -17,7 +17,7 @@
 package uk.gov.hmrc.rasapi.repository
 
 import org.mongodb.scala.MongoDatabase
-import org.mongodb.scala.bson.{BsonInt64, Document}
+import org.mongodb.scala.bson.{BsonInt64, Document, BsonInt32}
 import org.mongodb.scala.model.IndexOptions
 import play.api.Logger
 
@@ -26,7 +26,7 @@ import scala.concurrent.duration.SECONDS
 
 trait GridFsTTLIndexing {
 
-  val expireAfterSeconds: Long
+  val expireAfterSeconds: Int
   val log: Logger
 
   private lazy val LastUpdatedIndex = "lastUpdatedIndex"
@@ -77,7 +77,9 @@ trait GridFsTTLIndexing {
         }
         _ <- createIndex(mdb, collectionName, LastUpdatedIndex)
         ttlResult <- retrieveIndex(mdb, collectionName, LastUpdatedIndex).map { indexes =>
-          indexes.exists(index => index.containsKey(OptExpireAfterSeconds) && index.values.toList.contains(BsonInt64(expireAfterSeconds)))
+          indexes.exists(index =>
+            index.containsKey(OptExpireAfterSeconds) && (
+              index.values.toList.contains(BsonInt64(expireAfterSeconds.toLong)) || index.values.toList.contains(BsonInt32(expireAfterSeconds))))
         }
       } yield {
         ttlResult

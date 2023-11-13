@@ -28,12 +28,12 @@ import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpecLike
 import org.scalatestplus.mockito.MockitoSugar
 import org.scalatestplus.play.guice.GuiceOneAppPerSuite
-import play.api.libs.json.Json
+import play.api.libs.json.{JsObject, Json}
 import play.api.mvc.AnyContentAsEmpty
 import play.api.test.FakeRequest
 import play.api.test.Helpers.{await, defaultAwaitTimeout}
 import uk.gov.hmrc.http.HeaderCarrier
-import uk.gov.hmrc.http.cache.client.CacheMap
+import uk.gov.hmrc.mongo.cache.CacheItem
 import uk.gov.hmrc.mongo.test.DefaultPlayMongoRepositorySupport
 import uk.gov.hmrc.rasapi.config.AppContext
 import uk.gov.hmrc.rasapi.connectors.{DesConnector, FileUploadConnector}
@@ -47,6 +47,7 @@ import uk.gov.hmrc.rasapi.repository.RasFilesRepository
 import java.io.{ByteArrayInputStream, FileInputStream}
 import java.nio.charset.StandardCharsets
 import java.nio.file.{Files, Path}
+import java.time.Instant
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.{Random, Try}
@@ -66,7 +67,7 @@ class FileProcessingServiceSpec extends AnyWordSpecLike
   val mockFileUploadConnector: FileUploadConnector = mock[FileUploadConnector]
 
   val mockDesConnector: DesConnector = mock[DesConnector]
-  val mockSessionCache: SessionCacheService = mock[SessionCacheService]
+  val mockSessionCache: RasFilesSessionService = mock[RasFilesSessionService]
   val mockResidencyYearResolver: ResidencyYearResolver = mock[ResidencyYearResolver]
   val mockAuditService: AuditService = mock[AuditService]
   val appContext: AppContext = app.injector.instanceOf[AppContext]
@@ -172,13 +173,13 @@ class FileProcessingServiceSpec extends AnyWordSpecLike
         val fileStatus = "AVAILABLE"
         val reason: Option[String] = None
         val callbackData = CallbackData(envelopeId, fileId, fileStatus, reason)
-
         val fileMetaData = FileMetadata(fileId, Some(fileId), Some("2018-07-28"))
+        val cacheItem = CacheItem("sessionValue", Json.toJson(Map("user1234" -> Json.toJson(callbackData))).as[JsObject], Instant.now, Instant.now)
 
         when(mockFileUploadConnector.getFileMetadata(any(), any(), any())).thenReturn(Future.successful(Some(fileMetaData)))
 
-        when(mockSessionCache.updateFileSession(any(), any(), any(), any())(any()))
-          .thenReturn(Future.successful(CacheMap("sessionValue", Map("user1234" -> Json.toJson(callbackData)))))
+        when(mockSessionCache.updateFileSession(any(), any(), any(), any()))
+          .thenReturn(Future.successful(cacheItem))
 
         when(mockDesConnector.getResidencyStatus(any[IndividualDetails], any(), any(), any())).thenReturn(
           Future.successful(Left(ResidencyStatus("scotResident", Some("otherUKResident")))))
@@ -258,13 +259,13 @@ class FileProcessingServiceSpec extends AnyWordSpecLike
         val fileStatus = "AVAILABLE"
         val reason: Option[String] = None
         val callbackData = CallbackData(envelopeId, fileId, fileStatus, reason)
-
         val fileMetaData = FileMetadata(fileId, Some(fileId), Some("2018-07-28"))
+        val cacheItem = CacheItem("sessionValue", Json.toJson(Map("user1234" -> Json.toJson(callbackData))).as[JsObject], Instant.now, Instant.now)
 
         when(mockFileUploadConnector.getFileMetadata(any(), any(), any())).thenReturn(Future.successful(Some(fileMetaData)))
 
-        when(mockSessionCache.updateFileSession(any(), any(), any(), any())(any()))
-          .thenReturn(Future.successful(CacheMap("sessionValue", Map("user1234" -> Json.toJson(callbackData)))))
+        when(mockSessionCache.updateFileSession(any(), any(), any(), any()))
+          .thenReturn(Future.successful(cacheItem))
 
         when(mockDesConnector.getResidencyStatus(any[IndividualDetails], any(), any(), any())).thenReturn(
           Future.successful(Left(ResidencyStatus("scotResident", Some("scotResident")))))
@@ -343,13 +344,13 @@ class FileProcessingServiceSpec extends AnyWordSpecLike
         val fileStatus = "AVAILABLE"
         val reason: Option[String] = None
         val callbackData = CallbackData(envelopeId, fileId, fileStatus, reason)
-
         val fileMetaData = FileMetadata(fileId, Some(fileId), Some("2018-07-28"))
+        val cacheItem = CacheItem("sessionValue", Json.toJson(Map("user1234" -> Json.toJson(callbackData))).as[JsObject], Instant.now, Instant.now)
 
         when(mockFileUploadConnector.getFileMetadata(any(), any(), any())).thenReturn(Future.successful(Some(fileMetaData)))
 
-        when(mockSessionCache.updateFileSession(any(), any(), any(), any())(any()))
-          .thenReturn(Future.successful(CacheMap("sessionValue", Map("user1234" -> Json.toJson(callbackData)))))
+        when(mockSessionCache.updateFileSession(any(), any(), any(), any()))
+          .thenReturn(Future.successful(cacheItem))
 
         when(mockDesConnector.getResidencyStatus(any[IndividualDetails], any(), any(), any())).thenReturn(
           Future.successful(Left(ResidencyStatus("otherUKResident", Some("scotResident")))))
@@ -427,13 +428,13 @@ class FileProcessingServiceSpec extends AnyWordSpecLike
         val fileStatus = "AVAILABLE"
         val reason: Option[String] = None
         val callbackData = CallbackData(envelopeId, fileId, fileStatus, reason)
-
         val fileMetaData = FileMetadata(fileId, Some(fileId), Some("2018-07-28"))
+        val cacheItem = CacheItem("sessionValue", Json.toJson(Map("user1234" -> Json.toJson(callbackData))).as[JsObject], Instant.now, Instant.now)
 
         when(mockFileUploadConnector.getFileMetadata(any(), any(), any())).thenReturn(Future.successful(Some(fileMetaData)))
 
-        when(mockSessionCache.updateFileSession(any(), any(), any(), any())(any()))
-          .thenReturn(Future.successful(CacheMap("sessionValue", Map("user1234" -> Json.toJson(callbackData)))))
+        when(mockSessionCache.updateFileSession(any(), any(), any(), any()))
+          .thenReturn(Future.successful(cacheItem))
 
         when(mockDesConnector.getResidencyStatus(any[IndividualDetails], any(), any(), any())).thenReturn(
           Future.successful(Right(ResidencyStatusFailure(code = s"$STATUS_MATCHING_FAILED", reason = s"$STATUS_MATCHING_FAILED"))))
@@ -511,13 +512,13 @@ class FileProcessingServiceSpec extends AnyWordSpecLike
         val fileStatus = "AVAILABLE"
         val reason: Option[String] = None
         val callbackData = CallbackData(envelopeId, fileId, fileStatus, reason)
-
         val fileMetaData = FileMetadata(fileId, Some(fileId), Some("2018-07-28"))
+        val cacheItem = CacheItem("sessionValue", Json.toJson(Map("user1234" -> Json.toJson(callbackData))).as[JsObject], Instant.now, Instant.now)
 
         when(mockFileUploadConnector.getFileMetadata(any(), any(), any())).thenReturn(Future.successful(Some(fileMetaData)))
 
-        when(mockSessionCache.updateFileSession(any(), any(), any(), any())(any()))
-          .thenReturn(Future.successful(CacheMap("sessionValue", Map("user1234" -> Json.toJson(callbackData)))))
+        when(mockSessionCache.updateFileSession(any(), any(), any(), any()))
+          .thenReturn(Future.successful(cacheItem))
 
         when(mockDesConnector.getResidencyStatus(any[IndividualDetails], any(), any(), any())).thenReturn(
           Future.successful(Right(ResidencyStatusFailure(code = s"$STATUS_DECEASED", reason = s"$STATUS_DECEASED"))))
@@ -594,13 +595,13 @@ class FileProcessingServiceSpec extends AnyWordSpecLike
         val fileStatus = "AVAILABLE"
         val reason: Option[String] = None
         val callbackData = CallbackData(envelopeId, fileId, fileStatus, reason)
-
         val fileMetaData = FileMetadata(fileId, Some(fileId), Some("2018-07-28"))
+        val cacheItem = CacheItem("sessionValue", Json.toJson(Map("user1234" -> Json.toJson(callbackData))).as[JsObject], Instant.now, Instant.now)
 
         when(mockFileUploadConnector.getFileMetadata(any(), any(), any())).thenReturn(Future.successful(Some(fileMetaData)))
 
-        when(mockSessionCache.updateFileSession(any(), any(), any(), any())(any()))
-          .thenReturn(Future.successful(CacheMap("sessionValue", Map("user1234" -> Json.toJson(callbackData)))))
+        when(mockSessionCache.updateFileSession(any(), any(), any(), any()))
+          .thenReturn(Future.successful(cacheItem))
 
         when(mockDesConnector.getResidencyStatus(any[IndividualDetails], any(), any(), any())).thenReturn(
           Future.successful(Right(ResidencyStatusFailure(code = s"$STATUS_SERVICE_UNAVAILABLE", reason = s"$STATUS_SERVICE_UNAVAILABLE"))))
@@ -830,13 +831,13 @@ class FileProcessingServiceSpec extends AnyWordSpecLike
         val fileStatus = "AVAILABLE"
         val reason: Option[String] = None
         val callbackData = CallbackData(envelopeId, fileId, fileStatus, reason)
-
         val fileMetaData = FileMetadata(fileId, Some(fileId), Some("2018-07-28"))
+        val cacheItem = CacheItem("sessionValue", Json.toJson(Map("user1234" -> Json.toJson(callbackData))).as[JsObject], Instant.now, Instant.now)
 
         when(mockFileUploadConnector.getFileMetadata(any(), any(), any())).thenReturn(Future.successful(Some(fileMetaData)))
 
-        when(mockSessionCache.updateFileSession(any(), any(), any(), any())(any()))
-          .thenReturn(Future.successful(CacheMap("sessionValue", Map("user1234" -> Json.toJson(callbackData)))))
+        when(mockSessionCache.updateFileSession(any(), any(), any(), any()))
+          .thenReturn(Future.successful(cacheItem))
 
         when(mockDesConnector.getResidencyStatus(any[IndividualDetails], any(), any(), any())).thenReturn(
           Future.successful(Left(ResidencyStatus("otherUKResident", Some("scotResident")))))
@@ -874,7 +875,7 @@ class FileProcessingServiceSpec extends AnyWordSpecLike
         SUT.manipulateFile(inputFileData, "user1234", callbackData, V2_0)
 
         val captor: ArgumentCaptor[CallbackData] = ArgumentCaptor.forClass(classOf[CallbackData])
-        verify(mockSessionCache, times(1)).updateFileSession(any(), captor.capture, any(), any())(any())
+        verify(mockSessionCache, times(1)).updateFileSession(any(), captor.capture, any(), any())
 
         val resultsFileMetaData = captor.getValue
         resultsFileMetaData.status shouldBe "ERROR"

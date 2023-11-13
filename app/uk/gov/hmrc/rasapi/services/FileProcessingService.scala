@@ -33,15 +33,15 @@ import scala.concurrent.ExecutionContext
 import scala.util.{Failure, Success, Try}
 
 class FileProcessingService @Inject()(
-                                     val fileUploadConnector: FileUploadConnector,
-                                     val desConnector: DesConnector,
-                                     val residencyYearResolver: ResidencyYearResolver,
-                                     val auditService: AuditService,
-                                     val sessionCacheService: SessionCacheService,
-                                     val fileRepo: RasFilesRepository,
-                                     val appContext: AppContext,
-                                     val metrics: Metrics,
-                                     implicit val ec: ExecutionContext
+                                       val fileUploadConnector: FileUploadConnector,
+                                       val desConnector: DesConnector,
+                                       val residencyYearResolver: ResidencyYearResolver,
+                                       val auditService: AuditService,
+                                       val sessionCacheService: RasFilesSessionService,
+                                       val fileRepo: RasFilesRepository,
+                                       val appContext: AppContext,
+                                       val metrics: Metrics,
+                                       implicit val ec: ExecutionContext
                                      ) extends RasFileReader with RasFileWriter with ResultsGenerator with Logging {
 
   def getCurrentDate: DateTime = DateTime.now()
@@ -119,7 +119,7 @@ class FileProcessingService @Inject()(
     }
   }
 
-  def saveFile(filePath: Path, userId: String, callbackData: CallbackData)(implicit hc: HeaderCarrier): Unit = {
+  def saveFile(filePath: Path, userId: String, callbackData: CallbackData): Unit = {
 
     logger.info("[FileProcessingService][saveFile] Starting to save file...")
     val fileSaveMetrics = metrics.register(fileSave).time

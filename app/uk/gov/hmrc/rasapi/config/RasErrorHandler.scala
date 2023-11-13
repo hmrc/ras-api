@@ -22,25 +22,13 @@ import play.api.mvc.Results.{BadRequest, InternalServerError, NotFound, Unauthor
 import play.api.mvc.{RequestHeader, Result}
 import play.api.{Configuration, Logging}
 import uk.gov.hmrc.api.controllers.{ErrorInternalServerError, ErrorResponse => ErrorResponseHmrcApi}
-import uk.gov.hmrc.http.cache.client.ShortLivedHttpCaching
 import uk.gov.hmrc.play.audit.http.connector.AuditConnector
 import uk.gov.hmrc.play.bootstrap.backend.http.JsonErrorHandler
 import uk.gov.hmrc.play.bootstrap.config.HttpAuditEvent
-import uk.gov.hmrc.play.bootstrap.http.DefaultHttpClient
 import uk.gov.hmrc.rasapi.controllers.{BadRequestResponse, ErrorNotFound, ErrorResponse, Unauthorised}
 
 import javax.inject.Inject
 import scala.concurrent.{ExecutionContext, Future}
-
-class RasShortLivedHttpCaching @Inject()(
-                                          val appContext: AppContext,
-                                          val http: DefaultHttpClient
-                                        ) extends ShortLivedHttpCaching {
-  override lazy val defaultSource: String = appContext.appName
-  override lazy val baseUri: String = appContext.servicesConfig.baseUrl("cachable.short-lived-cache")
-  override lazy val domain: String = appContext.servicesConfig.getString("microservice.services.cachable.short-lived-cache.domain")
-}
-
 
 class RasErrorHandler @Inject()(configuration: Configuration,
                                 auditConnector: AuditConnector,

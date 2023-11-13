@@ -56,7 +56,7 @@ class DesConnector @Inject()( httpPost: DefaultHttpClient,
   lazy val isBulkRetryEnabled: Boolean = appContext.bulkRetryEnabled
   lazy val error_TooManyRequests: String = appContext.tooManyRequestsStatus
 
-  lazy val nonRetryableErrors = List(error_MatchingFailed, error_Deceased, error_DoNotReProcess)
+  lazy val nonRetryableErrors: Seq[String] = List(error_MatchingFailed, error_Deceased, error_DoNotReProcess)
 
   def canRetryRequest(isBulkRequest: Boolean): Boolean = isRetryEnabled || (isBulkRetryEnabled && isBulkRequest)
 

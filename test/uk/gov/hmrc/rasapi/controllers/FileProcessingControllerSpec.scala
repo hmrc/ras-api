@@ -31,7 +31,7 @@ import play.api.mvc.ControllerComponents
 import play.api.test.FakeRequest
 import play.api.test.Helpers.{defaultAwaitTimeout, status}
 import uk.gov.hmrc.rasapi.models.{CallbackData, ResultsFileMetaData, V2_0}
-import uk.gov.hmrc.rasapi.services.{FileProcessingService, SessionCacheService}
+import uk.gov.hmrc.rasapi.services.{FileProcessingService, RasFilesSessionService}
 
 import scala.concurrent.ExecutionContext
 import scala.util.Random
@@ -47,7 +47,7 @@ class FileProcessingControllerSpec extends AnyWordSpecLike with Matchers with Mo
   val userId: String = Random.nextInt(5).toString
 
   val mockFileProcessingService: FileProcessingService = mock[FileProcessingService]
-  val mockSessionCacheService: SessionCacheService = mock[SessionCacheService]
+  val mockSessionCacheService: RasFilesSessionService = mock[RasFilesSessionService]
   val mockCC: ControllerComponents = app.injector.instanceOf[ControllerComponents]
 
   val SUT = new FileProcessingController(mockSessionCacheService, mockFileProcessingService, mockCC, ExecutionContext.global)
@@ -87,7 +87,7 @@ class FileProcessingControllerSpec extends AnyWordSpecLike with Matchers with Mo
         val result = SUT.statusCallback(userId, version = "2.0").apply(fakeRequest.withJsonBody(Json.toJson(callbackData)))
 
         verifyNoInteractions(mockFileProcessingService)
-        verify(mockSessionCacheService).updateFileSession(Meq(userId), Meq(callbackData), Meq(None), Meq(None))(any())
+        verify(mockSessionCacheService).updateFileSession(Meq(userId), Meq(callbackData), Meq(None), Meq(None))
 
         status(result) shouldBe OK
       }
