@@ -21,14 +21,14 @@ import play.api.libs.json.JsSuccess
 import play.api.mvc._
 import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
 import uk.gov.hmrc.rasapi.models.{ApiVersion, CallbackData, V1_0, V2_0}
-import uk.gov.hmrc.rasapi.services.{FileProcessingService, SessionCacheService}
+import uk.gov.hmrc.rasapi.services.{FileProcessingService, RasFilesSessionService}
 
 import javax.inject.Inject
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.{Success, Try}
 
 class FileProcessingController @Inject()(
-                                          val sessionCacheService: SessionCacheService,
+                                          val sessionCacheService: RasFilesSessionService,
                                           val fileProcessingService: FileProcessingService,
                                           cc: ControllerComponents,
                                           implicit val ec: ExecutionContext

@@ -19,6 +19,7 @@ package uk.gov.hmrc.rasapi.config
 import uk.gov.hmrc.play.bootstrap.config.ServicesConfig
 
 import javax.inject.Inject
+import scala.concurrent.duration.Duration
 
 class AppContext @Inject()(val servicesConfig: ServicesConfig) {
   lazy val appName: String = servicesConfig.getString("appName")
@@ -44,4 +45,5 @@ class AppContext @Inject()(val servicesConfig: ServicesConfig) {
   lazy val internalServerErrorStatus: String = servicesConfig.getString("status.internal-server-error.api")
   lazy val removeChunksDataExerciseEnabled: Boolean = servicesConfig.getBoolean("remove-chunks-data-exercise.enabled")
   lazy val apiV2_0Enabled: Boolean = servicesConfig.getBoolean("api-v2_0.enabled")
+  lazy val rasFileSessionTTL: Duration = servicesConfig.getDuration("mongodb.fileSessionsCacheTTLDays")
 }
