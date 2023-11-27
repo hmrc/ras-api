@@ -16,6 +16,7 @@
 
 package uk.gov.hmrc.rasapi.services
 
+import org.joda.time.DateTime
 import play.api.Logging
 import uk.gov.hmrc.mongo.cache.{CacheItem, DataKey}
 import uk.gov.hmrc.rasapi.models.{CallbackData, FileMetadata, FileSession, ResultsFileMetaData}
@@ -27,6 +28,24 @@ import scala.concurrent.{ExecutionContext, Future}
 @Singleton
 class RasFilesSessionService @Inject()(filesSessionRepository: RasFilesSessionRepository)
                                       (implicit ec: ExecutionContext) extends Logging {
+
+  def createFileSession(userId: String, envelopeId: String): Future[Boolean] = {
+    filesSessionRepository.put[FileSession](userId)(DataKey("fileSession"), FileSession(None, None, userId, Some(DateTime.now().getMillis), None))
+      .map(_ => true)
+      .recover {
+        case ex: Throwable => logger.error(s"unable to create FileSession to cache => " +
+          s"$userId , envelopeId :$envelopeId,  Exception is ${ex.getMessage}")
+          false
+      }
+  }
+
+  def fetchFileSession(userId: String): Future[Option[FileSession]] = {
+    filesSessionRepository.get[FileSession](userId)(DataKey("fileSession")).recover {
+      case ex: Throwable => logger.error(s"unable to fetch FileSession from cache => " +
+        s"$userId , Exception is ${ex.getMessage}")
+        None
+    }
+  }
 
   def updateFileSession(userId: String, userFile: CallbackData, resultsFile: Option[ResultsFileMetaData],
                         fileMetadata: Option[FileMetadata]): Future[CacheItem] = {
@@ -43,6 +62,17 @@ class RasFilesSessionService @Inject()(filesSessionRepository: RasFilesSessionRe
         s"userId ($userId) , userFile : ${userFile.toString} , resultsFile id : " +
         s"${if (resultsFile.isDefined) resultsFile.get.id}, \n Exception is ${ex.getMessage}", ex)
         throw new RuntimeException("Error in saving sessionCache" + ex.getMessage)
+    }
+  }
+
+  def removeFileSession(userId: String): Future[Boolean] = {
+    filesSessionRepository.deleteEntity(userId)
+      .map(_ => true)
+      .recover {
+      case ex: Throwable =>
+        logger.error(s"[RasFilesSessionService][removeFileSession] unable to remove FileSession from cache  => " +
+          s"$userId , Exception is ${ex.getMessage}")
+        false
     }
   }
 }

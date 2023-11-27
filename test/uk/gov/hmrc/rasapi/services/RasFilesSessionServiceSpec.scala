@@ -18,22 +18,56 @@ package uk.gov.hmrc.rasapi.services
 
 import org.joda.time.DateTime
 import org.mockito.Mockito._
+import org.scalatest.OptionValues
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpec
 import org.scalatestplus.mockito.MockitoSugar
+import org.scalatestplus.play.guice.GuiceOneAppPerSuite
 import play.api.libs.json.{JsObject, JsValue, Json}
 import play.api.test.Helpers.{await, defaultAwaitTimeout}
+import uk.gov.hmrc.mongo.CurrentTimestampSupport
 import uk.gov.hmrc.mongo.cache.{CacheItem, DataKey}
+import uk.gov.hmrc.mongo.test.PlayMongoRepositorySupport
+import uk.gov.hmrc.rasapi.config.AppContext
 import uk.gov.hmrc.rasapi.models.{CallbackData, FileMetadata, FileSession, ResultsFileMetaData}
 import uk.gov.hmrc.rasapi.repository.RasFilesSessionRepository
 
 import java.time.Instant
 import scala.concurrent.ExecutionContext.Implicits.global
-import scala.concurrent.Future
+import scala.concurrent.{ExecutionContext, Future}
 
-class RasFilesSessionServiceSpec extends AnyWordSpec with Matchers with MockitoSugar {
+class RasFilesSessionServiceSpec extends AnyWordSpec with GuiceOneAppPerSuite with Matchers with MockitoSugar with OptionValues with PlayMongoRepositorySupport[CacheItem] {
 
-  "SessionCacheService" should {
+  val appContext: AppContext = app.injector.instanceOf[AppContext]
+  override lazy val repository = new RasFilesSessionRepository(mongoComponent, appContext, new CurrentTimestampSupport)
+
+  val SUT: RasFilesSessionService = new RasFilesSessionService(repository)(ExecutionContext.global)
+
+  "createFileSession" should {
+    "create new session and return true" in {
+      val result: Boolean = await(SUT.createFileSession("A1234533", "envelopeId"))
+
+      result shouldBe true
+    }
+  }
+
+  "fetchFileSession" should {
+    "return file session" in {
+      val result = await(SUT.fetchFileSession("A1234533"))
+
+      result shouldBe defined
+    }
+  }
+
+  "removeFileSession" should {
+    "remove file session" in {
+      val result = await(SUT.removeFileSession("A1234533"))
+
+      result shouldBe true
+    }
+  }
+
+  "updateFileSession" should {
     "update session cache with processing status" in new Setup {
       when(sessionCacheRepositoryMock.get[FileSession]("A1234533")(DataKey("fileSession")))
         .thenReturn(Future.successful(Some(rasSession)))
