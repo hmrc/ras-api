@@ -79,7 +79,7 @@ trait GridFsTTLIndexing {
         ttlResult <- retrieveIndex(mdb, collectionName, LastUpdatedIndex).map { indexes =>
           indexes.exists(index =>
             index.containsKey(OptExpireAfterSeconds) && (
-              index.values.toList.contains(BsonInt64(expireAfterSeconds.toLong)) || index.values.toList.contains(BsonInt32(expireAfterSeconds))))
+              index.values.toList.contains(BsonInt32(expireAfterSeconds)) || index.values.toList.contains(BsonInt64(expireAfterSeconds.toLong))))
         }
       } yield {
         ttlResult

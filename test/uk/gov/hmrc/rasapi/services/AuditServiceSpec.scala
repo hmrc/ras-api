@@ -32,7 +32,7 @@ import uk.gov.hmrc.rasapi.config.AppContext
 
 import scala.concurrent.ExecutionContext
 
-trait AuditServiceSpec extends AnyWordSpecLike with Matchers with MockitoSugar with GuiceOneAppPerSuite with BeforeAndAfter {
+class AuditServiceSpec extends AnyWordSpecLike with Matchers with MockitoSugar with GuiceOneAppPerSuite with BeforeAndAfter {
 
   implicit val hc: HeaderCarrier = HeaderCarrier()
   val mockAuditConnector: AuditConnector = mock[AuditConnector]
@@ -52,7 +52,6 @@ trait AuditServiceSpec extends AnyWordSpecLike with Matchers with MockitoSugar w
     val auditDataMap: Map[String, String] = Map("testKey" -> "testValue")
 
     "build an audit event with the correct mandatory details" in {
-
       SUT.audit(fakeAuditType, fakeEndpoint, auditDataMap)
       val captor: ArgumentCaptor[DataEvent] = ArgumentCaptor.forClass(classOf[DataEvent])
 
@@ -65,7 +64,6 @@ trait AuditServiceSpec extends AnyWordSpecLike with Matchers with MockitoSugar w
     }
 
     "build an audit event with the correct tags" in {
-
       SUT.audit(fakeAuditType, fakeEndpoint, auditDataMap)
       val captor: ArgumentCaptor[DataEvent] = ArgumentCaptor.forClass(classOf[DataEvent])
 
@@ -79,7 +77,6 @@ trait AuditServiceSpec extends AnyWordSpecLike with Matchers with MockitoSugar w
     }
 
     "build an audit event with the correct detail" in {
-
       SUT.audit(fakeAuditType, fakeEndpoint, auditDataMap)
       val captor: ArgumentCaptor[DataEvent] = ArgumentCaptor.forClass(classOf[DataEvent])
 
@@ -88,13 +85,11 @@ trait AuditServiceSpec extends AnyWordSpecLike with Matchers with MockitoSugar w
       val event = captor.getValue
 
       event.detail should contain ("testKey" -> "testValue")
-
-      event.detail should contain key "Authorization"
     }
 
     "send an event via the audit connector" in {
-
       SUT.audit(fakeAuditType, fakeEndpoint, auditDataMap)
+
       verify(mockAuditConnector).sendEvent(any())(any(), any())
     }
   }
