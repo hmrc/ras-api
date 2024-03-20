@@ -46,4 +46,5 @@ class AppContext @Inject()(val servicesConfig: ServicesConfig) {
   lazy val removeChunksDataExerciseEnabled: Boolean = servicesConfig.getBoolean("remove-chunks-data-exercise.enabled")
   lazy val apiV2_0Enabled: Boolean = servicesConfig.getBoolean("api-v2_0.enabled")
   lazy val rasFileSessionTTL: Duration = servicesConfig.getDuration("mongodb.fileSessionsCacheTTLDays")
+  lazy val initiateUrl = servicesConfig.baseUrl("upscan-initiate") + "/upscan/v2/initiate"
 }

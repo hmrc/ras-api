@@ -34,27 +34,30 @@ class FileProcessingController @Inject()(
                                           implicit val ec: ExecutionContext
                                         ) extends BackendController(cc) with Logging {
 
-  val STATUS_AVAILABLE: String = "READY"
-  val STATUS_ERROR: String = "ERROR"
+  val STATUS_READY: String = "READY"
+  val STATUS_FAILED: String = "FAILED"
 
   def statusCallback(userId: String, version: String): Action[AnyContent] = Action.async {
     implicit request =>
+      println(request.body)
       val optVersion = version match {
         case "1.0" => Some(V1_0)
         case "2.0" => Some(V2_0)
         case _ => None
       }
+      println("bananarama")
+      //println(withValidJson())
       (optVersion, withValidJson()) match {
         case (Some(apiVersion), Some(callbackData)) =>
           callbackData.status match {
-            case STATUS_AVAILABLE =>
+            case STATUS_READY =>
               logger.info(s"[FileProcessingController][statusCallback] Callback request received with status available: file processing " +
                 s"started for userId ($userId).")
               if (Try(fileProcessingService.processFile(userId, callbackData, apiVersion)).isFailure) {
                 sessionCacheService.updateFileSession(userId, callbackData, None, None)
               }
-            case STATUS_ERROR => logger.error(s"[FileProcessingController][statusCallback] There is a problem with the " +
-              s"file for userId ($userId) ERROR (${callbackData.fileId}), the status is: ${callbackData.status} and the reason is: ${callbackData.reason.get}")
+            case STATUS_FAILED => logger.error(s"[FileProcessingController][statusCallback] There is a problem with the " +
+              s"file for userId ($userId) ERROR (${callbackData.fileId}), the status is: ${callbackData.status} and the reason is: ${callbackData.reason}")
               sessionCacheService.updateFileSession(userId, callbackData, None, None)
             case _ => logger.warn(s"[FileProcessingController][statusCallback] There is a problem with the file (${callbackData.fileId}) for userId ($userId), the status is:" +
               s" ${callbackData.status}")
@@ -73,10 +76,13 @@ class FileProcessingController @Inject()(
   }
 
   private def withValidJson()(implicit request: Request[AnyContent]): Option[CallbackData] = {
+    println(request.body)
     request.body.asJson match {
       case Some(json) =>
         Try(json.validate[UpscanCallbackData]) match {
-          case Success(JsSuccess(payload, _)) => Some(CallbackData.fromUpscanCallbackData(payload))
+          case Success(JsSuccess(payload, _)) =>
+            println(payload)
+            Some(CallbackData.fromUpscanCallbackData(payload))
           case Failure(exception)=> {
             logger.warn(s"[FileProcessingController][withValidJson] Json could not be parsed. Json Data: $json, exception: ${exception.getMessage}")
           }

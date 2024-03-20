@@ -37,7 +37,7 @@ object FileMetadata {
   implicit val format: OFormat[FileMetadata] = Json.format[FileMetadata]
 }
 
-case class CallbackData(envelopeId: String, fileId: String, status: String, reason: Option[String], uploadDetails: Option[UploadDetails] = None)
+case class CallbackData(downloadUrl: String, fileId: String, status: String, reason: Option[String], uploadDetails: Option[UploadDetails] = None)
 
 case class UploadDetails(uploadTimestamp: Instant, checksum: String, fileMimeType: String, fileName: String, size: Int)
 
@@ -55,7 +55,7 @@ object CallbackData {
 
   def fromUpscanCallbackData(ucd: UpscanCallbackData): CallbackData =
     CallbackData(
-      ucd.reference,
+      ucd.downloadUrl,
       ucd.fileId,
       ucd.fileStatus,
       None,

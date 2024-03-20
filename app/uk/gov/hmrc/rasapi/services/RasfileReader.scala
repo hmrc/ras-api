@@ -18,7 +18,7 @@ package uk.gov.hmrc.rasapi.services
 
 import akka.actor.ActorSystem
 import play.api.Logging
-import uk.gov.hmrc.rasapi.connectors.FileUploadConnector
+import uk.gov.hmrc.rasapi.connectors.UpscanConnector
 
 import java.io._
 import java.nio.file.{Files, Path}
@@ -30,7 +30,7 @@ trait RasFileReader extends Logging {
   implicit val system: ActorSystem = ActorSystem()
   implicit val ec: ExecutionContext
 
-  val fileUploadConnector: FileUploadConnector
+  val fileUploadConnector: UpscanConnector
 
   def readFile(envelopeId: String, fileId: String, userId: String): Future[Iterator[String]] = {
 

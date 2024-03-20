@@ -21,7 +21,7 @@ import play.api.Logging
 import play.api.mvc.{AnyContent, Request}
 import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.rasapi.config.AppContext
-import uk.gov.hmrc.rasapi.connectors.{DesConnector, FileUploadConnector}
+import uk.gov.hmrc.rasapi.connectors.{DesConnector, UpscanConnector}
 import uk.gov.hmrc.rasapi.helpers.ResidencyYearResolver
 import uk.gov.hmrc.rasapi.metrics.Metrics
 import uk.gov.hmrc.rasapi.models.{ApiVersion, CallbackData, FileMetadata, ResultsFileMetaData}
@@ -33,7 +33,7 @@ import scala.concurrent.ExecutionContext
 import scala.util.{Failure, Success, Try}
 
 class FileProcessingService @Inject()(
-                                       val fileUploadConnector: FileUploadConnector,
+                                       val fileUploadConnector: UpscanConnector,
                                        val desConnector: DesConnector,
                                        val residencyYearResolver: ResidencyYearResolver,
                                        val auditService: AuditService,
@@ -64,7 +64,7 @@ class FileProcessingService @Inject()(
     val fileMetrics = metrics.register(fileProcess).time
     val fileReadMetrics = metrics.register(fileRead).time
 
-    readFile(callbackData.envelopeId, callbackData.fileId, userId).onComplete {
+    readFile(callbackData.downloadUrl, callbackData.fileId, userId).onComplete {
       fileReadMetrics.stop
       inputFileData =>
         if(inputFileData.isSuccess)
@@ -123,7 +123,7 @@ class FileProcessingService @Inject()(
 
     logger.info("[FileProcessingService][saveFile] Starting to save file...")
     val fileSaveMetrics = metrics.register(fileSave).time
-      fileRepo.saveFile(userId, callbackData.envelopeId, filePath, callbackData.fileId).onComplete {
+      fileRepo.saveFile(userId, callbackData.downloadUrl, filePath, callbackData.fileId).onComplete {
         result =>
           result match {
             case Success(file) =>
@@ -131,21 +131,15 @@ class FileProcessingService @Inject()(
 
               val resultsFileMetaData = Some(ResultsFileMetaData(file.getId.toString, file.getFilename, file.getUploadDate.getTime, file.getChunkSize, file.getLength))
 
-              //fileUploadConnector.getFileMetadata(callbackData.envelopeId, callbackData.fileId, userId).onComplete {
-                //case Success(metadata) =>
                   sessionCacheService.updateFileSession(userId, callbackData, resultsFileMetaData, Some(FileMetadata.fromCallbackData(callbackData)))
-                //case Failure(ex) =>
-                  //logger.error(s"[FileProcessingService][saveFile] Failed to get File Metadata for file (${file.getId}), for user ID: $userId, message: ${ex.getMessage}", ex)
-                  //sessionCacheService.updateFileSession(userId, callbackData, resultsFileMetaData, None)
-              //}
+
               logger.info(s"[FileProcessingService][saveFile] Completed saving the file (${file.getId}) for user ID: $userId")
             case Failure(ex) =>
               logger.error(s"[FileProcessingService][saveFile] results file for userId ($userId) generation/saving failed with Exception ${ex.getMessage}", ex)
               sessionCacheService.updateFileSession(userId, callbackData.copy(status = STATUS_ERROR), None, None)
-            //delete result  a future ind
           }
           fileSaveMetrics.stop
-          //fileUploadConnector.deleteUploadedFile(callbackData.envelopeId, callbackData.fileId, userId)
+
       }
   }
 
