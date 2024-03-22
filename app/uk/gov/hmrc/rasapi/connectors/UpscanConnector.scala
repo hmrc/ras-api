@@ -31,11 +31,11 @@ class UpscanConnector @Inject()(val wsHttp: WSHttp,
                                 implicit val ec: ExecutionContext
                                    ) extends Logging {
 
-  def getUpscanFile(reference: String, fileId: String, userId: String): Future[Option[InputStream]] = {
+  def getUpscanFile(downloadUrl: String, reference: String, userId: String): Future[Option[InputStream]] = {
     implicit val system: ActorSystem = ActorSystem()
-    logger.info(s"[FileUploadConnector][getFile] Trying to retrieve file from Upscan: $fileId")
+    logger.info(s"[FileUploadConnector][getFile] Trying to retrieve file from Upscan: $reference")
 
-    wsHttp.buildRequestWithStream(uri = reference).map { res =>
+    wsHttp.buildRequestWithStream(uri = downloadUrl).map { res =>
       Some(res.bodyAsSource.runWith(StreamConverters.asInputStream()))
     } recover {
       case ex: Throwable =>

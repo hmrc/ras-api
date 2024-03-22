@@ -32,14 +32,14 @@ trait RasFileReader extends Logging {
 
   val fileUploadConnector: UpscanConnector
 
-  def readFile(envelopeId: String, fileId: String, userId: String): Future[Iterator[String]] = {
+  def readFile(downloadUrl: String, reference: String, userId: String): Future[Iterator[String]] = {
 
     implicit val codec: Codec = Codec.ISO8859
 
-    fileUploadConnector.getUpscanFile(envelopeId, fileId, userId).map{
+    fileUploadConnector.getUpscanFile(downloadUrl, reference, userId).map{
 
       case Some(inputStream) => Source.fromInputStream(inputStream).getLines()
-      case None => logger.error(s"[RasFileReader][readFile] File Processing: the file ($fileId) could not be found for userId ($userId).")
+      case None => logger.error(s"[RasFileReader][readFile] File Processing: the file ($reference) could not be found for userId ($userId).")
         throw new FileNotFoundException
     }
   }

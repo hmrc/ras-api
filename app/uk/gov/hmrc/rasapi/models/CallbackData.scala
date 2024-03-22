@@ -27,9 +27,9 @@ import scala.util.matching.Regex
 case class FileMetadata(id: String, name: Option[String], created: Option[String])
 
 object FileMetadata {
-  def fromCallbackData(cd: CallbackData): FileMetadata =
+  def fromCallbackData(cd: UpscanCallbackData): FileMetadata =
     FileMetadata(
-      cd.fileId,
+      cd.reference,
       Some(cd.uploadDetails.getOrElse(UploadDetails.empty).fileName),
       Some(cd.uploadDetails.getOrElse(UploadDetails.empty).uploadTimestamp.toString)
     )
@@ -41,25 +41,33 @@ case class CallbackData(downloadUrl: String, fileId: String, status: String, rea
 
 case class UploadDetails(uploadTimestamp: Instant, checksum: String, fileMimeType: String, fileName: String, size: Int)
 
+case class FailureDetails(failureReason: String, message: String)
+  object FailureDetails{
+    implicit val formats: OFormat[FailureDetails] = Json.format[FailureDetails]
+  }
+
 object UploadDetails {
   val empty: UploadDetails = UploadDetails(Instant.now(), "", "", "", 0)
   implicit val formats: OFormat[UploadDetails] = Json.format[UploadDetails]
 }
-case class UpscanCallbackData(reference: String, downloadUrl: String, fileStatus: String, uploadDetails: UploadDetails) {
+case class UpscanCallbackData(reference: String, downloadUrl: Option[String], fileStatus: String, uploadDetails: Option[UploadDetails], failureDetails: Option[FailureDetails]) {
   val fileIdPattern: Regex = """[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{12}""".r
 
-  val fileId: String = fileIdPattern.findFirstIn(downloadUrl).getOrElse(throw new IllegalArgumentException("dupa o!"))
+  val failureReason = this.failureDetails.getOrElse(FailureDetails("unknown", "")).failureReason
+  val message = this.failureDetails.getOrElse(FailureDetails("unknown", "")).message
+
+  //val fileId: String = fileIdPattern.findFirstIn(downloadUrl).getOrElse(throw new IllegalArgumentException("dupa o!"))
 }
 
 object CallbackData {
 
   def fromUpscanCallbackData(ucd: UpscanCallbackData): CallbackData =
     CallbackData(
-      ucd.downloadUrl,
-      ucd.fileId,
+      ucd.downloadUrl.get,
+      ucd.reference,
       ucd.fileStatus,
       None,
-      Some(ucd.uploadDetails)
+      Some(ucd.uploadDetails.get)
     )
 
   implicit val formats: OFormat[CallbackData] = Json.format[CallbackData]
@@ -82,7 +90,7 @@ object Chunks {
   implicit  val format: OFormat[Chunks] = Json.format[Chunks]
 }
 
-case class FileSession(userFile: Option[CallbackData],
+case class FileSession(userFile: Option[UpscanCallbackData],
                        resultsFile: Option[ResultsFileMetaData],
                        userId: String,
                        uploadTimeStamp : Option[Long],

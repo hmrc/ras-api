@@ -46,10 +46,9 @@ class FileProcessingController @Inject()(
         case _ => None
       }
       println("bananarama")
-      //println(withValidJson())
       (optVersion, withValidJson()) match {
         case (Some(apiVersion), Some(callbackData)) =>
-          callbackData.status match {
+          callbackData.fileStatus match {
             case STATUS_READY =>
               logger.info(s"[FileProcessingController][statusCallback] Callback request received with status available: file processing " +
                 s"started for userId ($userId).")
@@ -57,17 +56,17 @@ class FileProcessingController @Inject()(
                 sessionCacheService.updateFileSession(userId, callbackData, None, None)
               }
             case STATUS_FAILED => logger.error(s"[FileProcessingController][statusCallback] There is a problem with the " +
-              s"file for userId ($userId) ERROR (${callbackData.fileId}), the status is: ${callbackData.status} and the reason is: ${callbackData.reason}")
+              s"file for userId ($userId) FAILED (${callbackData.reference}), the failure reason is: ${callbackData.failureReason} and the message is: ${callbackData.message}")
               sessionCacheService.updateFileSession(userId, callbackData, None, None)
-            case _ => logger.warn(s"[FileProcessingController][statusCallback] There is a problem with the file (${callbackData.fileId}) for userId ($userId), the status is:" +
-              s" ${callbackData.status}")
+            case _ => logger.warn(s"[FileProcessingController][statusCallback] There is a problem with the file (${callbackData.reference}) for userId ($userId), the status is:" +
+              s" ${callbackData.fileStatus}")
           }
           Future(Ok(""))
         case (optVer, optData) => handleInvalidRequest(optVer, optData)
       }
   }
 
-  private def handleInvalidRequest(optVersion: Option[ApiVersion], optCallBackData: Option[CallbackData]): Future[Result] = {
+  private def handleInvalidRequest(optVersion: Option[ApiVersion], optCallBackData: Option[UpscanCallbackData]): Future[Result] = {
     (optVersion, optCallBackData) match {
       case (None, _) => logger.warn("[FileProcessingController][handleInvalidRequest] Unsupported api version supplied")
       case _ => logger.warn("[FileProcessingController][handleInvalidRequest] Invalid Json supplied")
@@ -75,14 +74,15 @@ class FileProcessingController @Inject()(
     Future.successful(BadRequest(""))
   }
 
-  private def withValidJson()(implicit request: Request[AnyContent]): Option[CallbackData] = {
+  private def withValidJson()(implicit request: Request[AnyContent]): Option[UpscanCallbackData] = {
     println(request.body)
     request.body.asJson match {
       case Some(json) =>
         Try(json.validate[UpscanCallbackData]) match {
           case Success(JsSuccess(payload, _)) =>
-            println(payload)
-            Some(CallbackData.fromUpscanCallbackData(payload))
+            //println(payload)
+            //Some(CallbackData.fromUpscanCallbackData(payload))
+          Some(payload)
           case Failure(exception)=> {
             logger.warn(s"[FileProcessingController][withValidJson] Json could not be parsed. Json Data: $json, exception: ${exception.getMessage}")
           }

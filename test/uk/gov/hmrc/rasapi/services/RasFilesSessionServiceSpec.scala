@@ -29,7 +29,7 @@ import uk.gov.hmrc.mongo.CurrentTimestampSupport
 import uk.gov.hmrc.mongo.cache.{CacheItem, DataKey}
 import uk.gov.hmrc.mongo.test.PlayMongoRepositorySupport
 import uk.gov.hmrc.rasapi.config.AppContext
-import uk.gov.hmrc.rasapi.models.{CallbackData, FileMetadata, FileSession, ResultsFileMetaData}
+import uk.gov.hmrc.rasapi.models.{FileMetadata, FileSession, ResultsFileMetaData, UpscanCallbackData}
 import uk.gov.hmrc.rasapi.repository.RasFilesSessionRepository
 
 import java.time.Instant
@@ -105,7 +105,7 @@ class RasFilesSessionServiceSpec extends AnyWordSpec with GuiceOneAppPerSuite wi
   }
 
   trait Setup {
-    val callbackData: CallbackData = CallbackData("envelopeId-1234", "file-id-1", "AVAILABLE", None)
+    val callbackData: UpscanCallbackData = UpscanCallbackData(reference = "reference", downloadUrl = Some("url"), fileStatus = "READY", uploadDetails = None, failureDetails = None)
     val resultsFile: ResultsFileMetaData = ResultsFileMetaData("file-id-1", "fileName.csv", 1234L, 123, 1234L)
     val fileMetadata: FileMetadata = FileMetadata("file-id-1", Some("fileName"), None)
     val rasSession: FileSession = FileSession(Some(callbackData), Some(resultsFile), "A1234533", Some(DateTime.now().getMillis), Some(fileMetadata))

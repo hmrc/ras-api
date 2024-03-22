@@ -19,7 +19,7 @@ package uk.gov.hmrc.rasapi.services
 import org.joda.time.DateTime
 import play.api.Logging
 import uk.gov.hmrc.mongo.cache.{CacheItem, DataKey}
-import uk.gov.hmrc.rasapi.models.{CallbackData, FileMetadata, FileSession, ResultsFileMetaData}
+import uk.gov.hmrc.rasapi.models.{CallbackData, FileMetadata, FileSession, ResultsFileMetaData, UpscanCallbackData}
 import uk.gov.hmrc.rasapi.repository.RasFilesSessionRepository
 
 import javax.inject.{Inject, Singleton}
@@ -47,7 +47,7 @@ class RasFilesSessionService @Inject()(filesSessionRepository: RasFilesSessionRe
     }
   }
 
-  def updateFileSession(userId: String, userFile: CallbackData, resultsFile: Option[ResultsFileMetaData],
+  def updateFileSession(userId: String, userFile: UpscanCallbackData, resultsFile: Option[ResultsFileMetaData],
                         fileMetadata: Option[FileMetadata]): Future[CacheItem] = {
 
     (for {

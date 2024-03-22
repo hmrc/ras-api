@@ -16,8 +16,6 @@
 
 package uk.gov.hmrc.rasapi.controllers
 
-import org.mockito.ArgumentMatchers.{any, eq => Meq}
-import org.mockito.Mockito
 import org.mockito.Mockito._
 import org.scalatest.BeforeAndAfter
 import org.scalatest.matchers.should.Matchers
@@ -31,7 +29,7 @@ import play.api.libs.json.Json
 import play.api.mvc.ControllerComponents
 import play.api.test.FakeRequest
 import play.api.test.Helpers.{defaultAwaitTimeout, status}
-import uk.gov.hmrc.rasapi.models.{CallbackData, ResultsFileMetaData, UploadDetails, UpscanCallbackData, V2_0}
+import uk.gov.hmrc.rasapi.models.{CallbackData, ResultsFileMetaData, UploadDetails, UpscanCallbackData}
 import uk.gov.hmrc.rasapi.services.{FileProcessingService, RasFilesSessionService}
 
 import java.time.Instant
@@ -46,7 +44,7 @@ class FileProcessingControllerSpec extends AnyWordSpecLike with Matchers with Mo
   val reason: Option[String] = None
   val callbackData: CallbackData = CallbackData(downloadUrl, fileId, fileStatus, reason)
   val uploadDetails = UploadDetails(uploadTimestamp = Instant.now(), checksum = "qwerty", fileMimeType = "ytrewq", fileName = "???", size = 1234)
-  val upscanCallbackData: UpscanCallbackData = UpscanCallbackData(reference = "reference", downloadUrl = downloadUrl, fileStatus = fileStatus, uploadDetails = uploadDetails)
+  val upscanCallbackData: UpscanCallbackData = UpscanCallbackData(reference = "reference", downloadUrl = Some(downloadUrl), fileStatus = fileStatus, uploadDetails = Some(uploadDetails), None)
   val resultsFile: ResultsFileMetaData = ResultsFileMetaData(fileId, "fileName.csv", 1234L, 123, 1234L)
   val userId: String = Random.nextInt(5).toString
 
