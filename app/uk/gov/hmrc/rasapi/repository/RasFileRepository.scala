@@ -51,16 +51,18 @@ class RasFilesRepository @Inject()(val mongoComponent: MongoComponent,
   private val bucketName: String = "resultsFiles"
   val gridFSG: GridFSBucket = GridFSBucket(mongoComponent.database, bucketName)
 
-  def saveFile(userId:String, envelopeId: String, filePath: Path, fileId: String): Future[ResultsFile] = {
+  def saveFile(userId:String, reference: String, filePath: Path, fileId: String): Future[ResultsFile] = {
     log.info("[RasFilesRepository][saveFile] Starting to save file")
 
     val observableToUploadFrom: Observable[ByteBuffer] = Observable(
       Seq(ByteBuffer.wrap(Files.readAllBytes(filePath))
     ))
 
+    println(fileId)
+
     val options: GridFSUploadOptions = new GridFSUploadOptions()
       .metadata(Document(
-        "envelopeId" -> envelopeId,
+        "reference" -> reference,
         "fileId" -> fileId,
         "userId" -> userId,
         "contentType" -> contentType))

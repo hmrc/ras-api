@@ -45,7 +45,7 @@ class RasFilesSessionServiceSpec extends AnyWordSpec with GuiceOneAppPerSuite wi
 
   "createFileSession" should {
     "create new session and return true" in {
-      val result: Boolean = await(SUT.createFileSession("A1234533", "envelopeId"))
+      val result: Boolean = await(SUT.createFileSession("A1234533", "reference"))
 
       result shouldBe true
     }

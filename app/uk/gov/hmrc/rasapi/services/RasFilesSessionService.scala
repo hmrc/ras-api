@@ -19,7 +19,7 @@ package uk.gov.hmrc.rasapi.services
 import org.joda.time.DateTime
 import play.api.Logging
 import uk.gov.hmrc.mongo.cache.{CacheItem, DataKey}
-import uk.gov.hmrc.rasapi.models.{CallbackData, FileMetadata, FileSession, ResultsFileMetaData, UpscanCallbackData}
+import uk.gov.hmrc.rasapi.models.{FileMetadata, FileSession, ResultsFileMetaData, UpscanCallbackData}
 import uk.gov.hmrc.rasapi.repository.RasFilesSessionRepository
 
 import javax.inject.{Inject, Singleton}
@@ -29,12 +29,12 @@ import scala.concurrent.{ExecutionContext, Future}
 class RasFilesSessionService @Inject()(filesSessionRepository: RasFilesSessionRepository)
                                       (implicit ec: ExecutionContext) extends Logging {
 
-  def createFileSession(userId: String, envelopeId: String): Future[Boolean] = {
+  def createFileSession(userId: String, reference: String): Future[Boolean] = {
     filesSessionRepository.put[FileSession](userId)(DataKey("fileSession"), FileSession(None, None, userId, Some(DateTime.now().getMillis), None))
       .map(_ => true)
       .recover {
         case ex: Throwable => logger.error(s"unable to create FileSession to cache => " +
-          s"$userId , envelopeId :$envelopeId,  Exception is ${ex.getMessage}")
+          s"$userId , reference :$reference,  Exception is ${ex.getMessage}")
           false
       }
   }

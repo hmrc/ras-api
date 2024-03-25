@@ -20,7 +20,7 @@ import play.api.Logging
 import play.api.libs.json.JsSuccess
 import play.api.mvc._
 import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
-import uk.gov.hmrc.rasapi.models.{ApiVersion, CallbackData, UpscanCallbackData, V1_0, V2_0}
+import uk.gov.hmrc.rasapi.models.{ApiVersion, UpscanCallbackData, V1_0, V2_0}
 import uk.gov.hmrc.rasapi.services.{FileProcessingService, RasFilesSessionService}
 
 import javax.inject.Inject
@@ -52,7 +52,7 @@ class FileProcessingController @Inject()(
             case STATUS_READY =>
               logger.info(s"[FileProcessingController][statusCallback] Callback request received with status available: file processing " +
                 s"started for userId ($userId).")
-              if (Try(fileProcessingService.processFile(userId, callbackData, apiVersion)).isFailure) {
+              if (fileProcessingService.processFile(userId, callbackData, apiVersion)) {
                 sessionCacheService.updateFileSession(userId, callbackData, None, None)
               }
             case STATUS_FAILED => logger.error(s"[FileProcessingController][statusCallback] There is a problem with the " +
@@ -75,13 +75,10 @@ class FileProcessingController @Inject()(
   }
 
   private def withValidJson()(implicit request: Request[AnyContent]): Option[UpscanCallbackData] = {
-    println(request.body)
     request.body.asJson match {
       case Some(json) =>
         Try(json.validate[UpscanCallbackData]) match {
           case Success(JsSuccess(payload, _)) =>
-            //println(payload)
-            //Some(CallbackData.fromUpscanCallbackData(payload))
           Some(payload)
           case Failure(exception)=> {
             logger.warn(s"[FileProcessingController][withValidJson] Json could not be parsed. Json Data: $json, exception: ${exception.getMessage}")

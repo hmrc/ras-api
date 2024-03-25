@@ -43,7 +43,7 @@ class FileSessionController @Inject()(val filesSessionService: RasFilesSessionSe
         request.body.asJson match {
           case Some(json) => Try(json.validate[CreateFileSessionRequest]) match {
             case Success(JsSuccess(payload, _)) =>
-              filesSessionService.createFileSession(payload.userId, payload.envelopeId).flatMap {
+              filesSessionService.createFileSession(payload.userId, payload.reference).flatMap {
                 case true => Future.successful(Created)
                 case false =>
                   logger.warn(s"[FileSessionController][createFileSession] Could not create FileSession. Json Data: $json")

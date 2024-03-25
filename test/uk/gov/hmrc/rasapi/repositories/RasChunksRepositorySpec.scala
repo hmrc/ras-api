@@ -44,13 +44,13 @@ class RasChunksRepositorySpec extends AnyWordSpecLike with Matchers with Mockito
   "RasChunksRepository" should {
 
     "getAllChunks should return the correct amount of chunks as instances of the Chunk model" in {
-      await(repository.saveFile("user222","envelope222",createFile,"file222"))
+      await(repository.saveFile("user222","reference222",createFile,"file222"))
       val chunks = await(chunksRepository.getAllChunks)
       chunks.size shouldBe 1
     }
 
     "removeChunk should successfully delete a chunk when provided with an ObjectId" in {
-      val uploadedFile: ResultsFile = await(repository.saveFile("user222","envelope222",createFile,"file222"))
+      val uploadedFile: ResultsFile = await(repository.saveFile("user222","reference222",createFile,"file222"))
       val result = await(chunksRepository.removeChunk(uploadedFile.getObjectId))
       result shouldBe true
       val chunks = await(chunksRepository.getAllChunks)
