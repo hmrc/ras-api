@@ -24,7 +24,7 @@ import uk.gov.hmrc.rasapi.config.AppContext
 import uk.gov.hmrc.rasapi.connectors.{DesConnector, UpscanConnector}
 import uk.gov.hmrc.rasapi.helpers.ResidencyYearResolver
 import uk.gov.hmrc.rasapi.metrics.Metrics
-import uk.gov.hmrc.rasapi.models.{ApiVersion, CallbackData, FileMetadata, ResultsFileMetaData, UpscanCallbackData}
+import uk.gov.hmrc.rasapi.models.{ApiVersion, FileMetadata, ResultsFileMetaData, UpscanCallbackData}
 import uk.gov.hmrc.rasapi.repository.RasFilesRepository
 
 import java.nio.file.Path
@@ -60,13 +60,11 @@ class FileProcessingService @Inject()(
   val fileSave: String = "File-Save"
   val STATUS_FAILED: String = "FAILED"
 
-  def processFile(userId: String, callbackData: UpscanCallbackData, apiVersion: ApiVersion)(implicit hc: HeaderCarrier, request: Request[AnyContent]): Unit = {
+  def processFile(userId: String, callbackData: UpscanCallbackData, apiVersion: ApiVersion)(implicit hc: HeaderCarrier, request: Request[AnyContent]): Boolean = {
     val fileMetrics = metrics.register(fileProcess).time
     val fileReadMetrics = metrics.register(fileRead).time
-    callbackData.downloadUrl match {
+    val result = callbackData.downloadUrl match {
       case Some(url) => {
-        println(url)
-        println(callbackData)
         readFile(url, callbackData.reference, userId).onComplete {
           fileReadMetrics.stop
           inputFileData =>
@@ -74,14 +72,16 @@ class FileProcessingService @Inject()(
               manipulateFile(inputFileData, userId, callbackData, apiVersion)
             }
         }
+        true
       }
       case _ => {
-        //Todo
-        ???
+        //todo: log that file processing failed
+        false
       }
     }
 
     fileMetrics.stop
+    result
   }
 
   def manipulateFile(inputFileData: Try[Iterator[String]],
@@ -92,9 +92,6 @@ class FileProcessingService @Inject()(
     val fileResultsMetrics = metrics.register(fileResults).time
     val writer = createFileWriter(callbackData.reference, userId)
 
-    println("Bananarama")
-    //println(inputFileData.get.toList.size)
-
     def removeDoubleQuotes(row: String): String = {
       row match {
         case s if s.startsWith("\"") && s.endsWith("\"") => s.drop(1).dropRight(1)
@@ -104,7 +101,6 @@ class FileProcessingService @Inject()(
 
     try{
       val dataIterator = inputFileData.get.toList
-      println(dataIterator)
       logger.info(s"[FileProcessingService][manipulateFile] File data size ${dataIterator.size} for user $userId")
       writeResultToFile(writer._2, s"National Insurance number,First name,Last name,Date of birth,$getTaxYearHeadings", userId)
       dataIterator.foreach(row =>

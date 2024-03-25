@@ -49,9 +49,9 @@ class RasFileRepositorySpec extends AnyWordSpecLike with Matchers with MockitoSu
 
   "RasFileRepository" should {
     "saveFile should successfully save a file in storage" in {
-      val uploadedFile: ResultsFile = await(repository.saveFile("user111","envelope111",createFile,"file111"))
+      val uploadedFile: ResultsFile = await(repository.saveFile("user111","reference111",createFile,"file111"))
       uploadedFile.getFilename shouldBe "file111"
-      uploadedFile.getMetadata.getString("envelopeId") shouldBe "envelope111"
+      uploadedFile.getMetadata.getString("reference") shouldBe "reference111"
       uploadedFile.getMetadata.getString("fileId") shouldBe "file111"
       uploadedFile.getMetadata.getString("userId") shouldBe "user111"
       uploadedFile.getMetadata.getString("contentType") shouldBe "text/csv"
@@ -68,25 +68,25 @@ class RasFileRepositorySpec extends AnyWordSpecLike with Matchers with MockitoSu
       when(mockGridFSUploadObservable.head()).thenReturn(Future.successful(new ObjectId("123456789012345678901234")))
 
       intercept[RuntimeException] {
-        await(testRepository.saveFile("user124","envelope124",createFile,"file444"))
+        await(testRepository.saveFile("user124","reference124",createFile,"file444"))
       }.getMessage shouldBe "Failed to save file due to error: Failed to checkAndEnsureTTL."
     }
 
     "fetchFile should return an instance of FileData" in {
-      val uploadedFile: ResultsFile = await(repository.saveFile("user123","envelope123",createFile,"file123"))
+      val uploadedFile: ResultsFile = await(repository.saveFile("user123","reference123",createFile,"file123"))
       val fetchedFileData: Option[FileData] = await(repository.fetchFile(uploadedFile.getFilename, userId))
       fetchedFileData.isDefined shouldBe true
       fetchedFileData.get.length shouldBe uploadedFile.getLength
     }
 
     "removeFile should successfully remove a file from storage" in {
-      val uploadedFile: ResultsFile = await(repository.saveFile("user222","envelope222",createFile,"file222"))
+      val uploadedFile: ResultsFile = await(repository.saveFile("user222","reference222",createFile,"file222"))
       val removedFileResult: Boolean = await(repository.removeFile(uploadedFile.getFilename, userId))
       removedFileResult shouldBe true
     }
 
     "fetchResultsFile should return an instance of ResultsFile" in {
-      val uploadedFile: ResultsFile = await(repository.saveFile("user124","envelope124",createFile,"file444"))
+      val uploadedFile: ResultsFile = await(repository.saveFile("user124","reference124",createFile,"file444"))
       val fetchedFile: Option[ResultsFile] = await(repository.fetchResultsFile(uploadedFile.getObjectId))
       fetchedFile.isDefined shouldBe true
     }

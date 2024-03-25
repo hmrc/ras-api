@@ -130,7 +130,7 @@ class FileProcessingServiceSpec extends AnyWordSpecLike
   "fetchResult" should {
     "successfully audit processed data" when {
       //Todo - ignore bastard test for now
-      "there is a successful result returned when a request is made on 4th Feb 2018" ignore {
+      "there is a successful result returned when a request is made on 4th Feb 2018" in {
 
         val testFilePath = getTestFilePath
 
@@ -168,7 +168,7 @@ class FileProcessingServiceSpec extends AnyWordSpecLike
           "LE241131B,SIMON,DAWSON,1990-02-21,otherUKResident,otherUKResident" +
           "LE241131B,MICHEAL,SLATER,1990-02-21,otherUKResident,otherUKResident"
 
-        val callbackData: UpscanCallbackData = UpscanCallbackData(reference = "reference", downloadUrl = Some("url"), fileStatus = "READY", uploadDetails = None, failureDetails = None)
+        val callbackData: UpscanCallbackData = UpscanCallbackData(reference = fileId, downloadUrl = Some("url"), fileStatus = "READY", uploadDetails = None, failureDetails = None)
         val cacheItem = CacheItem("sessionValue", Json.toJson(Map("user1234" -> Json.toJson(callbackData))).as[JsObject], Instant.now, Instant.now)
 
         when(mockSessionCache.updateFileSession(any(), any(), any(), any()))
@@ -185,6 +185,7 @@ class FileProcessingServiceSpec extends AnyWordSpecLike
 
         val res = await(repository.fetchFile(fileId, userId))
         var result = new String("")
+        println(res)
         await(res.get.data.runWith(getAll.mapMaterializedValue {
           _.map { bytes =>
             result =
@@ -208,7 +209,7 @@ class FileProcessingServiceSpec extends AnyWordSpecLike
         )(any())
       }
 
-      "there is a successful result returned when a request is made on 4th Feb 2019" ignore {
+      "there is a successful result returned when a request is made on 4th Feb 2019" in {
 
         val testFilePath = getTestFilePath
 
@@ -246,7 +247,7 @@ class FileProcessingServiceSpec extends AnyWordSpecLike
           "LE241131B,SIMON,DAWSON,1990-02-21,scotResident,scotResident" +
           "LE241131B,MICHEAL,SLATER,1990-02-21,scotResident,scotResident"
 
-        val callbackData: UpscanCallbackData = UpscanCallbackData(reference = "reference", downloadUrl = Some("url"), fileStatus = "READY", uploadDetails = None, failureDetails = None)
+        val callbackData: UpscanCallbackData = UpscanCallbackData(reference = fileId, downloadUrl = Some("url"), fileStatus = "READY", uploadDetails = None, failureDetails = None)
         val fileMetaData = FileMetadata(fileId, Some(fileId), Some("2018-07-28"))
         val cacheItem = CacheItem("sessionValue", Json.toJson(Map("user1234" -> Json.toJson(callbackData))).as[JsObject], Instant.now, Instant.now)
 
@@ -286,7 +287,7 @@ class FileProcessingServiceSpec extends AnyWordSpecLike
         )(any())
       }
 
-      "there is a successful result returned when a request is made on 4th June 2018" ignore {
+      "there is a successful result returned when a request is made on 4th June 2018" in {
 
         val testFilePath = getTestFilePath
 
@@ -324,7 +325,7 @@ class FileProcessingServiceSpec extends AnyWordSpecLike
           "LE241131B,SIMON,DAWSON,1990-02-21,otherUKResident" +
           "LE241131B,MICHEAL,SLATER,1990-02-21,otherUKResident"
 
-        val upscanCallbackData = UpscanCallbackData(reference = "reference", downloadUrl = Some("url"), fileStatus = "READY", uploadDetails = None, failureDetails = None)
+        val upscanCallbackData = UpscanCallbackData(reference = fileId, downloadUrl = Some("url"), fileStatus = "READY", uploadDetails = None, failureDetails = None)
         val cacheItem = CacheItem("sessionValue", Json.toJson(Map("user1234" -> Json.toJson(upscanCallbackData))).as[JsObject], Instant.now, Instant.now)
 
         when(mockSessionCache.updateFileSession(any(), any(), any(), any()))
@@ -362,7 +363,7 @@ class FileProcessingServiceSpec extends AnyWordSpecLike
         )(any())
       }
 
-      "there is a matching failed result" ignore {
+      "there is a matching failed result" in {
 
         val testFilePath = getTestFilePath
 
@@ -400,7 +401,7 @@ class FileProcessingServiceSpec extends AnyWordSpecLike
           s"LE241131B,SIMON,DAWSON,1990-02-21,$STATUS_FILE_PROCESSING_MATCHING_FAILED" +
           s"LE241131B,MICHEAL,SLATER,1990-02-21,$STATUS_FILE_PROCESSING_MATCHING_FAILED"
 
-        val upscanCallbackData = UpscanCallbackData(reference = "reference", downloadUrl = Some("url"), fileStatus = "READY", uploadDetails = None, failureDetails = None)
+        val upscanCallbackData = UpscanCallbackData(reference = fileId, downloadUrl = Some("url"), fileStatus = "READY", uploadDetails = None, failureDetails = None)
         val cacheItem = CacheItem("sessionValue", Json.toJson(Map("user1234" -> Json.toJson(upscanCallbackData))).as[JsObject], Instant.now, Instant.now)
 
         when(mockSessionCache.updateFileSession(any(), any(), any(), any()))
@@ -438,7 +439,7 @@ class FileProcessingServiceSpec extends AnyWordSpecLike
         )(any())
       }
 
-      "there is a deceased result" ignore {
+      "there is a deceased result" in {
 
         val testFilePath = getTestFilePath
 
@@ -476,7 +477,7 @@ class FileProcessingServiceSpec extends AnyWordSpecLike
           s"LE241131B,SIMON,DAWSON,1990-02-21,$STATUS_FILE_PROCESSING_MATCHING_FAILED" +
           s"LE241131B,MICHEAL,SLATER,1990-02-21,$STATUS_FILE_PROCESSING_MATCHING_FAILED"
 
-        val callbackData: UpscanCallbackData = UpscanCallbackData(reference = "reference", downloadUrl = Some("url"), fileStatus = "READY", uploadDetails = None, failureDetails = None)
+        val callbackData: UpscanCallbackData = UpscanCallbackData(reference = fileId, downloadUrl = Some("url"), fileStatus = "READY", uploadDetails = None, failureDetails = None)
         val cacheItem = CacheItem("sessionValue", Json.toJson(Map("user1234" -> Json.toJson(callbackData))).as[JsObject], Instant.now, Instant.now)
 
         when(mockSessionCache.updateFileSession(any(), any(), any(), any()))
@@ -514,7 +515,7 @@ class FileProcessingServiceSpec extends AnyWordSpecLike
         )(any())
       }
 
-      "there is a SERVICE_UNAVAILABLE result" ignore {
+      "there is a SERVICE_UNAVAILABLE result" in {
         val testFilePath = getTestFilePath
 
         val SUT = new FileProcessingService (
@@ -551,7 +552,7 @@ class FileProcessingServiceSpec extends AnyWordSpecLike
           s"LE241131B,SIMON,DAWSON,1990-02-21,$STATUS_FILE_PROCESSING_INTERNAL_SERVER_ERROR" +
           s"LE241131B,MICHEAL,SLATER,1990-02-21,$STATUS_FILE_PROCESSING_INTERNAL_SERVER_ERROR"
 
-        val callbackData: UpscanCallbackData = UpscanCallbackData(reference = "reference", downloadUrl = Some("url"), fileStatus = "READY", uploadDetails = None, failureDetails = None)
+        val callbackData: UpscanCallbackData = UpscanCallbackData(reference = fileId, downloadUrl = Some("url"), fileStatus = "READY", uploadDetails = None, failureDetails = None)
         val cacheItem = CacheItem("sessionValue", Json.toJson(Map("user1234" -> Json.toJson(callbackData))).as[JsObject], Instant.now, Instant.now)
 
         when(mockSessionCache.updateFileSession(any(), any(), any(), any()))
@@ -595,7 +596,7 @@ class FileProcessingServiceSpec extends AnyWordSpecLike
     "readFile" when {
       "ISO_8859_1 file with accented characters" in {
 
-        val envelopeId: String = "0b215e97-11d4-4006-91db-c067e74fc656"
+        val reference: String = "0b215e97-11d4-4006-91db-c067e74fc656"
         val fileId: String = "file-id-1"
 
         val row1 = "Johné,Smithè,AB123456C,1990-02-21".getBytes(StandardCharsets.ISO_8859_1)
@@ -603,7 +604,7 @@ class FileProcessingServiceSpec extends AnyWordSpecLike
 
         when(mockUpscanConnector.getUpscanFile(any(), any(), any())).thenReturn(Future.successful(Some(inputStream)))
 
-        val result = await(SUT.readFile(envelopeId, fileId, userId))
+        val result = await(SUT.readFile(reference, fileId, userId))
 
         result.toList should contain theSameElementsAs List("Johné,Smithè,AB123456C,1990-02-21")
       }
@@ -765,7 +766,7 @@ class FileProcessingServiceSpec extends AnyWordSpecLike
       }
     }
 
-    "process file and generate results file " ignore {
+    "process file and generate results file " when {
       "valid file is submitted by user" in {
 
         val testFilePath = getTestFilePath
@@ -779,7 +780,7 @@ class FileProcessingServiceSpec extends AnyWordSpecLike
           "LE241131B,MICHEAL,SLATER,1990-02-21,otherUKResident,scotResident"
 
 
-        val upscanCallbackData = UpscanCallbackData(reference = "reference", downloadUrl = Some("url"), fileStatus = "READY", uploadDetails = None, failureDetails = None)
+        val upscanCallbackData = UpscanCallbackData(reference = fileId, downloadUrl = Some("url"), fileStatus = "READY", uploadDetails = None, failureDetails = None)
         val cacheItem = CacheItem("sessionValue", Json.toJson(Map("user1234" -> Json.toJson(upscanCallbackData))).as[JsObject], Instant.now, Instant.now)
 
         when(mockSessionCache.updateFileSession(any(), any(), any(), any()))

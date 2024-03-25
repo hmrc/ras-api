@@ -16,6 +16,7 @@
 
 package uk.gov.hmrc.rasapi.controllers
 
+import org.mockito.ArgumentMatchers.{any, eq => Meq}
 import org.mockito.Mockito._
 import org.scalatest.BeforeAndAfter
 import org.scalatest.matchers.should.Matchers
@@ -29,7 +30,7 @@ import play.api.libs.json.Json
 import play.api.mvc.ControllerComponents
 import play.api.test.FakeRequest
 import play.api.test.Helpers.{defaultAwaitTimeout, status}
-import uk.gov.hmrc.rasapi.models.{CallbackData, ResultsFileMetaData, UploadDetails, UpscanCallbackData}
+import uk.gov.hmrc.rasapi.models.{ResultsFileMetaData, UploadDetails, UpscanCallbackData, V2_0}
 import uk.gov.hmrc.rasapi.services.{FileProcessingService, RasFilesSessionService}
 
 import java.time.Instant
@@ -42,7 +43,7 @@ class FileProcessingControllerSpec extends AnyWordSpecLike with Matchers with Mo
   val fileId = "file-id-1"
   val fileStatus = "READY"
   val reason: Option[String] = None
-  val callbackData: CallbackData = CallbackData(downloadUrl, fileId, fileStatus, reason)
+  //val callbackData: CallbackData = CallbackData(downloadUrl, fileId, fileStatus, reason)
   val uploadDetails = UploadDetails(uploadTimestamp = Instant.now(), checksum = "qwerty", fileMimeType = "ytrewq", fileName = "???", size = 1234)
   val upscanCallbackData: UpscanCallbackData = UpscanCallbackData(reference = "reference", downloadUrl = Some(downloadUrl), fileStatus = fileStatus, uploadDetails = Some(uploadDetails), None)
   val resultsFile: ResultsFileMetaData = ResultsFileMetaData(fileId, "fileName.csv", 1234L, 123, 1234L)
@@ -68,11 +69,12 @@ class FileProcessingControllerSpec extends AnyWordSpecLike with Matchers with Mo
 
   "statusCallback" should {
     "return Ok and interact with FileProcessingService and SessionCacheService" when {
-      "an 'READY' status is given" in {
-
+      "an 'READY' status is given and processFile is successful" in {
+        when(mockFileProcessingService.processFile(any(), any(), any())(any(), any())).thenReturn(true)
         val result = SUT.statusCallback(userId, version = "2.0").apply(fakeRequest.withJsonBody(Json.toJson(upscanCallbackData)))
 
-        //verify(mockFileProcessingService).processFile(Meq(userId), Meq(CallbackData.fromUpscanCallbackData(upscanCallbackData)), Meq(V2_0))(any(), any())
+        verify(mockFileProcessingService).processFile(Meq(userId), Meq(upscanCallbackData), Meq(V2_0))(any(), any())
+        verify(mockSessionCacheService).updateFileSession(Meq(userId), Meq(upscanCallbackData), Meq(None), Meq(None))
 
         status(result) shouldBe OK
       }
@@ -80,19 +82,21 @@ class FileProcessingControllerSpec extends AnyWordSpecLike with Matchers with Mo
 
     "return Ok and not interact with FileProcessingService" when {
       "an 'FAILED' status is given" in {
-        val envelopeId = "0b215ey97-11d4-4006-91db-c067e74fc653"
+        val reference = "0b215ey97-11d4-4006-91db-c067e74fc653"
         val fileId = "file-id-1"
         val fileStatus = "FAILED"
         val reason: Option[String] = Some("VirusDetected")
-        val callbackData = CallbackData(envelopeId, fileId, fileStatus, reason)
+        //val callbackData = CallbackData(envelopeId, fileId, fileStatus, reason)
 
         val result = SUT.statusCallback(userId, version = "2.0").apply(fakeRequest.withJsonBody(Json.toJson(upscanCallbackData.copy(fileStatus = fileStatus))))
 
         verifyNoInteractions(mockFileProcessingService)
-        //verify(mockSessionCacheService).updateFileSession(Meq(userId), Meq(callbackData), Meq(None), Meq(None))
+        verify(mockSessionCacheService).updateFileSession(Meq(userId), Meq(upscanCallbackData.copy(fileStatus = fileStatus)), Meq(None), Meq(None))
 
         status(result) shouldBe OK
       }
+
+      //TODO: add tests for the following failure resons: FAILED(QUARANTINE, REJECTED, UNKNOWN)
 
 //      "a 'QUARANTINED' status is given" in {
 //        val envelopeId = "0b215ey97-11d4-4006-91db-c067e74fc653"

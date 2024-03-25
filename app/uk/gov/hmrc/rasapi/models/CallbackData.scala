@@ -21,7 +21,7 @@ import play.api.libs.json.{Format, Json, OFormat}
 import uk.gov.hmrc.mongo.play.json.formats.MongoFormats
 
 import java.time.Instant
-import java.util.regex.{Matcher, Pattern}
+import java.util.regex.{Matcher, Pattern} //todo: remove unused imports in other files as well
 import scala.util.matching.Regex
 
 case class FileMetadata(id: String, name: Option[String], created: Option[String])
@@ -37,7 +37,7 @@ object FileMetadata {
   implicit val format: OFormat[FileMetadata] = Json.format[FileMetadata]
 }
 
-case class CallbackData(downloadUrl: String, fileId: String, status: String, reason: Option[String], uploadDetails: Option[UploadDetails] = None)
+//case class CallbackData(downloadUrl: String, fileId: String, status: String, reason: Option[String], uploadDetails: Option[UploadDetails] = None)
 
 case class UploadDetails(uploadTimestamp: Instant, checksum: String, fileMimeType: String, fileName: String, size: Int)
 
@@ -51,27 +51,23 @@ object UploadDetails {
   implicit val formats: OFormat[UploadDetails] = Json.format[UploadDetails]
 }
 case class UpscanCallbackData(reference: String, downloadUrl: Option[String], fileStatus: String, uploadDetails: Option[UploadDetails], failureDetails: Option[FailureDetails]) {
-  val fileIdPattern: Regex = """[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{12}""".r
-
-  val failureReason = this.failureDetails.getOrElse(FailureDetails("unknown", "")).failureReason
-  val message = this.failureDetails.getOrElse(FailureDetails("unknown", "")).message
-
-  //val fileId: String = fileIdPattern.findFirstIn(downloadUrl).getOrElse(throw new IllegalArgumentException("dupa o!"))
+  val failureReason: String = this.failureDetails.getOrElse(FailureDetails("unknown", "")).failureReason
+  val message: String = this.failureDetails.getOrElse(FailureDetails("unknown", "")).message
 }
 
-object CallbackData {
-
-  def fromUpscanCallbackData(ucd: UpscanCallbackData): CallbackData =
-    CallbackData(
-      ucd.downloadUrl.get,
-      ucd.reference,
-      ucd.fileStatus,
-      None,
-      Some(ucd.uploadDetails.get)
-    )
-
-  implicit val formats: OFormat[CallbackData] = Json.format[CallbackData]
-}
+//object CallbackData {
+//
+//  def fromUpscanCallbackData(ucd: UpscanCallbackData): CallbackData =
+//    CallbackData(
+//      ucd.downloadUrl.get,
+//      ucd.reference,
+//      ucd.fileStatus,
+//      None,
+//      Some(ucd.uploadDetails.get)
+//    )
+//
+//  implicit val formats: OFormat[CallbackData] = Json.format[CallbackData]
+//}
 
 object UpscanCallbackData {
   implicit val formats: OFormat[UpscanCallbackData] = Json.format[UpscanCallbackData]

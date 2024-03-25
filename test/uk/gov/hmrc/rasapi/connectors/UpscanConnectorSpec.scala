@@ -60,7 +60,7 @@ class UpscanConnectorSpec extends AnyWordSpecLike with Matchers with GuiceOneApp
 
   object TestConnector extends UpscanConnector(mockWsHttp, appContext, ExecutionContext.global)
 
-  val envelopeId: String = "0b215e97-11d4-4006-91db-c067e74fc653"
+  val reference: String = "0b215e97-11d4-4006-91db-c067e74fc653"
   val fileId: String = "file-id-1"
   val userId: String = "A1234567"
   val originalFileName: String = "origFileName"
@@ -75,7 +75,7 @@ class UpscanConnectorSpec extends AnyWordSpecLike with Matchers with GuiceOneApp
     "return an StreamedResponse from Upscan service" in {
       when(mockWsHttp.buildRequestWithStream(any())).thenReturn(Future.successful(wsResponse))
 
-      val result = await(TestConnector.getUpscanFile(envelopeId, fileId, userId))
+      val result = await(TestConnector.getUpscanFile(reference, fileId, userId))
       val reader = new BufferedReader(new InputStreamReader(result.get))
 
       (Iterator continually reader.readLine takeWhile (_ != null) toList) should contain theSameElementsAs List("Test", "Passed")
@@ -84,7 +84,7 @@ class UpscanConnectorSpec extends AnyWordSpecLike with Matchers with GuiceOneApp
       when(mockWsHttp.buildRequestWithStream(any())).thenReturn(Future.failed(new RequestTimeoutException("")))
 
       val exception = intercept[RuntimeException] {
-        await(TestConnector.getUpscanFile(envelopeId, fileId, userId))
+        await(TestConnector.getUpscanFile(reference, fileId, userId))
       }
 
       exception.getMessage.contains("Error Streaming file from Upscan service") shouldBe true

@@ -56,7 +56,7 @@ class RasFileRepositoryISpec extends PlaySpec with ScalaFutures with GuiceOneApp
     def saveFile(): Unit = {
       await(rasFileRepository.saveFile(
         userId = "userid-1",
-        envelopeId = "envelopeid-1",
+        reference = "reference-1",
         filePath = largeFile.toPath,
         fileId = filename
       ))

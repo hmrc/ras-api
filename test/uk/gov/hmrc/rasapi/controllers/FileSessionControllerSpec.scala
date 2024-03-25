@@ -88,9 +88,9 @@ class FileSessionControllerSpec extends AnyWordSpecLike with TestEnrolments with
       result.header.status shouldBe Status.BAD_REQUEST
     }
 
-    "return BAD_REQUEST if envelopeId is missing" in {
+    "return BAD_REQUEST if reference is missing" in {
       when(mockAuthConnector.authorise[Enrolments](any(), any())(any(), any())).thenReturn(successfulRetrieval)
-      val jsonRequest = Json.toJson(createFileSessionRequest).as[JsObject] - "envelopeId"
+      val jsonRequest = Json.toJson(createFileSessionRequest).as[JsObject] - "reference"
 
       val result = fileSessionController.createFileSession()
         .apply(FakeRequest(Helpers.POST, "/create-file-session")
@@ -100,9 +100,9 @@ class FileSessionControllerSpec extends AnyWordSpecLike with TestEnrolments with
       result.header.status shouldBe Status.BAD_REQUEST
     }
 
-    "return BAD_REQUEST if envelopeId is empty" in {
+    "return BAD_REQUEST if reference is empty" in {
       when(mockAuthConnector.authorise[Enrolments](any(), any())(any(), any())).thenReturn(successfulRetrieval)
-      val jsonRequest = Json.toJson(createFileSessionRequest.copy(envelopeId = ""))
+      val jsonRequest = Json.toJson(createFileSessionRequest.copy(reference = ""))
 
       val result = fileSessionController.createFileSession()
         .apply(FakeRequest(Helpers.POST, "/create-file-session")

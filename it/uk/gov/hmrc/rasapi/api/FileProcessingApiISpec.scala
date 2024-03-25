@@ -53,7 +53,7 @@ class FileProcessingApiISpec extends PlaySpec with ScalaFutures
 
     def insertFile(): ResultsFile = await(rasFileRepository.saveFile(
       userId = "userid-1",
-      envelopeId = "envelopeid-1",
+      reference = "reference-1",
       filePath = largeFile.toPath,
       fileId = filename
     ))
