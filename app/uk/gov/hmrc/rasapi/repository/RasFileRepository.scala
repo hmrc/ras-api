@@ -58,8 +58,6 @@ class RasFilesRepository @Inject()(val mongoComponent: MongoComponent,
       Seq(ByteBuffer.wrap(Files.readAllBytes(filePath))
     ))
 
-    println(fileId)
-
     val options: GridFSUploadOptions = new GridFSUploadOptions()
       .metadata(Document(
         "reference" -> reference,

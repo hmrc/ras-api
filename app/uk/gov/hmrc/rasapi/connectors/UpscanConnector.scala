@@ -20,7 +20,6 @@ import akka.actor.ActorSystem
 import akka.stream.scaladsl.StreamConverters
 import play.api.Logging
 import uk.gov.hmrc.rasapi.config.{AppContext, WSHttp}
-import uk.gov.hmrc.rasapi.models.FileMetadata
 
 import java.io.InputStream
 import javax.inject.Inject

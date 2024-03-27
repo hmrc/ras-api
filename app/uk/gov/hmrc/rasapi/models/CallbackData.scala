@@ -21,8 +21,6 @@ import play.api.libs.json.{Format, Json, OFormat}
 import uk.gov.hmrc.mongo.play.json.formats.MongoFormats
 
 import java.time.Instant
-import java.util.regex.{Matcher, Pattern} //todo: remove unused imports in other files as well
-import scala.util.matching.Regex
 
 case class FileMetadata(id: String, name: Option[String], created: Option[String])
 
@@ -54,20 +52,6 @@ case class UpscanCallbackData(reference: String, downloadUrl: Option[String], fi
   val failureReason: String = this.failureDetails.getOrElse(FailureDetails("unknown", "")).failureReason
   val message: String = this.failureDetails.getOrElse(FailureDetails("unknown", "")).message
 }
-
-//object CallbackData {
-//
-//  def fromUpscanCallbackData(ucd: UpscanCallbackData): CallbackData =
-//    CallbackData(
-//      ucd.downloadUrl.get,
-//      ucd.reference,
-//      ucd.fileStatus,
-//      None,
-//      Some(ucd.uploadDetails.get)
-//    )
-//
-//  implicit val formats: OFormat[CallbackData] = Json.format[CallbackData]
-//}
 
 object UpscanCallbackData {
   implicit val formats: OFormat[UpscanCallbackData] = Json.format[UpscanCallbackData]

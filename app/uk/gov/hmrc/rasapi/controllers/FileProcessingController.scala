@@ -39,13 +39,11 @@ class FileProcessingController @Inject()(
 
   def statusCallback(userId: String, version: String): Action[AnyContent] = Action.async {
     implicit request =>
-      println(request.body)
       val optVersion = version match {
         case "1.0" => Some(V1_0)
         case "2.0" => Some(V2_0)
         case _ => None
       }
-      println("bananarama")
       (optVersion, withValidJson()) match {
         case (Some(apiVersion), Some(callbackData)) =>
           callbackData.fileStatus match {

@@ -185,7 +185,6 @@ class FileProcessingServiceSpec extends AnyWordSpecLike
 
         val res = await(repository.fetchFile(fileId, userId))
         var result = new String("")
-        println(res)
         await(res.get.data.runWith(getAll.mapMaterializedValue {
           _.map { bytes =>
             result =
