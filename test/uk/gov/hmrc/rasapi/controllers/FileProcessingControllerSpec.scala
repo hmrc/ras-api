@@ -43,8 +43,7 @@ class FileProcessingControllerSpec extends AnyWordSpecLike with Matchers with Mo
   val fileId = "file-id-1"
   val fileStatus = "READY"
   val reason: Option[String] = None
-  //val callbackData: CallbackData = CallbackData(downloadUrl, fileId, fileStatus, reason)
-  val uploadDetails = UploadDetails(uploadTimestamp = Instant.now(), checksum = "qwerty", fileMimeType = "ytrewq", fileName = "???", size = 1234)
+  val uploadDetails = UploadDetails(uploadTimestamp = Instant.now(), checksum = "1234567890", fileMimeType = "text/csv", fileName = "test.csv", size = 1234)
   val upscanCallbackData: UpscanCallbackData = UpscanCallbackData(reference = "reference", downloadUrl = Some(downloadUrl), fileStatus = fileStatus, uploadDetails = Some(uploadDetails), None)
   val resultsFile: ResultsFileMetaData = ResultsFileMetaData(fileId, "fileName.csv", 1234L, 123, 1234L)
   val userId: String = Random.nextInt(5).toString
@@ -82,11 +81,7 @@ class FileProcessingControllerSpec extends AnyWordSpecLike with Matchers with Mo
 
     "return Ok and not interact with FileProcessingService" when {
       "an 'FAILED' status is given" in {
-        val reference = "0b215ey97-11d4-4006-91db-c067e74fc653"
-        val fileId = "file-id-1"
         val fileStatus = "FAILED"
-        val reason: Option[String] = Some("VirusDetected")
-        //val callbackData = CallbackData(envelopeId, fileId, fileStatus, reason)
 
         val result = SUT.statusCallback(userId, version = "2.0").apply(fakeRequest.withJsonBody(Json.toJson(upscanCallbackData.copy(fileStatus = fileStatus))))
 
@@ -95,53 +90,6 @@ class FileProcessingControllerSpec extends AnyWordSpecLike with Matchers with Mo
 
         status(result) shouldBe OK
       }
-
-      //TODO: add tests for the following failure resons: FAILED(QUARANTINE, REJECTED, UNKNOWN)
-
-//      "a 'QUARANTINED' status is given" in {
-//        val envelopeId = "0b215ey97-11d4-4006-91db-c067e74fc653"
-//        val fileId = "file-id-1"
-//        val fileStatus = "QUARANTINED"
-//        val reason: Option[String] = None
-//        val callbackData = CallbackData(envelopeId, fileId, fileStatus, reason)
-//
-//        val result = SUT.statusCallback(userId, version = "2.0").apply(fakeRequest.withJsonBody(Json.toJson(upscanCallbackData.copy(fileStatus = fileStatus))))
-//
-//        verifyNoInteractions(mockFileProcessingService)
-//        verifyNoInteractions(mockSessionCacheService)
-//
-//        status(result) shouldBe OK
-//      }
-
-//      "a 'CLEANED'status is given" in {
-//        val envelopeId = "0b215ey97-11d4-4006-91db-c067e74fc653"
-//        val fileId = "file-id-1"
-//        val fileStatus = "CLEANED"
-//        val reason: Option[String] = None
-//        val callbackData = CallbackData(envelopeId, fileId, fileStatus, reason)
-//
-//        val result = SUT.statusCallback(userId, version = "2.0").apply(fakeRequest.withJsonBody(Json.toJson(upscanCallbackData.copy(fileStatus = fileStatus))))
-//
-//        verifyNoInteractions(mockFileProcessingService)
-//        verifyNoInteractions(mockSessionCacheService)
-//
-//        status(result) shouldBe OK
-//      }
-
-//      "an 'INFECTED' status is given" in {
-//        val envelopeId = "0b215ey97-11d4-4006-91db-c067e74fc653"
-//        val fileId = "file-id-1"
-//        val fileStatus = "INFECTED"
-//        val reason: Option[String] = None
-//        val callbackData = CallbackData(envelopeId, fileId, fileStatus, reason)
-//
-//        val result = SUT.statusCallback(userId, version = "2.0").apply(fakeRequest.withJsonBody(Json.toJson(callbackData)))
-//
-//        verifyNoInteractions(mockFileProcessingService)
-//        verifyNoInteractions(mockSessionCacheService)
-//
-//        status(result) shouldBe OK
-//      }
     }
   }
 }
