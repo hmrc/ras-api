@@ -16,7 +16,7 @@
 
 package uk.gov.hmrc.rasapi.api
 
-import akka.util.Timeout
+import org.apache.pekko.util.Timeout
 import org.scalatest.concurrent.{Eventually, ScalaFutures}
 import org.scalatestplus.play.PlaySpec
 import org.scalatestplus.play.guice.GuiceOneServerPerSuite

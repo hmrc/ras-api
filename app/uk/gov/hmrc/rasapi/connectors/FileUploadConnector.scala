@@ -16,8 +16,8 @@
 
 package uk.gov.hmrc.rasapi.connectors
 
-import akka.actor.ActorSystem
-import akka.stream.scaladsl.StreamConverters
+import org.apache.pekko.actor.ActorSystem
+import org.apache.pekko.stream.scaladsl.StreamConverters
 import play.api.Logging
 import uk.gov.hmrc.rasapi.config.{AppContext, WSHttp}
 import uk.gov.hmrc.rasapi.models.FileMetadata

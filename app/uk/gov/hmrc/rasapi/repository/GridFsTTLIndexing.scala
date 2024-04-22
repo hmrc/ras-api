@@ -51,7 +51,7 @@ trait GridFsTTLIndexing {
     ).toFuture()
   }
 
-  private def dropIndex(mdb: MongoDatabase, collectionName: String, indexName: String): Future[Void] = {
+  private def dropIndex(mdb: MongoDatabase, collectionName: String, indexName: String): Future[Unit] = {
     log.info(s"[GridFsTTLIndexing][checkAndEnsureTTL] Dropping the existing $indexName")
     mdb.getCollection(collectionName).dropIndex(indexName).toFuture()
   }

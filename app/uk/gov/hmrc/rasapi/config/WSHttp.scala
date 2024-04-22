@@ -16,7 +16,7 @@
 
 package uk.gov.hmrc.rasapi.config
 
-import akka.actor.ActorSystem
+import org.apache.pekko.actor.ActorSystem
 import play.api.Configuration
 import play.api.libs.ws.{WSClient, WSResponse}
 import uk.gov.hmrc.play.audit.http.HttpAuditing
