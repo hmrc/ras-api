@@ -16,7 +16,7 @@
 
 package uk.gov.hmrc.rasapi.repositories
 
-import akka.stream.scaladsl.Sink
+import org.apache.pekko.stream.scaladsl.Sink
 import play.api.Logging
 import uk.gov.hmrc.rasapi.services.RasFileWriter
 

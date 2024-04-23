@@ -59,7 +59,6 @@ class FileProcessingControllerSpec extends AnyWordSpecLike with Matchers with Mo
 
   override def fakeApplication(): Application =
     GuiceApplicationBuilder()
-      .disable[com.kenshoo.play.metrics.PlayModule]
       .build()
 
   lazy val fakeRequest = FakeRequest()

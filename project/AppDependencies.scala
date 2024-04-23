@@ -19,27 +19,25 @@ import sbt.*
 
 object AppDependencies {
 
-  val hmrcMongoVersion = "1.3.0"
-  val bootstrapVersion = "7.23.0"
+  val hmrcMongoVersion = "1.9.0"
+  val bootstrapVersion = "8.5.0"
 
   val compile: Seq[ModuleID] = Seq(
     ws,
-    "uk.gov.hmrc"                  %% "bootstrap-backend-play-28"        % bootstrapVersion,
-    "uk.gov.hmrc.mongo"            %% "hmrc-mongo-play-28"               % hmrcMongoVersion,
+    "uk.gov.hmrc"                  %% "bootstrap-backend-play-30"        % bootstrapVersion,
+    "uk.gov.hmrc.mongo"            %% "hmrc-mongo-play-30"               % hmrcMongoVersion,
     "uk.gov.hmrc"                  %% "domain"                           % "8.3.0-play-28",
-    "uk.gov.hmrc"                  %% "play-hmrc-api"                    % "7.2.0-play-28",
-    "joda-time"                    %  "joda-time"                        % "2.12.5",
-    "com.fasterxml.jackson.module" %% "jackson-module-scala"             % "2.16.0"
+    "uk.gov.hmrc"                  %%  "play-hmrc-api-play-30"           % "8.0.0",
+    "com.fasterxml.jackson.module" %% "jackson-module-scala"             % "2.17.0"
   )
 
   val test: Seq[ModuleID] = Seq(
-    "uk.gov.hmrc"               %% "bootstrap-test-play-28"   % bootstrapVersion,
-    "uk.gov.hmrc.mongo"         %% "hmrc-mongo-test-play-28"  % hmrcMongoVersion,
-    "org.scalatest"             %% "scalatest"                % "3.2.17",
-    "org.scalatestplus"         %% "mockito-4-11"             % "3.2.17.0",
-    "com.typesafe.akka"         %% "akka-testkit"             % "2.6.21",
-    "de.leanovate.play-mockws"  %% "play-mockws"              % "2.8.1",
-    "org.wiremock"              % "wiremock-standalone"       % "3.3.1",
+    "uk.gov.hmrc"               %% "bootstrap-test-play-30"   % bootstrapVersion,
+    "uk.gov.hmrc.mongo"         %% "hmrc-mongo-test-play-30"  % hmrcMongoVersion,
+    "org.scalatest"             %% "scalatest"                % "3.2.18",
+    "org.scalatestplus"         %% "mockito-5-10"             % "3.2.18.0",
+    "de.leanovate.play-mockws"  %% "play-mockws-3-0"          % "3.0.3",
+    "org.wiremock"              % "wiremock-standalone"       % "3.5.3",
     "com.vladsch.flexmark"      %  "flexmark-all"             % "0.64.8"
   ).map(_ % "it, test")
 

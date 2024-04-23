@@ -16,8 +16,8 @@
 
 package uk.gov.hmrc.rasapi.controllers
 
-import akka.stream.scaladsl.Source
-import akka.util.ByteString
+import org.apache.pekko.stream.scaladsl.Source
+import org.apache.pekko.util.ByteString
 import org.bson.types.ObjectId
 import play.api.Logging
 import play.api.http.HttpEntity

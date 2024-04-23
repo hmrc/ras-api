@@ -16,9 +16,9 @@
 
 package uk.gov.hmrc.rasapi.controllers
 
-import akka.actor.ActorSystem
-import akka.stream.Materializer
-import akka.stream.scaladsl.Source
+import org.apache.pekko.actor.ActorSystem
+import org.apache.pekko.stream.Materializer
+import org.apache.pekko.stream.scaladsl.Source
 import org.bson.types.ObjectId
 import org.mockito.ArgumentMatchers.{any, eq => Meq}
 import org.mockito.Mockito.{reset, verify, when}
@@ -72,7 +72,6 @@ class FileControllerSpec extends AnyWordSpecLike with Matchers with MockitoSugar
 
   override def fakeApplication(): Application =
     GuiceApplicationBuilder()
-      .disable[com.kenshoo.play.metrics.PlayModule]
       .build()
 
   implicit val actorSystem: ActorSystem = ActorSystem()

@@ -16,7 +16,8 @@
 
 package uk.gov.hmrc.rasapi.services
 
-import akka.stream.Materializer
+import org.apache.pekko.stream.Materializer
+import org.apache.pekko.actor.ActorSystem
 import mockws.MockWSHelpers
 import org.joda.time.DateTime
 import org.mockito.ArgumentCaptor
@@ -62,7 +63,8 @@ class FileProcessingServiceSpec extends AnyWordSpecLike
 
   implicit val hc: HeaderCarrier = HeaderCarrier()
   implicit val fakeReq: FakeRequest[AnyContentAsEmpty.type] = FakeRequest("POST", "/residency-status")
-  implicit val materializers: Materializer = MockWSHelpers.materializer
+  implicit lazy val system: ActorSystem        = ActorSystem()
+  implicit val materializers: Materializer = Materializer(system)
 
   val mockFileUploadConnector: FileUploadConnector = mock[FileUploadConnector]
 

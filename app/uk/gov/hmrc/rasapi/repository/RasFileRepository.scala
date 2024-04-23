@@ -15,8 +15,8 @@
  */
 
 package uk.gov.hmrc.rasapi.repository
-import akka.NotUsed
-import akka.stream.scaladsl.Source
+import org.apache.pekko.NotUsed
+import org.apache.pekko.stream.scaladsl.Source
 import org.mongodb.scala.bson.{Document, ObjectId}
 import org.mongodb.scala.gridfs.{GridFSBucket, GridFSUploadOptions}
 import org.mongodb.scala.{Observable, ObservableFuture}

@@ -16,8 +16,9 @@
 
 package uk.gov.hmrc.rasapi.repositories
 
-import akka.stream.scaladsl.Sink
-import mockws.MockWSHelpers.materializer
+import org.apache.pekko.stream.scaladsl.Sink
+import org.apache.pekko.stream.Materializer
+import org.apache.pekko.actor.ActorSystem
 import org.scalatest.concurrent.PatienceConfiguration.{Interval, Timeout}
 import org.scalatest.concurrent.{Eventually, ScalaFutures}
 import org.scalatestplus.play.PlaySpec
@@ -37,6 +38,8 @@ class RasFileRepositoryISpec extends PlaySpec with ScalaFutures with GuiceOneApp
     lazy val rasFileRepository: RasFilesRepository = app.injector.instanceOf[RasFilesRepository]
     lazy val rasChunksRepository: RasChunksRepository = app.injector.instanceOf[RasChunksRepository]
     val largeFile: File = new File("it/resources/testFiles/bulk.csv")
+    implicit lazy val system: ActorSystem        = ActorSystem()
+    implicit val materializers: Materializer = Materializer(system)
 
     val dropAll: Unit = {
       await(rasFileRepository.gridFSG.drop().head())
