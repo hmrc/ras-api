@@ -32,13 +32,13 @@ class UpscanConnector @Inject()(val wsHttp: WSHttp,
 
   def getUpscanFile(downloadUrl: String, reference: String, userId: String): Future[Option[InputStream]] = {
     implicit val system: ActorSystem = ActorSystem()
-    logger.info(s"[FileUploadConnector][getFile] Trying to retrieve file from Upscan: $reference")
+    logger.info(s"[UpscanConnector][getUpscanFile] Trying to retrieve file from Upscan: $reference")
 
     wsHttp.buildRequestWithStream(uri = downloadUrl).map { res =>
       Some(res.bodyAsSource.runWith(StreamConverters.asInputStream()))
     } recover {
       case ex: Throwable =>
-        logger.error(s"[FileUploadConnector][getFile] Exception thrown while retrieving file / converting to InputStream for userId ($userId). ${ex.getMessage}}.", ex)
+        logger.error(s"[UpscanConnector][getUpscanFile] Exception thrown while retrieving file / converting to InputStream for userId ($userId). ${ex.getMessage}}.", ex)
         throw new RuntimeException("Error Streaming file from Upscan service")
     }
   }

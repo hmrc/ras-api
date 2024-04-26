@@ -54,7 +54,7 @@ class FileProcessingController @Inject()(
                 sessionCacheService.updateFileSession(userId, callbackData, None, None)
               }
             case STATUS_FAILED => logger.error(s"[FileProcessingController][statusCallback] There is a problem with the " +
-              s"file for userId ($userId) FAILED (${callbackData.reference}), the failure reason is: ${callbackData.failureReason} and the message is: ${callbackData.message}")
+              s"file for userId ($userId) and fileId: (${callbackData.reference}), the failure reason is: ${callbackData.failureReason} and the message is: ${callbackData.message}")
               sessionCacheService.updateFileSession(userId, callbackData, None, None)
             case _ => logger.warn(s"[FileProcessingController][statusCallback] There is a problem with the file (${callbackData.reference}) for userId ($userId), the status is:" +
               s" ${callbackData.fileStatus}")

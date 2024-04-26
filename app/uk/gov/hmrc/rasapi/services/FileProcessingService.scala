@@ -99,13 +99,13 @@ class FileProcessingService @Inject()(
       }
     }
 
-    try{
+    try {
       val dataIterator = inputFileData.get.toList
       logger.info(s"[FileProcessingService][manipulateFile] File data size ${dataIterator.size} for user $userId")
       writeResultToFile(writer._2, s"National Insurance number,First name,Last name,Date of birth,$getTaxYearHeadings", userId)
       dataIterator.foreach(row =>
         if (row.nonEmpty) {
-          writeResultToFile(writer._2,fetchResult(removeDoubleQuotes(row),userId,callbackData.reference, apiVersion = apiVersion), userId)
+          writeResultToFile(writer._2, fetchResult(removeDoubleQuotes(row), userId, callbackData.reference, apiVersion = apiVersion), userId)
         }
       )
       closeWriter(writer._2)
@@ -115,16 +115,15 @@ class FileProcessingService @Inject()(
 
       saveFile(writer._1, userId, callbackData)
 
-    } catch
-      {
-        case ex:Throwable =>
-          logger.error(s"[FileProcessingService][manipulateFile] Error for userId ($userId) in File processing -> ${ex.getMessage}", ex)
-          sessionCacheService.updateFileSession(userId, callbackData.copy(fileStatus = STATUS_FAILED), None, None)
-          fileResultsMetrics.stop
-      }
+    } catch {
+      case ex: Throwable =>
+        logger.error(s"[FileProcessingService][manipulateFile] Error for userId ($userId) in File processing -> ${ex.getMessage}", ex)
+        sessionCacheService.updateFileSession(userId, callbackData.copy(fileStatus = STATUS_FAILED), None, None)
+        fileResultsMetrics.stop
+    }
     finally {
       closeWriter(writer._2)
-      clearFile( writer._1, userId)
+      clearFile(writer._1, userId)
     }
   }
 
@@ -132,24 +131,24 @@ class FileProcessingService @Inject()(
 
     logger.info("[FileProcessingService][saveFile] Starting to save file...")
     val fileSaveMetrics = metrics.register(fileSave).time
-      fileRepo.saveFile(userId, callbackData.reference, filePath).onComplete {
-        result =>
-          result match {
-            case Success(file) =>
-              logger.info(s"[FileProcessingService][saveFile] Starting to save the file (${file.getId}) for user ID: $userId")
+    fileRepo.saveFile(userId, callbackData.reference, filePath).onComplete {
+      result =>
+        result match {
+          case Success(file) =>
+            logger.info(s"[FileProcessingService][saveFile] Starting to save the file (${file.getId}) for user ID: $userId")
 
-              val resultsFileMetaData = Some(ResultsFileMetaData(file.getId.toString, file.getFilename, file.getUploadDate.getTime, file.getChunkSize, file.getLength))
+            val resultsFileMetaData = Some(ResultsFileMetaData(file.getId.toString, file.getFilename, file.getUploadDate.getTime, file.getChunkSize, file.getLength))
 
-                  sessionCacheService.updateFileSession(userId, callbackData, resultsFileMetaData, Some(FileMetadata.fromCallbackData(callbackData)))
+            sessionCacheService.updateFileSession(userId, callbackData, resultsFileMetaData, Some(callbackData.toFileMetadata))
 
-              logger.info(s"[FileProcessingService][saveFile] Completed saving the file (${file.getId}) for user ID: $userId")
-            case Failure(ex) =>
-              logger.error(s"[FileProcessingService][saveFile] results file for userId ($userId) generation/saving failed with Exception ${ex.getMessage}", ex)
-              sessionCacheService.updateFileSession(userId, callbackData.copy(fileStatus = STATUS_FAILED), None, None)
-          }
-          fileSaveMetrics.stop
+            logger.info(s"[FileProcessingService][saveFile] Completed saving the file (${file.getId}) for user ID: $userId")
+          case Failure(ex) =>
+            logger.error(s"[FileProcessingService][saveFile] results file for userId ($userId) generation/saving failed with Exception ${ex.getMessage}", ex)
+            sessionCacheService.updateFileSession(userId, callbackData.copy(fileStatus = STATUS_FAILED), None, None)
+        }
+        fileSaveMetrics.stop
 
-      }
+    }
   }
 
   def getTaxYearHeadings: String = {

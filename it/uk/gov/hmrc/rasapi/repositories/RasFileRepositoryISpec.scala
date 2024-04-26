@@ -50,11 +50,11 @@ class RasFileRepositoryISpec extends PlaySpec with ScalaFutures with GuiceOneApp
     }
 
     def fileCount: Long = {
-      await(rasFileRepository.gridFSG.find().collect().head().map(res => res.length))
+      await(rasFileRepository.gridFSG.find().collect().head().map(_.length))
     }
 
     def chunksCount: Int =
-      await(rasChunksRepository.collection.find().collect().head().map(res => res.length))
+      await(rasChunksRepository.collection.find().collect().head().map(_.length))
 
     def saveFile(): Unit = {
       await(rasFileRepository.saveFile(
