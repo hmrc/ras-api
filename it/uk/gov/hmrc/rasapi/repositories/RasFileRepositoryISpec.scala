@@ -50,18 +50,17 @@ class RasFileRepositoryISpec extends PlaySpec with ScalaFutures with GuiceOneApp
     }
 
     def fileCount: Long = {
-      await(rasFileRepository.gridFSG.find().collect().head().map(res => res.length))
+      await(rasFileRepository.gridFSG.find().collect().head().map(_.length))
     }
 
     def chunksCount: Int =
-      await(rasChunksRepository.collection.find().collect().head().map(res => res.length))
+      await(rasChunksRepository.collection.find().collect().head().map(_.length))
 
     def saveFile(): Unit = {
       await(rasFileRepository.saveFile(
         userId = "userid-1",
-        envelopeId = "envelopeid-1",
+        reference = "reference-1",
         filePath = largeFile.toPath,
-        fileId = filename
       ))
 
       eventually(Timeout(5.seconds), Interval(1.second)) {
@@ -78,7 +77,7 @@ class RasFileRepositoryISpec extends PlaySpec with ScalaFutures with GuiceOneApp
   }
 
   "fetch file" should {
-    "fetch a file that was previously saved" in new Setup("fetch-file-name") {
+    "fetch a file that was previously saved" in new Setup("reference-1") {
       saveFile()
 
       val receiveFile: Option[FileData] = await(rasFileRepository.fetchFile(filename, "userid-1"))
@@ -105,7 +104,7 @@ class RasFileRepositoryISpec extends PlaySpec with ScalaFutures with GuiceOneApp
   }
 
   "removing the file" should {
-    "remove all chunks and files from the database" in new Setup("delete-file-name") {
+    "remove all chunks and files from the database" in new Setup("reference-1") {
       saveFile()
 
       val deleteFile: Boolean = await(rasFileRepository.removeFile(filename, "userid-1"))

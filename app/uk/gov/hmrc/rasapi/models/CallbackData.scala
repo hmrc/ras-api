@@ -20,19 +20,42 @@ import org.mongodb.scala.bson.ObjectId
 import play.api.libs.json.{Format, Json, OFormat}
 import uk.gov.hmrc.mongo.play.json.formats.MongoFormats
 
+import java.time.Instant
+
 case class FileMetadata(id: String, name: Option[String], created: Option[String])
 
 object FileMetadata {
   implicit val format: OFormat[FileMetadata] = Json.format[FileMetadata]
 }
 
-case class CallbackData(envelopeId: String, fileId: String, status: String, reason: Option[String])
+case class UploadDetails(uploadTimestamp: Instant, checksum: String, fileMimeType: String, fileName: String, size: Int)
 
-object CallbackData {
-  implicit val formats: OFormat[CallbackData] = Json.format[CallbackData]
+case class FailureDetails(failureReason: String, message: String)
+  object FailureDetails{
+    implicit val formats: OFormat[FailureDetails] = Json.format[FailureDetails]
+  }
+
+object UploadDetails {
+  implicit val formats: OFormat[UploadDetails] = Json.format[UploadDetails]
 }
 
-case class ResultsFileMetaData (id: String, filename: String,uploadDate: Long, chunkSize: Int, length: Long)
+case class UpscanCallbackData(reference: String, downloadUrl: Option[String], fileStatus: String, uploadDetails: Option[UploadDetails], failureDetails: Option[FailureDetails]) {
+  val failureReason: String = this.failureDetails.getOrElse(FailureDetails("unknown", "")).failureReason
+  val message: String = this.failureDetails.getOrElse(FailureDetails("unknown", "")).message
+
+  def toFileMetadata: FileMetadata =
+    FileMetadata(
+      this.reference,
+      Some(this.uploadDetails.getOrElse(UploadDetails(Instant.now(), "", "", "", 0)).fileName),
+      Some(this.uploadDetails.getOrElse(UploadDetails(Instant.now(), "", "", "", 0)).uploadTimestamp.toString)
+    )
+}
+
+object UpscanCallbackData {
+  implicit val formats: OFormat[UpscanCallbackData] = Json.format[UpscanCallbackData]
+}
+
+case class ResultsFileMetaData(id: String, filename: String, uploadDate: Long, chunkSize: Int, length: Long)
 
 object ResultsFileMetaData {
   implicit val formats: OFormat[ResultsFileMetaData] = Json.format[ResultsFileMetaData]
@@ -42,13 +65,13 @@ case class Chunks(_id: ObjectId, files_id: ObjectId)
 
 object Chunks {
   implicit val objectIdformats: Format[ObjectId] = MongoFormats.objectIdFormat
-  implicit  val format: OFormat[Chunks] = Json.format[Chunks]
+  implicit val format: OFormat[Chunks] = Json.format[Chunks]
 }
 
-case class FileSession(userFile: Option[CallbackData],
+case class FileSession(userFile: Option[UpscanCallbackData],
                        resultsFile: Option[ResultsFileMetaData],
                        userId: String,
-                       uploadTimeStamp : Option[Long],
+                       uploadTimeStamp: Option[Long],
                        fileMetadata: Option[FileMetadata]
                       )
 

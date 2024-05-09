@@ -26,10 +26,9 @@ import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpecLike
 import org.scalatestplus.mockito.MockitoSugar
 import org.scalatestplus.play.guice.GuiceOneAppPerSuite
-import play.api.libs.json.Json
 import play.api.libs.ws.WSResponse
 import play.api.test.Helpers.{await, defaultAwaitTimeout}
-import uk.gov.hmrc.http.{HeaderCarrier, HttpResponse, RequestTimeoutException}
+import uk.gov.hmrc.http.{HeaderCarrier, RequestTimeoutException}
 import uk.gov.hmrc.rasapi.config.{AppContext, WSHttp}
 import uk.gov.hmrc.rasapi.models.FileMetadata
 
@@ -37,7 +36,7 @@ import java.io.{BufferedReader, InputStreamReader}
 import scala.concurrent.{ExecutionContext, Future}
 import scala.language.postfixOps
 
-class FileUploadConnectorSpec extends AnyWordSpecLike with Matchers with GuiceOneAppPerSuite with MockitoSugar {
+class UpscanConnectorSpec extends AnyWordSpecLike with Matchers with GuiceOneAppPerSuite with MockitoSugar {
 
   implicit val hc: HeaderCarrier = HeaderCarrier()
 
@@ -59,9 +58,9 @@ class FileUploadConnectorSpec extends AnyWordSpecLike with Matchers with GuiceOn
     wsResponseMock
   }
 
-  object TestConnector extends FileUploadConnector(mockWsHttp, appContext, ExecutionContext.global)
+  object TestConnector extends UpscanConnector(mockWsHttp, appContext, ExecutionContext.global)
 
-  val envelopeId: String = "0b215e97-11d4-4006-91db-c067e74fc653"
+  val reference: String = "0b215e97-11d4-4006-91db-c067e74fc653"
   val fileId: String = "file-id-1"
   val userId: String = "A1234567"
   val originalFileName: String = "origFileName"
@@ -69,62 +68,26 @@ class FileUploadConnectorSpec extends AnyWordSpecLike with Matchers with GuiceOn
   val fileMetadata: FileMetadata = FileMetadata(fileId, Some(originalFileName), Some(dateCreated))
 
 
-  "getFile" should {
+  "getUpscanFile" should {
 
     val wsResponse: WSResponse = createMockResponse(bodyAsSource, headers)
 
-    "return an StreamedResponse from File-Upload service" in {
+    "return an StreamedResponse from Upscan service" in {
       when(mockWsHttp.buildRequestWithStream(any())).thenReturn(Future.successful(wsResponse))
 
-      val result = await(TestConnector.getFile(envelopeId, fileId, userId))
+      val result = await(TestConnector.getUpscanFile(reference, fileId, userId))
       val reader = new BufferedReader(new InputStreamReader(result.get))
 
       (Iterator continually reader.readLine takeWhile (_ != null) toList) should contain theSameElementsAs List("Test", "Passed")
     }
-    "return a RuntimeException when File Upload throws error" in {
+    "return a RuntimeException when Upscan throws error" in {
       when(mockWsHttp.buildRequestWithStream(any())).thenReturn(Future.failed(new RequestTimeoutException("")))
 
       val exception = intercept[RuntimeException] {
-        await(TestConnector.getFile(envelopeId, fileId, userId))
+        await(TestConnector.getUpscanFile(reference, fileId, userId))
       }
 
-      exception.getMessage.contains("Error Streaming file from file-upload service") shouldBe true
-    }
-  }
-
-  "getFileMetadata" should {
-    "return the original filename when file metadata returns 200" in {
-      when(mockWsHttp.doGet(any(), any())(any())).thenReturn(Future.successful(HttpResponse(200, Json.toJson(fileMetadata).toString())))
-      val result = await(TestConnector.getFileMetadata(envelopeId, fileId, userId))
-      result.get shouldBe fileMetadata
-    }
-    "return None when file metadata does not return 200" in {
-      when(mockWsHttp.doGet(any(), any())(any())).thenReturn(Future.successful(HttpResponse(404, "")))
-      val result = await(TestConnector.getFileMetadata(envelopeId, fileId, userId))
-      result shouldBe None
-    }
-    "return None when file metadata return an exception" in {
-      when(mockWsHttp.doGet(any(), any())(any())).thenReturn(Future.failed(new RequestTimeoutException("")))
-      val result = await(TestConnector.getFileMetadata(envelopeId, fileId, userId))
-      result shouldBe None
-    }
-  }
-
-  "deleteUploadedFile" should {
-    "submit delete request to file-upload service" in {
-      when(mockWsHttp.doDelete(any(), any())(any())).thenReturn(Future.successful(HttpResponse(200, "")))
-      val result = await(TestConnector.deleteUploadedFile(envelopeId, fileId, userId))
-      result shouldBe true
-    }
-    "failed delete request to file-upload service" in {
-      when(mockWsHttp.doDelete(any(), any())(any())).thenReturn(Future.successful(HttpResponse(400, "")))
-      val result = await(TestConnector.deleteUploadedFile(envelopeId, fileId, userId))
-      result shouldBe false
-    }
-    "return false when delete returns an exception" in {
-      when(mockWsHttp.doDelete(any(), any())(any())).thenReturn(Future.failed(new RequestTimeoutException("")))
-      val result = await(TestConnector.deleteUploadedFile(envelopeId, fileId, userId))
-      result shouldBe false
+      exception.getMessage.contains("Error Streaming file from Upscan service") shouldBe true
     }
   }
 }

@@ -53,9 +53,8 @@ class FileProcessingApiISpec extends PlaySpec with ScalaFutures
 
     def insertFile(): ResultsFile = await(rasFileRepository.saveFile(
       userId = "userid-1",
-      envelopeId = "envelopeid-1",
+      reference = "reference-1",
       filePath = largeFile.toPath,
-      fileId = filename
     ))
 
     def dropAll(): Boolean = {
@@ -64,11 +63,11 @@ class FileProcessingApiISpec extends PlaySpec with ScalaFutures
   }
 
   "calling the getFile" should {
-    "retrieve the file" in new Setup("file-name-1") {
+    "retrieve the file" in new Setup("reference-1") {
       insertFile()
 
       authMocks
-      val response = await(client.doGet(s"http://localhost:$port/ras-api/file/getFile/file-name-1", Seq(("Authorization", "Bearer123"))))
+      val response = await(client.doGet(s"http://localhost:$port/ras-api/file/getFile/reference-1", Seq(("Authorization", "Bearer123"))))
 
       val testSource: BufferedSource = Source.fromFile("it/resources/testFiles/bulk.csv")
 
