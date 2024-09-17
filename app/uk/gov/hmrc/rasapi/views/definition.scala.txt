@@ -1,12 +1,5 @@
 @(context : String, status : String, endpointsEnabled : Boolean, version2Enabled : Boolean)
 {
-  "scopes": [
-    {
-      "key": "read:ras",
-      "name": "Relief At Source",
-      "description": "Access to Relief At Source API's"
-    }
-  ],
   "api": {
     "name": "Relief At Source",
     "description": "For pension scheme administrators to identify the residency status for their scheme members.",
