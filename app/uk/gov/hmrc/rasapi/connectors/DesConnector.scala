@@ -119,15 +119,11 @@ class DesConnector @Inject()( httpPost: HttpClientV2Provider,
 
     val payload = Json.toJson(Json.toJson[IndividualDetails](member)
       .as[JsObject] + ("pensionSchemeOrganisationID" -> Json.toJson(userId)))
-    //val result = httpPost.POST[JsValue, HttpResponse](uri, payload, desHeaders)
-   // (implicitly[Writes[IndividualDetails]], implicitly[HttpReads[HttpResponse]], rasHeaders, ec)
-    println("body------"+payload)
     val result = httpPost.get()
                  .post(url"$uri")
                  .setHeader(desHeaders: _*)
                  .withBody(payload)
                  .execute[HttpResponse]
-    println("result---------"+result)
     result.map(response =>
       resolveResponse(response, userId, member.nino, apiVersion)
     ).recover {
