@@ -61,7 +61,7 @@ class DesConnectorSpec extends AnyWordSpecLike with Matchers with GuiceOneAppPer
   val uuid = "123e4567-e89b-42d3-a456-556642440000"
 
   object TestDesConnector extends DesConnector(mockHttp, mockAuditService, appContext, ExecutionContext.global) {
-    override lazy val desBaseUrl = appContext.servicesConfig.baseUrl("des")
+    override lazy val desBaseUrl = "http://localhost:9669"
     override val auditService: AuditService = mockAuditService
     override lazy val allowNoNextYearStatus: Boolean = true
     override lazy val retryLimit: Int = 3
@@ -227,7 +227,7 @@ class DesConnectorSpec extends AnyWordSpecLike with Matchers with GuiceOneAppPer
       implicit val formatF = ResidencyStatusFormats.failureFormats
 
       object TestDesConnector extends DesConnector(mockHttp, mockAuditService, appContext, ExecutionContext.global) {
-        override lazy val desBaseUrl = appContext.servicesConfig.baseUrl("des")
+        override lazy val desBaseUrl = "http://localhost:9669"
         override val auditService: AuditService = mockAuditService
         override lazy val allowNoNextYearStatus: Boolean = true
         override lazy val retryLimit: Int = 3
@@ -264,7 +264,7 @@ class DesConnectorSpec extends AnyWordSpecLike with Matchers with GuiceOneAppPer
       implicit val formatF = ResidencyStatusFormats.failureFormats
 
       object TestDesConnector extends DesConnector(mockHttp, mockAuditService, appContext, ExecutionContext.global) {
-        override lazy val desBaseUrl = appContext.servicesConfig.baseUrl("des")
+        override lazy val desBaseUrl = "http://localhost:9669"
         override val auditService: AuditService = mockAuditService
         override lazy val allowNoNextYearStatus: Boolean = true
         override lazy val retryLimit: Int = 3
@@ -294,7 +294,7 @@ class DesConnectorSpec extends AnyWordSpecLike with Matchers with GuiceOneAppPer
 
     "handle successful response when 200 is returned from des and only CY is present and no next year status toggle is turned off" in {
       object TestDesConnector extends DesConnector(mockHttp, mockAuditService, appContext, ExecutionContext.global) {
-        override lazy val desBaseUrl = appContext.servicesConfig.baseUrl("des")
+        override lazy val desBaseUrl = "http://localhost:9669"
         override val auditService: AuditService = mockAuditService
         override lazy val allowNoNextYearStatus: Boolean = false
         override lazy val retryLimit: Int = 3
