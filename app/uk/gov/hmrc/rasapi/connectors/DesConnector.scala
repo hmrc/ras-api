@@ -17,9 +17,9 @@
 package uk.gov.hmrc.rasapi.connectors
 
 import play.api.Logging
-import play.api.libs.json.{JsObject, JsValue, Json, Writes}
+import play.api.libs.json.{JsObject, Json}
 import uk.gov.hmrc.http.{HeaderCarrier, _}
-import uk.gov.hmrc.play.bootstrap.http.DefaultHttpClient
+import uk.gov.hmrc.play.bootstrap.http.HttpClientV2Provider
 import uk.gov.hmrc.rasapi.config.AppContext
 import uk.gov.hmrc.rasapi.models._
 import uk.gov.hmrc.rasapi.services.AuditService
@@ -29,7 +29,7 @@ import javax.inject.Inject
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.{Failure, Success, Try}
 
-class DesConnector @Inject()( httpPost: DefaultHttpClient,
+class DesConnector @Inject()( httpPost: HttpClientV2Provider,
                               val auditService: AuditService,
                               val appContext: AppContext,
                               implicit val ec: ExecutionContext) extends Logging {
@@ -119,10 +119,11 @@ class DesConnector @Inject()( httpPost: DefaultHttpClient,
 
     val payload = Json.toJson(Json.toJson[IndividualDetails](member)
       .as[JsObject] + ("pensionSchemeOrganisationID" -> Json.toJson(userId)))
-
-    val result = httpPost.POST[JsValue, HttpResponse](uri, payload, desHeaders)
-    (implicitly[Writes[IndividualDetails]], implicitly[HttpReads[HttpResponse]], rasHeaders, ec)
-
+    val result = httpPost.get()
+                 .post(url"$uri")
+                 .setHeader(desHeaders: _*)
+                 .withBody(payload)
+                 .execute[HttpResponse]
     result.map(response =>
       resolveResponse(response, userId, member.nino, apiVersion)
     ).recover {
