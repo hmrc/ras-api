@@ -21,11 +21,12 @@ import org.scalatest.concurrent.{Eventually, ScalaFutures}
 import org.scalatestplus.play.PlaySpec
 import org.scalatestplus.play.guice.GuiceOneServerPerSuite
 import play.api.Application
+import play.api.http.Status.OK
 import play.api.inject.guice.GuiceApplicationBuilder
 import play.api.libs.ws.WSClient
-import play.api.test.Helpers.OK
 import play.api.test.{DefaultAwaitTimeout, FutureAwaits}
-import uk.gov.hmrc.http.HttpClient
+import uk.gov.hmrc.http.client.HttpClientV2
+import uk.gov.hmrc.http.{HeaderCarrier, StringContextOps}
 import uk.gov.hmrc.rasapi.itUtils.WireMockServerHelper
 import uk.gov.hmrc.rasapi.models.ResultsFile
 import uk.gov.hmrc.rasapi.repository.RasFilesRepository
@@ -46,7 +47,9 @@ class FileProcessingApiISpec extends PlaySpec with ScalaFutures
 
   lazy val rasFileRepository: RasFilesRepository = app.injector.instanceOf[RasFilesRepository]
   lazy val ws: WSClient = app.injector.instanceOf[WSClient]
-  lazy val client:HttpClient = app.injector.instanceOf[HttpClient]
+  lazy val client1:HttpClientV2 = app.injector.instanceOf[HttpClientV2]
+  private val uri = s"http://localhost:$port/ras-api/file/getFile/reference-1"
+  implicit val hc : HeaderCarrier = HeaderCarrier()
 
   class Setup(filename: String) {
     val largeFile: File = new File("it/resources/testFiles/bulk.csv")
@@ -65,12 +68,10 @@ class FileProcessingApiISpec extends PlaySpec with ScalaFutures
   "calling the getFile" should {
     "retrieve the file" in new Setup("reference-1") {
       insertFile()
-
+      val headers = Map("Authorization" -> "Bearer123")
       authMocks
-      val response = await(client.doGet(s"http://localhost:$port/ras-api/file/getFile/reference-1", Seq(("Authorization", "Bearer123"))))
-
       val testSource: BufferedSource = Source.fromFile("it/resources/testFiles/bulk.csv")
-
+      val response =   await(client1.get(url"$uri").setHeader(headers.toSeq:_*).execute)
       response.status mustBe OK
       response.body mustBe testSource.getLines().toList.mkString("\n")
       response.header("Content-Type") mustBe Some("application/csv")
