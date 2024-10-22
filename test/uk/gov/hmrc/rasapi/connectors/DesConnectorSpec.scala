@@ -17,17 +17,19 @@
 package uk.gov.hmrc.rasapi.connectors
 
 import org.joda.time.DateTime
-import org.mockito.ArgumentMatchers.{eq => Meq, _}
+import org.mockito.ArgumentMatchers._
 import org.mockito.Mockito.{reset, times, verify, when}
 import org.scalatest.BeforeAndAfter
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpecLike
 import org.scalatestplus.mockito.MockitoSugar
 import org.scalatestplus.play.guice.GuiceOneAppPerSuite
-import play.api.libs.json.{JsValue, Json, OFormat}
+import play.api.libs.json.{JsObject, JsValue, Json, OFormat}
 import play.api.test.Helpers.{await, defaultAwaitTimeout}
 import uk.gov.hmrc.http._
-import uk.gov.hmrc.play.bootstrap.http.DefaultHttpClient
+import uk.gov.hmrc.http.client.{HttpClientV2, RequestBuilder}
+import uk.gov.hmrc.play.bootstrap.config.ServicesConfig
+import uk.gov.hmrc.play.bootstrap.http.HttpClientV2Provider
 import uk.gov.hmrc.rasapi.config.AppContext
 import uk.gov.hmrc.rasapi.models._
 import uk.gov.hmrc.rasapi.services.AuditService
@@ -38,20 +40,28 @@ class DesConnectorSpec extends AnyWordSpecLike with Matchers with GuiceOneAppPer
 
   implicit val hc: HeaderCarrier = HeaderCarrier()
 
-  val mockHttp: DefaultHttpClient = mock[DefaultHttpClient]
+  val mockHttp: HttpClientV2Provider = mock[HttpClientV2Provider]
+  val mockHttpClient: HttpClientV2 = mock[HttpClientV2]
+  val mockRequestBuilder = mock[RequestBuilder]
   val mockAuditService: AuditService = mock[AuditService]
   implicit val format: OFormat[ResidencyStatusSuccess] = ResidencyStatusFormats.successFormats
 
+  val servicesConfig = app.injector.instanceOf[ServicesConfig]
   val appContext: AppContext = app.injector.instanceOf[AppContext]
 
   before {
     reset(mockHttp)
+    reset(mockHttpClient)
+    when(mockHttp.get()).thenReturn(mockHttpClient)
+    when(mockHttpClient.post(any())(any())).thenReturn(mockRequestBuilder)
+    when(mockRequestBuilder.setHeader(any())).thenReturn(mockRequestBuilder)
+    when(mockRequestBuilder.withBody(any[JsObject])(any(), any(), any())).thenReturn(mockRequestBuilder)
   }
 
   val uuid = "123e4567-e89b-42d3-a456-556642440000"
 
   object TestDesConnector extends DesConnector(mockHttp, mockAuditService, appContext, ExecutionContext.global) {
-    override lazy val desBaseUrl = ""
+    override lazy val desBaseUrl = "http://localhost:9669"
     override val auditService: AuditService = mockAuditService
     override lazy val allowNoNextYearStatus: Boolean = true
     override lazy val retryLimit: Int = 3
@@ -60,6 +70,7 @@ class DesConnectorSpec extends AnyWordSpecLike with Matchers with GuiceOneAppPer
     override lazy val desAuthToken: String = "DES AUTH TOKEN"
     override lazy val isRetryEnabled: Boolean = true
     override lazy val isBulkRetryEnabled: Boolean = false
+
     override def generateNewUUID: String = uuid
   }
 
@@ -99,17 +110,16 @@ class DesConnectorSpec extends AnyWordSpecLike with Matchers with GuiceOneAppPer
         currentYearResidencyStatus = "Uk", nextYearResidencyStatus = Some("Scottish"))
 
       val individualDetails = IndividualDetails("AB123456C", "JOHN", "SMITH", new DateTime("1990-02-21"))
-
+      val expectedResponse: Future[HttpResponse] = Future.successful(HttpResponse(200, Json.toJson(successresponse).toString()))
       val expectedPayload = createJsonPayload(individualDetails)
 
-      when(mockHttp.POST[JsValue, HttpResponse](any(), any(), any())(any(), any(), any(), any())).
-        thenReturn(Future.successful(HttpResponse(200, Json.toJson(successresponse).toString())))
+      when(mockRequestBuilder.execute(any[HttpReads[HttpResponse]], any())).thenReturn(expectedResponse)
 
       val result = await(TestDesConnector.getResidencyStatus(individualDetails, userId, V2_0))
       result.isLeft shouldBe true
       result.left.getOrElse("Get Failed") shouldBe ResidencyStatus("otherUKResident", Some("scotResident"))
 
-      verify(mockHttp, times(1)).POST[JsValue, HttpResponse](any(), Meq[JsValue](expectedPayload), any())(any(), any(), any(), any())
+      verify(mockHttpClient, times(1)).post(any())(any())
     }
 
     "When the requested API version is V1.0" should {
@@ -122,14 +132,14 @@ class DesConnectorSpec extends AnyWordSpecLike with Matchers with GuiceOneAppPer
         val individualDetails = IndividualDetails("AB123456C", "JACK", "OSCAR", new DateTime("1962-07-07"))
 
         val expectedPayload = createJsonPayload(individualDetails)
+        val expectedResponse: Future[HttpResponse] = Future.successful(HttpResponse(200, Json.toJson(successResponse).toString()))
 
-        when(mockHttp.POST[JsValue, HttpResponse](any(), Meq[JsValue](expectedPayload), any())(any(), any(), any(), any())).
-          thenReturn(Future.successful(HttpResponse(200, Json.toJson(successResponse).toString())))
+        when(mockRequestBuilder.execute(any[HttpReads[HttpResponse]], any())).thenReturn(expectedResponse)
 
         val result = await(TestDesConnector.getResidencyStatus(individualDetails, userId, V1_0))
         result shouldBe Left(ResidencyStatus("otherUKResident", Some("otherUKResident")))
 
-        verify(mockHttp, times(1)).POST[JsValue, HttpResponse](any(), Meq[JsValue](expectedPayload), any())(any(), any(), any(), any())
+        verify(mockHttpClient, times(1)).post(any())(any())
       }
 
       "handle successful response when 200 is returned from des where CY and CYPlusOne is present for a Scottish resident moving in Wales" in {
@@ -140,14 +150,14 @@ class DesConnectorSpec extends AnyWordSpecLike with Matchers with GuiceOneAppPer
         val individualDetails = IndividualDetails("SG123480", "HELEN", "SMITH", new DateTime("1975-02-18"))
 
         val expectedPayload = createJsonPayload(individualDetails)
+        val expectedResponse: Future[HttpResponse] = Future.successful(HttpResponse(200, Json.toJson(successResponse).toString()))
 
-        when(mockHttp.POST[JsValue, HttpResponse](any(), any(), any())(any(), any(), any(), any())).
-          thenReturn(Future.successful(HttpResponse(200, Json.toJson(successResponse).toString())))
+        when(mockRequestBuilder.execute(any[HttpReads[HttpResponse]], any())).thenReturn(expectedResponse)
 
         val result = await(TestDesConnector.getResidencyStatus(individualDetails, userId, V1_0))
         result shouldBe Left(ResidencyStatus("otherUKResident", Some("scotResident")))
 
-        verify(mockHttp, times(1)).POST[JsValue, HttpResponse](any(), Meq[JsValue](expectedPayload), any())(any(), any(), any(), any())
+        verify(mockHttpClient, times(1)).post(any())(any())
       }
 
     }
@@ -162,14 +172,14 @@ class DesConnectorSpec extends AnyWordSpecLike with Matchers with GuiceOneAppPer
         val individualDetails = IndividualDetails("AB123456C", "JACK", "OSCAR", new DateTime("1962-07-07"))
 
         val expectedPayload = createJsonPayload(individualDetails)
+        val expectedResponse: Future[HttpResponse] = Future.successful(HttpResponse(200, Json.toJson(successResponse).toString()))
 
-        when(mockHttp.POST[JsValue, HttpResponse](any(), any(), any())(any(), any(), any(), any())).
-          thenReturn(Future.successful(HttpResponse(200, Json.toJson(successResponse).toString())))
+        when(mockRequestBuilder.execute(any[HttpReads[HttpResponse]], any())).thenReturn(expectedResponse)
 
         val result = await(TestDesConnector.getResidencyStatus(individualDetails, userId, V2_0))
         result shouldBe Left(ResidencyStatus("welshResident", Some("welshResident")))
 
-        verify(mockHttp, times(1)).POST[JsValue, HttpResponse](any(), Meq[JsValue](expectedPayload), any())(any(), any(), any(), any())
+        verify(mockHttpClient, times(1)).post(any())(any())
       }
 
       "handle successful response when 200 is returned from des where CY and CYPlusOne is present for a Scottish resident moving in Wales" in {
@@ -180,14 +190,14 @@ class DesConnectorSpec extends AnyWordSpecLike with Matchers with GuiceOneAppPer
         val individualDetails = IndividualDetails("SG123480", "HELEN", "SMITH", new DateTime("1975-02-18"))
 
         val expectedPayload = createJsonPayload(individualDetails)
+        val expectedResponse: Future[HttpResponse] = Future.successful(HttpResponse(200, Json.toJson(successResponse).toString()))
 
-        when(mockHttp.POST[JsValue, HttpResponse](any(), any(), any())(any(), any(), any(), any())).
-          thenReturn(Future.successful(HttpResponse(200, Json.toJson(successResponse).toString())))
+        when(mockRequestBuilder.execute(any[HttpReads[HttpResponse]], any())).thenReturn(expectedResponse)
 
         val result = await(TestDesConnector.getResidencyStatus(individualDetails, userId, V2_0))
         result shouldBe Left(ResidencyStatus("welshResident", Some("scotResident")))
 
-        verify(mockHttp, times(1)).POST[JsValue, HttpResponse](any(), Meq[JsValue](expectedPayload), any())(any(), any(), any(), any())
+        verify(mockHttpClient, times(1)).post(any())(any())
       }
 
     }
@@ -200,15 +210,15 @@ class DesConnectorSpec extends AnyWordSpecLike with Matchers with GuiceOneAppPer
       val individualDetails = IndividualDetails("AB123456C", "JOHN", "SMITH", new DateTime("1990-02-21"))
 
       val expectedPayload = createJsonPayload(individualDetails)
+      val expectedResponse: Future[HttpResponse] = Future.successful(HttpResponse(200, Json.toJson(successResponse).toString()))
 
-      when(mockHttp.POST[JsValue, HttpResponse](any(), any(), any())(any(), any(), any(), any())).
-        thenReturn(Future.successful(HttpResponse(200, Json.toJson(successResponse).toString())))
+      when(mockRequestBuilder.execute(any[HttpReads[HttpResponse]], any())).thenReturn(expectedResponse)
 
       val result = await(TestDesConnector.getResidencyStatus(individualDetails, userId, V2_0))
       result.isLeft shouldBe true
       result.left.getOrElse("Get Failed") shouldBe ResidencyStatus("otherUKResident", None)
 
-      verify(mockHttp, times(1)).POST[JsValue, HttpResponse](any(), Meq[JsValue](expectedPayload), any())(any(), any(), any(), any())
+      verify(mockHttpClient, times(1)).post(any())(any())
     }
 
     "handle unsuccessful response for bulk request when 429 is returned from des the first time around and CY and " +
@@ -217,7 +227,7 @@ class DesConnectorSpec extends AnyWordSpecLike with Matchers with GuiceOneAppPer
       implicit val formatF = ResidencyStatusFormats.failureFormats
 
       object TestDesConnector extends DesConnector(mockHttp, mockAuditService, appContext, ExecutionContext.global) {
-        override lazy val desBaseUrl = ""
+        override lazy val desBaseUrl = "http://localhost:9669"
         override val auditService: AuditService = mockAuditService
         override lazy val allowNoNextYearStatus: Boolean = true
         override lazy val retryLimit: Int = 3
@@ -235,17 +245,17 @@ class DesConnectorSpec extends AnyWordSpecLike with Matchers with GuiceOneAppPer
       val individualDetails = IndividualDetails("AB123456C", "JOHN", "SMITH", new DateTime("1990-02-21"))
 
       val expectedPayload = createJsonPayload(individualDetails)
+      val expectedSuccessResponse: Future[HttpResponse] = Future.successful(HttpResponse(200, Json.toJson(successResponse).toString()))
+      val expectedErrorResponse: Future[HttpResponse] = Future.successful(HttpResponse(429, Json.toJson(errorResponse).toString()))
 
-      when(mockHttp.POST[JsValue, HttpResponse](any(), any(), any())(any(), any(), any(), any())).
-        thenReturn(Future.successful(HttpResponse(429, Json.toJson(errorResponse).toString())),
-          Future.successful(HttpResponse(200, Json.toJson(successResponse).toString())))
+      when(mockRequestBuilder.execute(any[HttpReads[HttpResponse]], any())).thenReturn(expectedErrorResponse, expectedSuccessResponse)
 
       val result = await(TestDesConnector.getResidencyStatus(individualDetails, userId, V2_0, isBulkRequest = true))
 
       result.isRight shouldBe false
       result.left.getOrElse("Get Failed") shouldBe ResidencyStatus("otherUKResident", Some("scotResident"))
 
-      verify(mockHttp, times(2)).POST[JsValue, HttpResponse](any(), Meq[JsValue](expectedPayload), any())(any(), any(), any(), any())
+      verify(mockHttpClient, times(2)).post(any())(any())
     }
 
     "handle unsuccessful response for bulk request when 429 is returned from des the first time around and CY and " +
@@ -254,7 +264,7 @@ class DesConnectorSpec extends AnyWordSpecLike with Matchers with GuiceOneAppPer
       implicit val formatF = ResidencyStatusFormats.failureFormats
 
       object TestDesConnector extends DesConnector(mockHttp, mockAuditService, appContext, ExecutionContext.global) {
-        override lazy val desBaseUrl = ""
+        override lazy val desBaseUrl = "http://localhost:9669"
         override val auditService: AuditService = mockAuditService
         override lazy val allowNoNextYearStatus: Boolean = true
         override lazy val retryLimit: Int = 3
@@ -268,24 +278,23 @@ class DesConnectorSpec extends AnyWordSpecLike with Matchers with GuiceOneAppPer
       val errorResponse = ResidencyStatusFailure("INTERNAL_SERVER_ERROR", "Internal server error.")
 
       val individualDetails = IndividualDetails("AB123456C", "JOHN", "SMITH", new DateTime("1990-02-21"))
+      val expectedErrorResponse: Future[HttpResponse] = Future.successful(HttpResponse(429, Json.toJson(errorResponse).toString()))
 
       val expectedPayload = createJsonPayload(individualDetails)
 
-      when(mockHttp.POST[JsValue, HttpResponse](any(), any(), any())(any(), any(), any(), any())).
-        thenReturn(Future.successful(HttpResponse(429, Json.toJson(errorResponse).toString())))
+      when(mockRequestBuilder.execute(any[HttpReads[HttpResponse]], any())).thenReturn(expectedErrorResponse)
 
       val result = await(TestDesConnector.getResidencyStatus(individualDetails, userId, V2_0, isBulkRequest = true))
 
       result.isLeft shouldBe false
       result.getOrElse("Get Failed") shouldBe errorResponse
 
-      verify(mockHttp, times(1)).POST[JsValue, HttpResponse](any(), Meq[JsValue](expectedPayload), any())(any(), any(), any(), any())
+      verify(mockHttpClient, times(1)).post(any())(any())
     }
 
     "handle successful response when 200 is returned from des and only CY is present and no next year status toggle is turned off" in {
-
       object TestDesConnector extends DesConnector(mockHttp, mockAuditService, appContext, ExecutionContext.global) {
-        override lazy val desBaseUrl = ""
+        override lazy val desBaseUrl = "http://localhost:9669"
         override val auditService: AuditService = mockAuditService
         override lazy val allowNoNextYearStatus: Boolean = false
         override lazy val retryLimit: Int = 3
@@ -295,44 +304,35 @@ class DesConnectorSpec extends AnyWordSpecLike with Matchers with GuiceOneAppPer
         override lazy val isRetryEnabled: Boolean = true
         override lazy val isBulkRetryEnabled: Boolean = false
       }
-
       val errorResponse = ResidencyStatusFailure(TestDesConnector.error_InternalServerError, "Internal server error.")
-
       val successResponse = ResidencyStatusSuccess(nino = "AB123456C", deathDate = Some(""), deathDateStatus = Some(""), deseasedIndicator = Some(false),
         currentYearResidencyStatus = "Uk", nextYearResidencyStatus = None)
-
       val individualDetails = IndividualDetails("AB123456C", "JOHN", "SMITH", new DateTime("1990-02-21"))
-
       val expectedPayload = createJsonPayload(individualDetails)
 
-      when(mockHttp.POST[JsValue, HttpResponse](any(), any(), any())(any(), any(), any(), any())).
+      when(mockRequestBuilder.execute(any[HttpReads[HttpResponse]], any())).
         thenReturn(Future.successful(HttpResponse(200, Json.toJson(successResponse).toString())))
-
       val result = await(TestDesConnector.getResidencyStatus(individualDetails, userId, V2_0))
-
       result.isLeft shouldBe false
       result.getOrElse("Get Failed") shouldBe errorResponse
-
-      verify(mockHttp, times(1)).POST[JsValue, HttpResponse](any(), Meq[JsValue](expectedPayload), any())(any(), any(), any(), any())
+      verify(mockHttpClient, times(1)).post(any())(any())
     }
 
     "handle failure response (no match) from des" in {
       implicit val formatF = ResidencyStatusFormats.failureFormats
       val errorResponse = ResidencyStatusFailure("STATUS_UNAVAILABLE", "Cannot provide a residency status for this pension scheme member.")
 
-      val individualDetails =IndividualDetails("AB123456C", "JOHN", "Lewis", new DateTime("1990-02-21"))
+      val individualDetails = IndividualDetails("AB123456C", "JOHN", "Lewis", new DateTime("1990-02-21"))
 
       val expectedPayload = createJsonPayload(individualDetails)
-
-      when(mockHttp.POST[JsValue, HttpResponse](any(), any(), any())(any(), any(), any(), any())).
+      when(mockRequestBuilder.execute(any[HttpReads[HttpResponse]], any())).
         thenReturn(Future.successful(HttpResponse(404, Json.toJson(errorResponse).toString())))
-
       val result = await(TestDesConnector.getResidencyStatus(individualDetails, userId, V2_0))
 
       result.isLeft shouldBe false
       result.getOrElse("Get Failed") shouldBe errorResponse
 
-      verify(mockHttp, times(1)).POST[JsValue, HttpResponse](any(), Meq[JsValue](expectedPayload), any())(any(), any(), any(), any())
+      verify(mockHttpClient, times(1)).post(any())(any())
     }
 
     "handle success response but the person is deceased from des" in {
@@ -342,8 +342,7 @@ class DesConnectorSpec extends AnyWordSpecLike with Matchers with GuiceOneAppPer
       val individualDetails = IndividualDetails("AB123456C", "JOHN", "Lewis", new DateTime("1990-02-21"))
 
       val expectedPayload = createJsonPayload(individualDetails)
-
-      when(mockHttp.POST[JsValue, HttpResponse](any(), any(), any())(any(), any(), any(), any())).
+      when(mockRequestBuilder.execute(any[HttpReads[HttpResponse]], any())).
         thenReturn(Future.successful(HttpResponse(200, Json.toJson(successResponse).toString())))
 
       val expectedResult = ResidencyStatusFailure("DECEASED", "Cannot provide a residency status for this pension scheme member.")
@@ -353,7 +352,7 @@ class DesConnectorSpec extends AnyWordSpecLike with Matchers with GuiceOneAppPer
       result.isLeft shouldBe false
       result.getOrElse("Get Failed") shouldBe expectedResult
 
-      verify(mockHttp, times(1)).POST[JsValue, HttpResponse](any(), Meq[JsValue](expectedPayload), any())(any(), any(), any(), any())
+      verify(mockHttpClient, times(1)).post(any())(any())
     }
 
     "handle unexpected responses as 500 from des" in {
@@ -363,8 +362,7 @@ class DesConnectorSpec extends AnyWordSpecLike with Matchers with GuiceOneAppPer
       val individualDetails = IndividualDetails("AB123456C", "JOHN", "Lewis", new DateTime("1990-02-21"))
 
       val expectedPayload = createJsonPayload(individualDetails)
-
-      when(mockHttp.POST[JsValue, HttpResponse](any(), any(), any())(any(), any(), any(), any())).
+      when(mockRequestBuilder.execute(any[HttpReads[HttpResponse]], any())).
         thenReturn(Future.successful(HttpResponse(500, Json.toJson(errorResponse).toString())))
 
       val result = await(TestDesConnector.getResidencyStatus(individualDetails, userId, V2_0))
@@ -372,7 +370,7 @@ class DesConnectorSpec extends AnyWordSpecLike with Matchers with GuiceOneAppPer
       result.isLeft shouldBe false
       result.getOrElse("Get Failed") shouldBe errorResponse
 
-      verify(mockHttp, times(3)).POST[JsValue, HttpResponse](any(), Meq[JsValue](expectedPayload), any())(any(), any(), any(), any())
+      verify(mockHttpClient, times(3)).post(any())(any())
     }
 
     "handle Service Unavailable (503) response from des" in {
@@ -381,8 +379,7 @@ class DesConnectorSpec extends AnyWordSpecLike with Matchers with GuiceOneAppPer
       val individualDetails = IndividualDetails("AB123456C", "JOHN", "Lewis", new DateTime("1990-02-21"))
 
       val expectedPayload = createJsonPayload(individualDetails)
-
-      when(mockHttp.POST[JsValue, HttpResponse](any(), any(), any())(any(), any(), any(), any())).
+      when(mockRequestBuilder.execute(any[HttpReads[HttpResponse]], any())).
         thenReturn(Future.failed(UpstreamErrorResponse("SERVICE_UNAVAILABLE", 503, 503)))
 
       val result = await(TestDesConnector.getResidencyStatus(individualDetails, userId, V2_0))
@@ -390,7 +387,7 @@ class DesConnectorSpec extends AnyWordSpecLike with Matchers with GuiceOneAppPer
       result.isLeft shouldBe false
       result.getOrElse("Get Failed") shouldBe errorResponse
 
-      verify(mockHttp, times(3)).POST[JsValue, HttpResponse](any(), Meq[JsValue](expectedPayload), any())(any(), any(), any(), any())
+      verify(mockHttpClient, times(3)).post(any())(any())
     }
 
     "handle bad request from des" in {
@@ -401,8 +398,7 @@ class DesConnectorSpec extends AnyWordSpecLike with Matchers with GuiceOneAppPer
       val individualDetails = IndividualDetails("AB123456C", "JOHN", "Lewis", new DateTime("1990-02-21"))
 
       val expectedPayload = createJsonPayload(individualDetails)
-
-      when(mockHttp.POST[JsValue, HttpResponse](any(), any(), any())(any(), any(), any(), any())).
+      when(mockRequestBuilder.execute(any[HttpReads[HttpResponse]], any())).
         thenReturn(Future.successful(HttpResponse(400, Json.toJson(errorResponse).toString())))
 
       val result = await(TestDesConnector.getResidencyStatus(individualDetails, userId, V2_0))
@@ -410,7 +406,7 @@ class DesConnectorSpec extends AnyWordSpecLike with Matchers with GuiceOneAppPer
       result.isLeft shouldBe false
       result.getOrElse("Get Failed") shouldBe expectedErrorResponse
 
-      verify(mockHttp, times(1)).POST[JsValue, HttpResponse](any(), Meq[JsValue](expectedPayload), any())(any(), any(), any(), any())
+      verify(mockHttpClient, times(1)).post(any())(any())
     }
 
     "Handle requests" when {
@@ -425,8 +421,7 @@ class DesConnectorSpec extends AnyWordSpecLike with Matchers with GuiceOneAppPer
         val individualDetails = IndividualDetails("AB123456C", "JOHN", "Lewis", new DateTime("1990-02-21"))
 
         val expectedPayload = createJsonPayload(individualDetails)
-
-        when(mockHttp.POST[JsValue, HttpResponse](any(), any(), any())(any(), any(), any(), any())).
+        when(mockRequestBuilder.execute(any[HttpReads[HttpResponse]], any())).
           thenReturn(Future.successful(HttpResponse(429, Json.toJson(errorResponse).toString())),
             Future.successful(HttpResponse(200, Json.toJson(successResponse).toString())))
 
@@ -436,7 +431,7 @@ class DesConnectorSpec extends AnyWordSpecLike with Matchers with GuiceOneAppPer
         result.left.getOrElse("Get Failed") shouldBe ResidencyStatus("otherUKResident")
         result.isRight shouldBe false
 
-        verify(mockHttp, times(2)).POST[JsValue, HttpResponse](any(), Meq[JsValue](expectedPayload), any())(any(), any(), any(), any())
+        verify(mockHttpClient, times(2)).post(any())(any())
       }
 
       "429 (Too Many Requests) has been returned 3 times" in {
@@ -449,14 +444,14 @@ class DesConnectorSpec extends AnyWordSpecLike with Matchers with GuiceOneAppPer
 
         val expectedPayload = createJsonPayload(individualDetails)
 
-        when(mockHttp.POST[JsValue, HttpResponse](any(), any(), any())(any(), any(), any(), any())).
+        when(mockRequestBuilder.execute(any[HttpReads[HttpResponse]], any())).
           thenReturn(Future.successful(HttpResponse(429, Json.toJson(errorResponse).toString())))
 
         val result = await(TestDesConnector.getResidencyStatus(individualDetails, userId, V2_0))
         result.isLeft shouldBe false
         result.getOrElse("Get Failed") shouldBe errorResponse
 
-        verify(mockHttp, times(3)).POST[JsValue, HttpResponse](any(), Meq[JsValue](expectedPayload), any())(any(), any(), any(), any())
+        verify(mockHttpClient, times(3)).post(any())(any())
       }
     }
   }
