@@ -34,7 +34,7 @@ majorVersion := 1
 DefaultBuildSettings.defaultSettings()
 PlayKeys.playDefaultPort := 9669
 
-scalaVersion                      := "2.13.15"
+scalaVersion                      := "2.13.16"
 retrieveManaged                   := true
 routesGenerator                   := InjectedRoutesGenerator
 

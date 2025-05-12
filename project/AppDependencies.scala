@@ -19,16 +19,16 @@ import sbt.*
 
 object AppDependencies {
 
-  val hmrcMongoVersion = "2.2.0"
-  val bootstrapVersion = "9.5.0"
+  val hmrcMongoVersion = "2.6.0"
+  val bootstrapVersion = "9.11.0"
 
   val compile: Seq[ModuleID] = Seq(
     ws,
     "uk.gov.hmrc"                  %% "bootstrap-backend-play-30"        % bootstrapVersion,
     "uk.gov.hmrc.mongo"            %% "hmrc-mongo-play-30"               % hmrcMongoVersion,
     "uk.gov.hmrc"                  %% "domain"                           % "8.3.0-play-28",
-    "uk.gov.hmrc"                  %%  "play-hmrc-api-play-30"           % "8.0.0",
-    "com.fasterxml.jackson.module" %% "jackson-module-scala"             % "2.18.0"
+    "uk.gov.hmrc"                  %% "play-hmrc-api-play-30"            % "8.0.0",
+    "com.fasterxml.jackson.module" %% "jackson-module-scala"             % "2.19.0"
   )
 
   val test: Seq[ModuleID] = Seq(
@@ -36,8 +36,8 @@ object AppDependencies {
     "uk.gov.hmrc.mongo"         %% "hmrc-mongo-test-play-30"  % hmrcMongoVersion,
     "org.scalatest"             %% "scalatest"                % "3.2.19",
     "org.scalatestplus"         %% "mockito-5-10"             % "3.2.18.0",
-    "de.leanovate.play-mockws"  %% "play-mockws-3-0"          % "3.0.5",
-    "org.wiremock"              % "wiremock-standalone"       % "3.9.1",
+    "de.leanovate.play-mockws"  %% "play-mockws-3-0"          % "3.0.6",
+    "org.wiremock"              %  "wiremock-standalone"      % "3.13.0",
     "com.vladsch.flexmark"      %  "flexmark-all"             % "0.64.8"
   ).map(_ % "it, test")
 
