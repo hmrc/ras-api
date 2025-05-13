@@ -24,7 +24,7 @@ import uk.gov.hmrc.rasapi.config.AppContext
 import uk.gov.hmrc.rasapi.connectors.{DesConnector, UpscanConnector}
 import uk.gov.hmrc.rasapi.helpers.ResidencyYearResolver
 import uk.gov.hmrc.rasapi.metrics.Metrics
-import uk.gov.hmrc.rasapi.models.{ApiVersion, FileMetadata, ResultsFileMetaData, UpscanCallbackData}
+import uk.gov.hmrc.rasapi.models.{ApiVersion, ResultsFileMetaData, UpscanCallbackData}
 import uk.gov.hmrc.rasapi.repository.RasFilesRepository
 
 import java.nio.file.Path
