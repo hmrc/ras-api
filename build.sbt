@@ -1,48 +1,23 @@
-import scoverage.ScoverageKeys
-import uk.gov.hmrc.DefaultBuildSettings
+import sbt.Keys.scalacOptions
+import uk.gov.hmrc.DefaultBuildSettings.itSettings
 
-val appName = "ras-api"
+import scala.collection.Seq
 
-lazy val microservice = Project(appName, file("."))
+ThisBuild / scalaVersion        := "2.13.16"
+ThisBuild / majorVersion        := 1
+
+lazy val microservice = Project("ras-api", file("."))
   .enablePlugins(play.sbt.PlayScala, SbtDistributablesPlugin)
   .disablePlugins(JUnitXmlReportPlugin)
-  .configs(IntegrationTest)
+  .settings(Compile / unmanagedResourceDirectories += baseDirectory.value / "resource")
+  .settings(CodeCoverageSettings())
+  .settings(
+    PlayKeys.playDefaultPort := 9669,
+    libraryDependencies ++= AppDependencies(),
+    scalacOptions ++= Seq("-Wconf:src=routes/.*:s")
+  )
 
-// scoverage settings
-ScoverageKeys.coverageExcludedPackages  := "<empty>;" +
-  "testOnlyDoNotUseInAppConf.*;" +
-  "uk.gov.hmrc.rasapi.config.*;" +
-  "conf.*;" +
-  "prod;" +
-  "app;" +
-  "uk.gov.hmrc;" +
-  "uk.gov.hmrc.rasapi.views.*;" +
-  "definition.*;" +
-  "ras.*;" +
-  "uk.gov.hmrc.rasapi.controllers.Documentation;" +
-  "dev.*;" +
-  "matching.*"
-ScoverageKeys.coverageMinimumStmtTotal  := 80
-ScoverageKeys.coverageFailOnMinimum     := true
-ScoverageKeys.coverageHighlighting      := true
-Test / parallelExecution                := false
-libraryDependencies ++= AppDependencies()
-
-// build settings
-majorVersion := 1
-
-DefaultBuildSettings.defaultSettings()
-PlayKeys.playDefaultPort := 9669
-
-scalaVersion                      := "2.13.16"
-retrieveManaged                   := true
-routesGenerator                   := InjectedRoutesGenerator
-
-// IT Settings
-DefaultBuildSettings.integrationTestSettings()
-
-Compile / unmanagedResourceDirectories += baseDirectory.value / "resources"
-
-scalacOptions ++= Seq("-Wconf:src=routes/.*:s")
-
-addCommandAlias("scalastyleAll", "all scalastyle Test/scalastyle IntegrationTest/scalastyle")
+lazy val it = microservice
+  .enablePlugins(PlayScala)
+  .dependsOn(microservice % "test->test")
+  .settings(itSettings())

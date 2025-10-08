@@ -1,5 +1,5 @@
 /*
- * Copyright 2023 HM Revenue & Customs
+ * Copyright 2025 HM Revenue & Customs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,7 +19,7 @@ import org.apache.pekko.NotUsed
 import org.apache.pekko.stream.scaladsl.Source
 import org.mongodb.scala.bson.{Document, ObjectId}
 import org.mongodb.scala.gridfs.{GridFSBucket, GridFSUploadOptions}
-import org.mongodb.scala.{Observable, ObservableFuture}
+import org.mongodb.scala.Observable
 import play.api.Logger
 import uk.gov.hmrc.mongo.MongoComponent
 import uk.gov.hmrc.mongo.play.json.PlayMongoRepository
