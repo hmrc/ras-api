@@ -17,7 +17,7 @@ lazy val microservice = Project("ras-api", file("."))
     scalacOptions ++= Seq("-Wconf:src=routes/.*:s")
   )
 
-lazy val it = microservice
+lazy val it = project
   .enablePlugins(PlayScala)
   .dependsOn(microservice % "test->test")
   .settings(itSettings())

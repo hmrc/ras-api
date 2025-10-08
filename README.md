@@ -1,7 +1,5 @@
 # ras-api
 
-[![Build Status](https://travis-ci.org/hmrc/ras-api.svg)](https://travis-ci.org/hmrc/ras-api) [ ![Download](https://api.bintray.com/packages/hmrc/releases/ras-api/images/download.svg) ](https://bintray.com/hmrc/releases/ras-api/_latestVersion)
-
 Check if an pension scheme member is a resident in Scotland for tax purposes. 
 
 If you’re a pension scheme administrator, you need to know this to make the correct relief at source claims.
