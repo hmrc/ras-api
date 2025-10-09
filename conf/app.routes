@@ -1,13 +1,13 @@
 # microservice specific routes
 
-POST    /residency-status                          uk.gov.hmrc.rasapi.controllers.LookupController.getResidencyStatus()
+POST    /residency-status                          uk.gov.hmrc.rasapi.controllers.lookupController.LookupController.getResidencyStatus()
 
-POST    /ras-api/file-processing/status/:userId    uk.gov.hmrc.rasapi.controllers.FileProcessingController.statusCallback(userId, version ?= "1.0")
+POST    /ras-api/file-processing/status/:userId    uk.gov.hmrc.rasapi.controllers.fileProcessing.FileProcessingController.statusCallback(userId, version ?= "1.0")
 
-GET     /ras-api/file/getFile/:name                uk.gov.hmrc.rasapi.controllers.FileController.serveFile(name)
+GET     /ras-api/file/getFile/:name                uk.gov.hmrc.rasapi.controllers.fileController.FileController.serveFile(name)
 
-DELETE  /ras-api/file/remove/:name/:userid         uk.gov.hmrc.rasapi.controllers.FileController.remove(name, userid)
+DELETE  /ras-api/file/remove/:name/:userid         uk.gov.hmrc.rasapi.controllers.fileController.FileController.remove(name, userid)
 
-POST    /create-file-session                       uk.gov.hmrc.rasapi.controllers.FileSessionController.createFileSession()
-GET     /get-file-session/:userId                  uk.gov.hmrc.rasapi.controllers.FileSessionController.fetchFileSession(userId)
-DELETE  /delete-file-session/:userId               uk.gov.hmrc.rasapi.controllers.FileSessionController.deleteFileSession(userId)
+POST    /create-file-session                       uk.gov.hmrc.rasapi.controllers.fileSession.FileSessionController.createFileSession()
+GET     /get-file-session/:userId                  uk.gov.hmrc.rasapi.controllers.fileSession.FileSessionController.fetchFileSession(userId)
+DELETE  /delete-file-session/:userId               uk.gov.hmrc.rasapi.controllers.fileSession.FileSessionController.deleteFileSession(userId)

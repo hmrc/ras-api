@@ -30,6 +30,7 @@ import play.api.libs.json.Json
 import play.api.mvc.ControllerComponents
 import play.api.test.FakeRequest
 import play.api.test.Helpers.{defaultAwaitTimeout, status}
+import uk.gov.hmrc.rasapi.controllers.fileProcessing.FileProcessingController
 import uk.gov.hmrc.rasapi.models.{ResultsFileMetaData, UploadDetails, UpscanCallbackData, V2_0}
 import uk.gov.hmrc.rasapi.services.{FileProcessingService, RasFilesSessionService}
 

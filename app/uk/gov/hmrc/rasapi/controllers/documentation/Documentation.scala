@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package uk.gov.hmrc.rasapi.controllers
+package uk.gov.hmrc.rasapi.controllers.documentation
 
 import controllers.Assets
 import play.api.http.HttpErrorHandler

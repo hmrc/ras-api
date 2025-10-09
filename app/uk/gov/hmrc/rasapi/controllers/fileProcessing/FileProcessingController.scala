@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package uk.gov.hmrc.rasapi.controllers
+package uk.gov.hmrc.rasapi.controllers.fileProcessing
 
 import play.api.Logging
 import play.api.libs.json.JsSuccess

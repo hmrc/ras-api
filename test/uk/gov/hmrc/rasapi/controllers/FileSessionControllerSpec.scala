@@ -29,6 +29,7 @@ import play.api.libs.json.{JsObject, Json}
 import play.api.mvc.ControllerComponents
 import play.api.test.{FakeRequest, Helpers}
 import uk.gov.hmrc.auth.core.{AuthConnector, Enrolments, InsufficientEnrolments}
+import uk.gov.hmrc.rasapi.controllers.fileSession.FileSessionController
 import uk.gov.hmrc.rasapi.models.{CreateFileSessionRequest, FileSession}
 import uk.gov.hmrc.rasapi.services.RasFilesSessionService
 
