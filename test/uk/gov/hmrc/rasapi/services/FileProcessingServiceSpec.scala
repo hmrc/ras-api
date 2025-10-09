@@ -18,7 +18,6 @@ package uk.gov.hmrc.rasapi.services
 
 import org.apache.pekko.stream.Materializer
 import org.apache.pekko.actor.ActorSystem
-import mockws.MockWSHelpers
 import org.joda.time.DateTime
 import org.mockito.ArgumentCaptor
 import org.mockito.ArgumentMatchers.{eq => Meq, _}
