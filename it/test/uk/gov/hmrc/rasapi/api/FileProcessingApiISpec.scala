@@ -1,5 +1,5 @@
 /*
- * Copyright 2023 HM Revenue & Customs
+ * Copyright 2025 HM Revenue & Customs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -52,7 +52,7 @@ class FileProcessingApiISpec extends PlaySpec with ScalaFutures
   implicit val hc : HeaderCarrier = HeaderCarrier()
 
   class Setup(filename: String) {
-    val largeFile: File = new File("it/resources/testFiles/bulk.csv")
+    val largeFile: File = new File("it/test/resources/testFiles/bulk.csv")
 
     def insertFile(): ResultsFile = await(rasFileRepository.saveFile(
       userId = "userid-1",
@@ -70,7 +70,7 @@ class FileProcessingApiISpec extends PlaySpec with ScalaFutures
       insertFile()
       val headers = Map("Authorization" -> "Bearer123")
       authMocks
-      val testSource: BufferedSource = Source.fromFile("it/resources/testFiles/bulk.csv")
+      val testSource: BufferedSource = Source.fromFile("it/test/resources/testFiles/bulk.csv")
       val response =   await(client1.get(url"$uri").setHeader(headers.toSeq:_*).execute)
       response.status mustBe OK
       response.body mustBe testSource.getLines().toList.mkString("\n")

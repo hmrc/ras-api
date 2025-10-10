@@ -1,5 +1,5 @@
 /*
- * Copyright 2023 HM Revenue & Customs
+ * Copyright 2025 HM Revenue & Customs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -37,7 +37,7 @@ class RasFileRepositoryISpec extends PlaySpec with ScalaFutures with GuiceOneApp
   class Setup(val filename: String) {
     lazy val rasFileRepository: RasFilesRepository = app.injector.instanceOf[RasFilesRepository]
     lazy val rasChunksRepository: RasChunksRepository = app.injector.instanceOf[RasChunksRepository]
-    val largeFile: File = new File("it/resources/testFiles/bulk.csv")
+    val largeFile: File = new File("it/test/resources/testFiles/bulk.csv")
     implicit lazy val system: ActorSystem        = ActorSystem()
     implicit val materializers: Materializer = Materializer(system)
 
@@ -95,7 +95,7 @@ class RasFileRepositoryISpec extends PlaySpec with ScalaFutures with GuiceOneApp
         }
       }))
 
-      val testSource: BufferedSource = Source.fromFile("it/resources/testFiles/bulk.csv")
+      val testSource: BufferedSource = Source.fromFile("it/test/resources/testFiles/bulk.csv")
 
       result mustBe testSource.getLines().toList.mkString("\n")
 

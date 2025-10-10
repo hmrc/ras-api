@@ -1,5 +1,5 @@
 /*
- * Copyright 2023 HM Revenue & Customs
+ * Copyright 2025 HM Revenue & Customs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -30,6 +30,7 @@ import play.api.libs.json.Json
 import play.api.mvc.ControllerComponents
 import play.api.test.FakeRequest
 import play.api.test.Helpers.{defaultAwaitTimeout, status}
+import uk.gov.hmrc.rasapi.controllers.fileProcessing.FileProcessingController
 import uk.gov.hmrc.rasapi.models.{ResultsFileMetaData, UploadDetails, UpscanCallbackData, V2_0}
 import uk.gov.hmrc.rasapi.services.{FileProcessingService, RasFilesSessionService}
 
