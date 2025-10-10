@@ -9,7 +9,7 @@ ThisBuild / majorVersion        := 1
 lazy val microservice = Project("ras-api", file("."))
   .enablePlugins(play.sbt.PlayScala, SbtDistributablesPlugin)
   .disablePlugins(JUnitXmlReportPlugin)
-  .settings(Compile / unmanagedResourceDirectories += baseDirectory.value / "resource")
+  .settings(Compile / unmanagedResourceDirectories += baseDirectory.value / "resources")
   .settings(CodeCoverageSettings())
   .settings(
     PlayKeys.playDefaultPort := 9669,
