@@ -3,10 +3,10 @@ import sbt.*
 
 object AppDependencies {
 
-  val hmrcMongoVersion = "2.9.0"
-  val bootstrapVersion = "10.2.0"
+  private val hmrcMongoVersion = "2.10.0"
+  private val bootstrapVersion = "10.3.0"
 
-  val compile: Seq[ModuleID] = Seq(
+  private val compile: Seq[ModuleID] = Seq(
     ws,
     "uk.gov.hmrc"                  %% "bootstrap-backend-play-30"        % bootstrapVersion,
     "uk.gov.hmrc.mongo"            %% "hmrc-mongo-play-30"               % hmrcMongoVersion,
@@ -15,10 +15,11 @@ object AppDependencies {
     "com.fasterxml.jackson.module" %% "jackson-module-scala"             % "2.20.0"
   )
 
-  val test: Seq[ModuleID] = Seq(
+  private val test: Seq[ModuleID] = Seq(
     "uk.gov.hmrc"               %% "bootstrap-test-play-30"   % bootstrapVersion,
     "uk.gov.hmrc.mongo"         %% "hmrc-mongo-test-play-30"  % hmrcMongoVersion
   ).map(_ % Test)
 
   def apply(): Seq[sbt.ModuleID] = compile ++ test
+
 }
