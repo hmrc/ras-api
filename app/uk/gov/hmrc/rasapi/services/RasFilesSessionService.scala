@@ -16,7 +16,7 @@
 
 package uk.gov.hmrc.rasapi.services
 
-import org.joda.time.DateTime
+import java.time.Instant
 import play.api.Logging
 import uk.gov.hmrc.mongo.cache.{CacheItem, DataKey}
 import uk.gov.hmrc.rasapi.models.{FileMetadata, FileSession, ResultsFileMetaData, UpscanCallbackData}
@@ -30,7 +30,7 @@ class RasFilesSessionService @Inject()(filesSessionRepository: RasFilesSessionRe
                                       (implicit ec: ExecutionContext) extends Logging {
 
   def createFileSession(userId: String, reference: String): Future[Boolean] = {
-    filesSessionRepository.put[FileSession](userId)(DataKey("fileSession"), FileSession(None, None, userId, Some(DateTime.now().getMillis), None))
+    filesSessionRepository.put[FileSession](userId)(DataKey("fileSession"), FileSession(None, None, userId, Some(Instant.now().toEpochMilli), None))
       .map(_ => true)
       .recover {
         case ex: Throwable => logger.error(s"unable to create FileSession to cache => " +

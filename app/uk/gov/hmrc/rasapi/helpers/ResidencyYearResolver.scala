@@ -16,20 +16,20 @@
 
 package uk.gov.hmrc.rasapi.helpers
 
-import org.joda.time.DateTime
+import java.time.LocalDate
 
 import javax.inject.Inject
 
 class ResidencyYearResolver @Inject()() {
 
-  def currentDateTime: DateTime = DateTime.now()
+  def currentDate: LocalDate = LocalDate.now()
 
   /**
     * Checks to see if the current date is between 1st January and 5th April (inclusive)
     * @return true if the date is between 1st January and 5th April (inclusive) else return false
     */
   def isBetweenJanAndApril: Boolean = {
-    val currentDate = currentDateTime
-    currentDate.isAfter(new DateTime(currentDate.getYear - 1, 12, 31, 0, 0, 0, 0)) && currentDate.isBefore(new DateTime(currentDate.getYear, 4, 6, 0, 0, 0, 0))
+    val currentYear = currentDate.getYear
+    !currentDate.isBefore(LocalDate.of(currentYear, 1, 1)) && !currentDate.isAfter(LocalDate.of(currentYear, 4, 5))
   }
 }

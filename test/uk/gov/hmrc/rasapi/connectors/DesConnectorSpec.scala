@@ -16,7 +16,7 @@
 
 package uk.gov.hmrc.rasapi.connectors
 
-import org.joda.time.DateTime
+import java.time.LocalDate
 import org.mockito.ArgumentMatchers._
 import org.mockito.Mockito.{reset, times, verify, when}
 import org.scalatest.BeforeAndAfter
@@ -34,6 +34,7 @@ import uk.gov.hmrc.rasapi.config.AppContext
 import uk.gov.hmrc.rasapi.models._
 import uk.gov.hmrc.rasapi.services.AuditService
 
+import java.time.format.DateTimeFormatter
 import scala.concurrent.{ExecutionContext, Future}
 
 class DesConnectorSpec extends AnyWordSpecLike with Matchers with GuiceOneAppPerSuite with BeforeAndAfter with MockitoSugar {
@@ -74,7 +75,8 @@ class DesConnectorSpec extends AnyWordSpecLike with Matchers with GuiceOneAppPer
     override def generateNewUUID: String = uuid
   }
 
-  val individualDetails: IndividualDetails = IndividualDetails("LE241131B", "Joe", "Bloggs", new DateTime("1990-12-03"))
+  val formatter: DateTimeFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd")
+  val individualDetails: IndividualDetails = IndividualDetails("LE241131B", "Joe", "Bloggs", LocalDate.parse("1990-12-03", formatter))
   val userId = "A123456"
 
   val residencyStatus: ResidencyStatus = ResidencyStatus(currentYearResidencyStatus = "scotResident",
@@ -96,7 +98,7 @@ class DesConnectorSpec extends AnyWordSpecLike with Matchers with GuiceOneAppPer
        |  "nino": "${individualDetails.nino}",
        |  "firstName": "${individualDetails.firstName}",
        |  "lastName": "${individualDetails.lastName}",
-       |  "dob": "${individualDetails.dateOfBirth.toString("yyyy-MM-dd")}",
+       |  "dob": "${individualDetails.dateOfBirth.format(formatter)}",
        |  "pensionSchemeOrganisationID": "$userId"
        |}
     """.stripMargin
@@ -109,9 +111,9 @@ class DesConnectorSpec extends AnyWordSpecLike with Matchers with GuiceOneAppPer
       val successresponse = ResidencyStatusSuccess(nino = "AB123456C", deathDate = Some(""), deathDateStatus = Some(""), deseasedIndicator = Some(false),
         currentYearResidencyStatus = "Uk", nextYearResidencyStatus = Some("Scottish"))
 
-      val individualDetails = IndividualDetails("AB123456C", "JOHN", "SMITH", new DateTime("1990-02-21"))
+      val individualDetails = IndividualDetails("AB123456C", "JOHN", "SMITH", LocalDate.parse("1990-02-21", formatter))
+
       val expectedResponse: Future[HttpResponse] = Future.successful(HttpResponse(200, Json.toJson(successresponse).toString()))
-      val expectedPayload = createJsonPayload(individualDetails)
 
       when(mockRequestBuilder.execute(any[HttpReads[HttpResponse]], any())).thenReturn(expectedResponse)
 
@@ -129,9 +131,8 @@ class DesConnectorSpec extends AnyWordSpecLike with Matchers with GuiceOneAppPer
         val successResponse = ResidencyStatusSuccess(nino = "AA246255", deathDate = Some(""), deathDateStatus = Some(""), deseasedIndicator = Some(false),
           currentYearResidencyStatus = "Welsh", nextYearResidencyStatus = Some("Welsh"))
 
-        val individualDetails = IndividualDetails("AB123456C", "JACK", "OSCAR", new DateTime("1962-07-07"))
+        val individualDetails = IndividualDetails("AB123456C", "JACK", "OSCAR", LocalDate.parse("1962-07-07", formatter))
 
-        val expectedPayload = createJsonPayload(individualDetails)
         val expectedResponse: Future[HttpResponse] = Future.successful(HttpResponse(200, Json.toJson(successResponse).toString()))
 
         when(mockRequestBuilder.execute(any[HttpReads[HttpResponse]], any())).thenReturn(expectedResponse)
@@ -147,9 +148,8 @@ class DesConnectorSpec extends AnyWordSpecLike with Matchers with GuiceOneAppPer
         val successResponse = ResidencyStatusSuccess(nino = "SG123480", deathDate = Some(""), deathDateStatus = Some(""), deseasedIndicator = Some(false),
           currentYearResidencyStatus = "Welsh", nextYearResidencyStatus = Some("Scottish"))
 
-        val individualDetails = IndividualDetails("SG123480", "HELEN", "SMITH", new DateTime("1975-02-18"))
+        val individualDetails = IndividualDetails("SG123480", "HELEN", "SMITH", LocalDate.parse("1975-02-18", formatter))
 
-        val expectedPayload = createJsonPayload(individualDetails)
         val expectedResponse: Future[HttpResponse] = Future.successful(HttpResponse(200, Json.toJson(successResponse).toString()))
 
         when(mockRequestBuilder.execute(any[HttpReads[HttpResponse]], any())).thenReturn(expectedResponse)
@@ -169,9 +169,8 @@ class DesConnectorSpec extends AnyWordSpecLike with Matchers with GuiceOneAppPer
         val successResponse = ResidencyStatusSuccess(nino = "AA246255", deathDate = Some(""), deathDateStatus = Some(""), deseasedIndicator = Some(false),
           currentYearResidencyStatus = "Welsh", nextYearResidencyStatus = Some("Welsh"))
 
-        val individualDetails = IndividualDetails("AB123456C", "JACK", "OSCAR", new DateTime("1962-07-07"))
+        val individualDetails = IndividualDetails("AB123456C", "JACK", "OSCAR", LocalDate.parse("1962-07-07", formatter))
 
-        val expectedPayload = createJsonPayload(individualDetails)
         val expectedResponse: Future[HttpResponse] = Future.successful(HttpResponse(200, Json.toJson(successResponse).toString()))
 
         when(mockRequestBuilder.execute(any[HttpReads[HttpResponse]], any())).thenReturn(expectedResponse)
@@ -187,9 +186,8 @@ class DesConnectorSpec extends AnyWordSpecLike with Matchers with GuiceOneAppPer
         val successResponse = ResidencyStatusSuccess(nino = "SG123480", deathDate = Some(""), deathDateStatus = Some(""), deseasedIndicator = Some(false),
           currentYearResidencyStatus = "Welsh", nextYearResidencyStatus = Some("Scottish"))
 
-        val individualDetails = IndividualDetails("SG123480", "HELEN", "SMITH", new DateTime("1975-02-18"))
+        val individualDetails = IndividualDetails("SG123480", "HELEN", "SMITH", LocalDate.parse("1975-02-18", formatter))
 
-        val expectedPayload = createJsonPayload(individualDetails)
         val expectedResponse: Future[HttpResponse] = Future.successful(HttpResponse(200, Json.toJson(successResponse).toString()))
 
         when(mockRequestBuilder.execute(any[HttpReads[HttpResponse]], any())).thenReturn(expectedResponse)
@@ -207,9 +205,8 @@ class DesConnectorSpec extends AnyWordSpecLike with Matchers with GuiceOneAppPer
       val successResponse = ResidencyStatusSuccess(nino = "AB123456C", deathDate = Some(""), deathDateStatus = Some(""), deseasedIndicator = None,
         currentYearResidencyStatus = "Uk", nextYearResidencyStatus = None)
 
-      val individualDetails = IndividualDetails("AB123456C", "JOHN", "SMITH", new DateTime("1990-02-21"))
+      val individualDetails = IndividualDetails("AB123456C", "JOHN", "SMITH", LocalDate.parse("1990-02-21", formatter))
 
-      val expectedPayload = createJsonPayload(individualDetails)
       val expectedResponse: Future[HttpResponse] = Future.successful(HttpResponse(200, Json.toJson(successResponse).toString()))
 
       when(mockRequestBuilder.execute(any[HttpReads[HttpResponse]], any())).thenReturn(expectedResponse)
@@ -242,9 +239,8 @@ class DesConnectorSpec extends AnyWordSpecLike with Matchers with GuiceOneAppPer
       val successResponse = ResidencyStatusSuccess(nino = "AB123456C", deathDate = Some(""), deathDateStatus = Some(""), deseasedIndicator = Some(false),
         currentYearResidencyStatus = "Uk", nextYearResidencyStatus = Some("Scottish"))
 
-      val individualDetails = IndividualDetails("AB123456C", "JOHN", "SMITH", new DateTime("1990-02-21"))
+      val individualDetails = IndividualDetails("AB123456C", "JOHN", "SMITH", LocalDate.parse("1990-02-21", formatter))
 
-      val expectedPayload = createJsonPayload(individualDetails)
       val expectedSuccessResponse: Future[HttpResponse] = Future.successful(HttpResponse(200, Json.toJson(successResponse).toString()))
       val expectedErrorResponse: Future[HttpResponse] = Future.successful(HttpResponse(429, Json.toJson(errorResponse).toString()))
 
@@ -277,10 +273,8 @@ class DesConnectorSpec extends AnyWordSpecLike with Matchers with GuiceOneAppPer
 
       val errorResponse = ResidencyStatusFailure("INTERNAL_SERVER_ERROR", "Internal server error.")
 
-      val individualDetails = IndividualDetails("AB123456C", "JOHN", "SMITH", new DateTime("1990-02-21"))
+      val individualDetails = IndividualDetails("AB123456C", "JOHN", "SMITH", LocalDate.parse("1990-02-21", formatter))
       val expectedErrorResponse: Future[HttpResponse] = Future.successful(HttpResponse(429, Json.toJson(errorResponse).toString()))
-
-      val expectedPayload = createJsonPayload(individualDetails)
 
       when(mockRequestBuilder.execute(any[HttpReads[HttpResponse]], any())).thenReturn(expectedErrorResponse)
 
@@ -307,8 +301,8 @@ class DesConnectorSpec extends AnyWordSpecLike with Matchers with GuiceOneAppPer
       val errorResponse = ResidencyStatusFailure(TestDesConnector.error_InternalServerError, "Internal server error.")
       val successResponse = ResidencyStatusSuccess(nino = "AB123456C", deathDate = Some(""), deathDateStatus = Some(""), deseasedIndicator = Some(false),
         currentYearResidencyStatus = "Uk", nextYearResidencyStatus = None)
-      val individualDetails = IndividualDetails("AB123456C", "JOHN", "SMITH", new DateTime("1990-02-21"))
-      val expectedPayload = createJsonPayload(individualDetails)
+      val individualDetails = IndividualDetails("AB123456C", "JOHN", "SMITH", LocalDate.parse("1990-02-21", formatter))
+      
 
       when(mockRequestBuilder.execute(any[HttpReads[HttpResponse]], any())).
         thenReturn(Future.successful(HttpResponse(200, Json.toJson(successResponse).toString())))
@@ -322,9 +316,8 @@ class DesConnectorSpec extends AnyWordSpecLike with Matchers with GuiceOneAppPer
       implicit val formatF = ResidencyStatusFormats.failureFormats
       val errorResponse = ResidencyStatusFailure("STATUS_UNAVAILABLE", "Cannot provide a residency status for this pension scheme member.")
 
-      val individualDetails = IndividualDetails("AB123456C", "JOHN", "Lewis", new DateTime("1990-02-21"))
+      val individualDetails = IndividualDetails("AB123456C", "JOHN", "Lewis", LocalDate.parse("1990-02-21", formatter))
 
-      val expectedPayload = createJsonPayload(individualDetails)
       when(mockRequestBuilder.execute(any[HttpReads[HttpResponse]], any())).
         thenReturn(Future.successful(HttpResponse(404, Json.toJson(errorResponse).toString())))
       val result = await(TestDesConnector.getResidencyStatus(individualDetails, userId, V2_0))
@@ -339,9 +332,8 @@ class DesConnectorSpec extends AnyWordSpecLike with Matchers with GuiceOneAppPer
       val successResponse = ResidencyStatusSuccess(nino = "AB123456C", deathDate = Some("2017-12-25"), deathDateStatus = None,
         deseasedIndicator = Some(true), currentYearResidencyStatus = "Uk", nextYearResidencyStatus = Some("Uk"))
 
-      val individualDetails = IndividualDetails("AB123456C", "JOHN", "Lewis", new DateTime("1990-02-21"))
+      val individualDetails = IndividualDetails("AB123456C", "JOHN", "Lewis", LocalDate.parse("1990-02-21", formatter))
 
-      val expectedPayload = createJsonPayload(individualDetails)
       when(mockRequestBuilder.execute(any[HttpReads[HttpResponse]], any())).
         thenReturn(Future.successful(HttpResponse(200, Json.toJson(successResponse).toString())))
 
@@ -359,9 +351,8 @@ class DesConnectorSpec extends AnyWordSpecLike with Matchers with GuiceOneAppPer
       implicit val formatF = ResidencyStatusFormats.failureFormats
       val errorResponse = ResidencyStatusFailure("INTERNAL_SERVER_ERROR", "Internal server error.")
 
-      val individualDetails = IndividualDetails("AB123456C", "JOHN", "Lewis", new DateTime("1990-02-21"))
+      val individualDetails = IndividualDetails("AB123456C", "JOHN", "Lewis", LocalDate.parse("1990-02-21", formatter))
 
-      val expectedPayload = createJsonPayload(individualDetails)
       when(mockRequestBuilder.execute(any[HttpReads[HttpResponse]], any())).
         thenReturn(Future.successful(HttpResponse(500, Json.toJson(errorResponse).toString())))
 
@@ -376,9 +367,8 @@ class DesConnectorSpec extends AnyWordSpecLike with Matchers with GuiceOneAppPer
     "handle Service Unavailable (503) response from des" in {
       val errorResponse = ResidencyStatusFailure("SERVICE_UNAVAILABLE", "Service unavailable")
 
-      val individualDetails = IndividualDetails("AB123456C", "JOHN", "Lewis", new DateTime("1990-02-21"))
+      val individualDetails = IndividualDetails("AB123456C", "JOHN", "Lewis", LocalDate.parse("1990-02-21", formatter))
 
-      val expectedPayload = createJsonPayload(individualDetails)
       when(mockRequestBuilder.execute(any[HttpReads[HttpResponse]], any())).
         thenReturn(Future.failed(UpstreamErrorResponse("SERVICE_UNAVAILABLE", 503, 503)))
 
@@ -395,9 +385,8 @@ class DesConnectorSpec extends AnyWordSpecLike with Matchers with GuiceOneAppPer
       val expectedErrorResponse = ResidencyStatusFailure("INTERNAL_SERVER_ERROR", "Internal server error.")
       val errorResponse = ResidencyStatusFailure("DO_NOT_RE_PROCESS", "Internal server error.")
 
-      val individualDetails = IndividualDetails("AB123456C", "JOHN", "Lewis", new DateTime("1990-02-21"))
+      val individualDetails = IndividualDetails("AB123456C", "JOHN", "Lewis", LocalDate.parse("1990-02-21", formatter))
 
-      val expectedPayload = createJsonPayload(individualDetails)
       when(mockRequestBuilder.execute(any[HttpReads[HttpResponse]], any())).
         thenReturn(Future.successful(HttpResponse(400, Json.toJson(errorResponse).toString())))
 
@@ -418,9 +407,8 @@ class DesConnectorSpec extends AnyWordSpecLike with Matchers with GuiceOneAppPer
           deathDateStatus = Some(""), deseasedIndicator = Some(false),
           currentYearResidencyStatus = "Uk", nextYearResidencyStatus = None)
 
-        val individualDetails = IndividualDetails("AB123456C", "JOHN", "Lewis", new DateTime("1990-02-21"))
+        val individualDetails = IndividualDetails("AB123456C", "JOHN", "Lewis", LocalDate.parse("1990-02-21", formatter))
 
-        val expectedPayload = createJsonPayload(individualDetails)
         when(mockRequestBuilder.execute(any[HttpReads[HttpResponse]], any())).
           thenReturn(Future.successful(HttpResponse(429, Json.toJson(errorResponse).toString())),
             Future.successful(HttpResponse(200, Json.toJson(successResponse).toString())))
@@ -440,9 +428,7 @@ class DesConnectorSpec extends AnyWordSpecLike with Matchers with GuiceOneAppPer
 
         val errorResponse = ResidencyStatusFailure("TOO_MANY_REQUESTS", "Too many requests received")
 
-        val individualDetails = IndividualDetails("AB123456C", "JOHN", "Lewis", new DateTime("1990-02-21"))
-
-        val expectedPayload = createJsonPayload(individualDetails)
+        val individualDetails = IndividualDetails("AB123456C", "JOHN", "Lewis", LocalDate.parse("1990-02-21", formatter))
 
         when(mockRequestBuilder.execute(any[HttpReads[HttpResponse]], any())).
           thenReturn(Future.successful(HttpResponse(429, Json.toJson(errorResponse).toString())))

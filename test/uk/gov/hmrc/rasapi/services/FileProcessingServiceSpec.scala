@@ -18,7 +18,7 @@ package uk.gov.hmrc.rasapi.services
 
 import org.apache.pekko.stream.Materializer
 import org.apache.pekko.actor.ActorSystem
-import org.joda.time.DateTime
+import java.time.{Instant, LocalDate}
 import org.mockito.ArgumentCaptor
 import org.mockito.ArgumentMatchers.{eq => Meq, _}
 import org.mockito.Mockito._
@@ -47,7 +47,7 @@ import uk.gov.hmrc.rasapi.repository.RasFilesRepository
 import java.io.{ByteArrayInputStream, FileInputStream}
 import java.nio.charset.StandardCharsets
 import java.nio.file.{Files, Path}
-import java.time.Instant
+import java.time.format.DateTimeFormatter
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.Try
@@ -93,7 +93,7 @@ class FileProcessingServiceSpec extends AnyWordSpecLike
     metrics,
     ExecutionContext.global
   ) {
-    override def getCurrentDate: DateTime = new DateTime("2018-04-04")
+    override def getCurrentDate: LocalDate = LocalDate.parse("2018-06-04", DateTimeFormatter.ofPattern("yyyy-MM-dd"))
 
     override val allowDefaultRUK: Boolean = false
 
@@ -145,7 +145,7 @@ class FileProcessingServiceSpec extends AnyWordSpecLike
           metrics,
           ExecutionContext.global
         ) {
-          override def getCurrentDate: DateTime = new DateTime("2018-02-04")
+          override def getCurrentDate: LocalDate = LocalDate.parse("2018-02-04", DateTimeFormatter.ofPattern("yyyy-MM-dd"))
 
           override val allowDefaultRUK: Boolean = true
 
@@ -223,7 +223,7 @@ class FileProcessingServiceSpec extends AnyWordSpecLike
           metrics,
           ExecutionContext.global
         ) {
-          override def getCurrentDate: DateTime = new DateTime("2019-02-04")
+          override def getCurrentDate: LocalDate = LocalDate.parse("2019-02-04", DateTimeFormatter.ofPattern("yyyy-MM-dd"))
 
           override val allowDefaultRUK: Boolean = true
 
@@ -247,7 +247,6 @@ class FileProcessingServiceSpec extends AnyWordSpecLike
           "LE241131B,MICHEAL,SLATER,1990-02-21,scotResident,scotResident"
 
         val callbackData: UpscanCallbackData = UpscanCallbackData(reference = fileId, downloadUrl = Some("url"), fileStatus = "READY", uploadDetails = None, failureDetails = None)
-        val fileMetaData = FileMetadata(fileId, Some(fileId), Some("2018-07-28"))
         val cacheItem = CacheItem("sessionValue", Json.toJson(Map("user1234" -> Json.toJson(callbackData))).as[JsObject], Instant.now, Instant.now)
 
         when(mockSessionCache.updateFileSession(any(), any(), any(), any()))
@@ -301,7 +300,7 @@ class FileProcessingServiceSpec extends AnyWordSpecLike
           metrics,
           ExecutionContext.global
         ) {
-          override def getCurrentDate: DateTime = new DateTime("2018-06-04")
+          override def getCurrentDate: LocalDate = LocalDate.parse("2018-06-04", DateTimeFormatter.ofPattern("yyyy-MM-dd"))
 
           override val allowDefaultRUK: Boolean = true
 
@@ -377,7 +376,7 @@ class FileProcessingServiceSpec extends AnyWordSpecLike
           metrics,
           ExecutionContext.global
         ) {
-          override def getCurrentDate: DateTime = new DateTime("2018-02-04")
+          override def getCurrentDate: LocalDate = LocalDate.parse("2018-02-04", DateTimeFormatter.ofPattern("yyyy-MM-dd"))
 
           override val allowDefaultRUK: Boolean = true
 
@@ -453,7 +452,7 @@ class FileProcessingServiceSpec extends AnyWordSpecLike
           metrics,
           ExecutionContext.global
         ) {
-          override def getCurrentDate: DateTime = new DateTime("2018-02-04")
+          override def getCurrentDate: LocalDate = LocalDate.parse("2018-02-04", DateTimeFormatter.ofPattern("yyyy-MM-dd"))
 
           override val allowDefaultRUK: Boolean = true
 
@@ -528,7 +527,7 @@ class FileProcessingServiceSpec extends AnyWordSpecLike
           metrics,
           ExecutionContext.global
         ) {
-          override def getCurrentDate: DateTime = new DateTime("2018-02-04")
+          override def getCurrentDate: LocalDate = LocalDate.parse("2018-02-04", DateTimeFormatter.ofPattern("yyyy-MM-dd"))
 
           override val allowDefaultRUK: Boolean = true
 
@@ -641,7 +640,7 @@ class FileProcessingServiceSpec extends AnyWordSpecLike
 
           val result = SUT.createMatchingData(inputData)
 
-          result shouldBe Left(IndividualDetails("AB123456C", "JOHN", "SMITH", new DateTime("1995-02-21")))
+          result shouldBe Left(IndividualDetails("AB123456C", "JOHN", "SMITH", LocalDate.parse("1995-02-21", DateTimeFormatter.ofPattern("yyyy-MM-dd"))))
         }
       }
 
@@ -651,7 +650,7 @@ class FileProcessingServiceSpec extends AnyWordSpecLike
 
           val result = SUT.createMatchingData(inputData)
 
-          result shouldBe Left(IndividualDetails("AB123456C", "JOHN", "SMITH", new DateTime("1995-02-21")))
+          result shouldBe Left(IndividualDetails("AB123456C", "JOHN", "SMITH", LocalDate.parse("1995-02-21", DateTimeFormatter.ofPattern("yyyy-MM-dd"))))
         }
       }
 
@@ -661,7 +660,7 @@ class FileProcessingServiceSpec extends AnyWordSpecLike
 
           val result = SUT.createMatchingData(inputData)
 
-          result shouldBe Left(IndividualDetails("AB123456C", "JOHN", "SMITH", new DateTime("1995-02-21")))
+          result shouldBe Left(IndividualDetails("AB123456C", "JOHN", "SMITH", LocalDate.parse("1995-02-21", DateTimeFormatter.ofPattern("yyyy-MM-dd"))))
         }
       }
 
@@ -672,7 +671,7 @@ class FileProcessingServiceSpec extends AnyWordSpecLike
 
           val result = SUT.createMatchingData(inputData)
 
-          result shouldBe Left(IndividualDetails("AB123456C", "JOHN", "SMITH", new DateTime("1995-02-21")))
+          result shouldBe Left(IndividualDetails("AB123456C", "JOHN", "SMITH", LocalDate.parse("1995-02-21", DateTimeFormatter.ofPattern("yyyy-MM-dd"))))
         }
 
         "parse line as raw data and convert to RawMemberDetails object when there is an invalid date" in {
@@ -717,7 +716,7 @@ class FileProcessingServiceSpec extends AnyWordSpecLike
       }
     }
 
-    val data = IndividualDetails("AB123456C", "JOHN", "SMITH", new DateTime("1992-02-21"))
+    val data = IndividualDetails("AB123456C", "JOHN", "SMITH", LocalDate.parse("1992-02-21", DateTimeFormatter.ofPattern("yyyy-MM-dd")))
 
     "fetch result" when {
       "input row is valid and the date of processing is between january and april" in {

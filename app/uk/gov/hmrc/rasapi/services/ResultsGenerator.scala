@@ -16,7 +16,7 @@
 
 package uk.gov.hmrc.rasapi.services
 
-import org.joda.time.DateTime
+import java.time.LocalDate
 import play.api.libs.json.{JsError, JsSuccess, Json}
 import play.api.mvc.{AnyContent, Request}
 import uk.gov.hmrc.http.HeaderCarrier
@@ -36,7 +36,7 @@ trait ResultsGenerator {
   val residencyYearResolver: ResidencyYearResolver
   val auditService: AuditService
 
-  def getCurrentDate: DateTime
+  def getCurrentDate: LocalDate
   val allowDefaultRUK: Boolean
 
   val DECEASED: String
@@ -94,7 +94,7 @@ trait ResultsGenerator {
 
   private def updateResidencyResponse(residencyStatus: ResidencyStatus): ResidencyStatus = {
 
-    if (getCurrentDate.isBefore(new DateTime(2018, 4, 6, 0, 0, 0, 0)) && allowDefaultRUK) {
+    if (getCurrentDate.isBefore(LocalDate.of(2018, 4, 6)) && allowDefaultRUK) {
       residencyStatus.copy(currentYearResidencyStatus = desConnector.otherUk)
     } else {
       residencyStatus

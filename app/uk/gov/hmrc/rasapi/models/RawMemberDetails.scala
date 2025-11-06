@@ -16,7 +16,8 @@
 
 package uk.gov.hmrc.rasapi.models
 
-import org.joda.time.DateTime
+import java.time.LocalDate
+import java.time.format.DateTimeFormatter
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
 
@@ -30,7 +31,7 @@ object RawMemberDetails {
   implicit val formats: OFormat[RawMemberDetails] = Json.format[RawMemberDetails]
 }
 
-case class IndividualDetails(nino: NINO, firstName: Name, lastName: Name, dateOfBirth: DateTime)
+case class IndividualDetails(nino: NINO, firstName: Name, lastName: Name, dateOfBirth: LocalDate)
 
 object IndividualDetails {
 
@@ -42,13 +43,13 @@ object IndividualDetails {
     (JsPath \ "nino").write[String] and
       (JsPath \ "firstName").write[String] and
       (JsPath \ "lastName").write[String] and
-      (JsPath \ "dob").write[String].contramap[DateTime](_.toString("yyyy-MM-dd"))
+      (JsPath \ "dob").write[String].contramap[LocalDate](_.format(DateTimeFormatter.ofPattern("yyyy-MM-dd")))
     )(unlift(IndividualDetails.unapply))
 
-  private def individualDetailsReadsWith(dateTimeReads: Reads[DateTime]): Reads[IndividualDetails] =
+  private def individualDetailsReadsWith(dateTimeReads: Reads[LocalDate]): Reads[IndividualDetails] =
     ((JsPath \ "nino").read[NINO](JsonReads.nino).map(_.padTo(9, " ").mkString.toUpperCase) and
         (JsPath \ "firstName").read[Name](JsonReads.name).map(_.toUpperCase) and
         (JsPath \ "lastName").read[Name](JsonReads.name).map(_.toUpperCase) and
-        (JsPath \ "dateOfBirth").read[DateTime](dateTimeReads).map(new DateTime(_))
+        (JsPath \ "dateOfBirth").read[LocalDate](dateTimeReads)
       )(IndividualDetails.apply _)
 }
