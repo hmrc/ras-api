@@ -16,7 +16,7 @@
 
 package uk.gov.hmrc.rasapi.controllers
 
-import org.joda.time.DateTime
+import java.time.Instant
 import org.mockito.ArgumentMatchers.any
 import org.mockito.Mockito.when
 import org.scalatest.concurrent.ScalaFutures.convertScalaFuture
@@ -48,7 +48,7 @@ class FileSessionControllerSpec extends AnyWordSpecLike with TestEnrolments with
   val fileSessionController = new FileSessionController(mockFilesSessionService, mockAuthConnector, mockCC)(ExecutionContext.global)
 
   val createFileSessionRequest: CreateFileSessionRequest = CreateFileSessionRequest("A123456", UUID.randomUUID().toString)
-  val fileSession: FileSession = FileSession(None, None, "A123456", Some(DateTime.now().getMillis), None)
+  val fileSession: FileSession = FileSession(None, None, "A123456", Some(Instant.now().toEpochMilli), None)
 
   "createFileSession" should {
     "return CREATED if file session successfully stored" in {

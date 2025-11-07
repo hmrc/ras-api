@@ -16,7 +16,6 @@
 
 package uk.gov.hmrc.rasapi.services
 
-import org.joda.time.DateTime
 import org.mockito.Mockito._
 import org.scalatest.OptionValues
 import org.scalatest.matchers.should.Matchers
@@ -108,7 +107,7 @@ class RasFilesSessionServiceSpec extends AnyWordSpec with GuiceOneAppPerSuite wi
     val callbackData: UpscanCallbackData = UpscanCallbackData(reference = "reference", downloadUrl = Some("url"), fileStatus = "READY", uploadDetails = None, failureDetails = None)
     val resultsFile: ResultsFileMetaData = ResultsFileMetaData("file-id-1", "fileName.csv", 1234L, 123, 1234L)
     val fileMetadata: FileMetadata = FileMetadata("file-id-1", Some("fileName"), None)
-    val rasSession: FileSession = FileSession(Some(callbackData), Some(resultsFile), "A1234533", Some(DateTime.now().getMillis), Some(fileMetadata))
+    val rasSession: FileSession = FileSession(Some(callbackData), Some(resultsFile), "A1234533", Some(Instant.now().toEpochMilli), Some(fileMetadata))
     val json: JsValue = Json.toJson(rasSession)
     val cacheItem: CacheItem = CacheItem("A1234533", Json.toJson(Map("fileSession" -> json)).as[JsObject], Instant.now, Instant.now)
 

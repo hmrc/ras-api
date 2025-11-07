@@ -16,7 +16,7 @@
 
 package uk.gov.hmrc.rasapi.services
 
-import org.joda.time.DateTime
+import java.time.LocalDate
 import play.api.Logging
 import play.api.mvc.{AnyContent, Request}
 import uk.gov.hmrc.http.HeaderCarrier
@@ -44,7 +44,7 @@ class FileProcessingService @Inject()(
                                        implicit val ec: ExecutionContext
                                      ) extends RasFileReader with RasFileWriter with ResultsGenerator with Logging {
 
-  def getCurrentDate: DateTime = DateTime.now()
+  def getCurrentDate: LocalDate = LocalDate.now()
 
   val allowDefaultRUK: Boolean = appContext.allowDefaultRUK
   val DECEASED: String = appContext.deceasedStatus
@@ -154,7 +154,7 @@ class FileProcessingService @Inject()(
   def getTaxYearHeadings: String = {
     val currentDate = getCurrentDate
     val currentYear = currentDate.getYear
-    if (currentDate.isAfter(new DateTime(currentYear - 1, 12, 31, 0, 0, 0, 0)) && currentDate.isBefore(new DateTime(currentYear, 4, 6, 0, 0, 0, 0))) {
+    if (residencyYearResolver.isBetweenJanAndApril) {
       s"${currentYear - 1} to $currentYear residency status,$currentYear to ${currentYear + 1} residency status"
     } else {
       s"$currentYear to ${currentYear + 1} residency status"

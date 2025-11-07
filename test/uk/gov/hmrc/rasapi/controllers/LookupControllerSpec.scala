@@ -16,7 +16,7 @@
 
 package uk.gov.hmrc.rasapi.controllers
 
-import org.joda.time.DateTime
+import java.time.LocalDate
 import org.mockito.ArgumentMatchers
 import org.mockito.ArgumentMatchers.{eq => Meq, _}
 import org.mockito.Mockito._
@@ -45,6 +45,7 @@ import uk.gov.hmrc.rasapi.models.{Nino, _}
 import uk.gov.hmrc.rasapi.services.AuditService
 import uk.gov.hmrc.rasapi.utils.ErrorConverter
 
+import java.time.format.DateTimeFormatter
 import scala.concurrent.{ExecutionContext, Future}
 
 class LookupControllerSpec extends AnyWordSpecLike with Matchers with MockitoSugar with GuiceOneAppPerSuite with BeforeAndAfter {
@@ -82,7 +83,7 @@ class LookupControllerSpec extends AnyWordSpecLike with Matchers with MockitoSug
 
   val successfulRetrieval: Future[Enrolments] = Future.successful(enrolments)
 
-  val individualDetails: IndividualDetails = IndividualDetails("LE241131B", "Joe", "Bloggs", new DateTime("1990-12-03"))
+  val individualDetails: IndividualDetails = IndividualDetails("LE241131B", "Joe", "Bloggs", LocalDate.parse("1990-12-03", DateTimeFormatter.ofPattern("yyyy-MM-dd")))
 
   val STATUS_DECEASED: String = "DECEASED"
   val STATUS_MATCHING_FAILED: String = "STATUS_UNAVAILABLE"
@@ -94,7 +95,7 @@ class LookupControllerSpec extends AnyWordSpecLike with Matchers with MockitoSug
     (JsPath \ "nino").write[String] and
       (JsPath \ "firstName").write[String] and
       (JsPath \ "lastName").write[String] and
-      (JsPath \ "dateOfBirth").write[String].contramap[DateTime](date => date.toString("yyyy-MM-dd"))
+      (JsPath \ "dateOfBirth").write[String].contramap[LocalDate](_.format(DateTimeFormatter.ofPattern("yyyy-MM-dd")))
     ) (unlift(IndividualDetails.unapply))
 
   object TestLookupController extends LookupController(
@@ -110,7 +111,7 @@ class LookupControllerSpec extends AnyWordSpecLike with Matchers with MockitoSug
     mockParser
   ) {
 
-    override def getCurrentDate: DateTime = new DateTime(2018, 7, 6, 0, 0, 0, 0)
+    override def getCurrentDate: LocalDate = LocalDate.of(2018, 7, 6)
 
     override lazy val allowDefaultRUK: Boolean = false
     override lazy val STATUS_DECEASED: String = "DECEASED"
@@ -132,7 +133,7 @@ class LookupControllerSpec extends AnyWordSpecLike with Matchers with MockitoSug
     ExecutionContext.global,
     mockParser
   ) {
-    override def getCurrentDate: DateTime = new DateTime(2018, 2, 15, 0, 0, 0, 0)
+    override def getCurrentDate: LocalDate = LocalDate.of(2018, 2, 15)
 
     override lazy val allowDefaultRUK: Boolean = true
     override lazy val STATUS_DECEASED: String = "DECEASED"
@@ -154,7 +155,7 @@ class LookupControllerSpec extends AnyWordSpecLike with Matchers with MockitoSug
     ExecutionContext.global,
     mockParser
   ) {
-    override def getCurrentDate: DateTime = new DateTime(2019, 2, 15, 0, 0, 0, 0)
+    override def getCurrentDate: LocalDate = LocalDate.of(2019, 2, 15)
 
     override lazy val allowDefaultRUK: Boolean = false
     override lazy val STATUS_DECEASED: String = "DECEASED"
@@ -176,7 +177,7 @@ class LookupControllerSpec extends AnyWordSpecLike with Matchers with MockitoSug
     ExecutionContext.global,
     mockParser
   ) {
-    override def getCurrentDate: DateTime = new DateTime(2019, 1, 1, 0, 0, 0, 0)
+    override def getCurrentDate: LocalDate = LocalDate.of(2019, 1, 1)
 
     override lazy val allowDefaultRUK: Boolean = false
     override lazy val STATUS_DECEASED: String = "DECEASED"

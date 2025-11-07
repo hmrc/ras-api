@@ -16,7 +16,7 @@
 
 package uk.gov.hmrc.rasapi.controllers.lookupController
 
-import org.joda.time.DateTime
+import java.time.LocalDate
 import play.api.Logging
 import play.api.libs.json.Json._
 import play.api.libs.json._
@@ -53,7 +53,7 @@ class LookupController @Inject()(
                                 parser: BodyParsers.Default
                                 ) extends BackendController(cc) with HeaderValidator with AuthorisedFunctions with Logging {
 
-  def getCurrentDate: DateTime = DateTime.now()
+  def getCurrentDate: LocalDate = LocalDate.now()
   lazy val allowDefaultRUK: Boolean = appContext.allowDefaultRUK
   lazy val STATUS_DECEASED: String = appContext.deceasedStatus
   lazy val STATUS_MATCHING_FAILED: String = appContext.matchingFailedStatus
@@ -177,7 +177,7 @@ class LookupController @Inject()(
 
   private def updateResidencyResponse(residencyStatus: ResidencyStatus): ResidencyStatus = {
 
-    if (getCurrentDate.isBefore(new DateTime(2018, 4, 6, 0, 0, 0, 0)) && allowDefaultRUK) {
+    if (getCurrentDate.isBefore(LocalDate.of(2018, 4, 6)) && allowDefaultRUK) {
       residencyStatus.copy(currentYearResidencyStatus = desConnector.otherUk)
     } else {
       residencyStatus

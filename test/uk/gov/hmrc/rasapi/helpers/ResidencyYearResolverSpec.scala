@@ -16,7 +16,7 @@
 
 package uk.gov.hmrc.rasapi.helpers
 
-import org.joda.time.DateTime
+import java.time.LocalDate
 import org.scalatest.BeforeAndAfter
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpecLike
@@ -32,7 +32,7 @@ class ResidencyYearResolverSpec extends AnyWordSpecLike with Matchers with Mocki
       "the date is on 6th April" in {
 
         val SUT = new ResidencyYearResolver {
-          override def currentDateTime = new DateTime(2017, 4, 6, 0, 0)
+          override def currentDate = LocalDate.of(2017, 4, 6)
         }
 
         SUT.isBetweenJanAndApril shouldBe false
@@ -41,7 +41,7 @@ class ResidencyYearResolverSpec extends AnyWordSpecLike with Matchers with Mocki
       "the date is on 31st December" in {
 
         val SUT = new ResidencyYearResolver {
-          override def currentDateTime = new DateTime(2017, 12, 31, 0, 0)
+          override def currentDate = LocalDate.of(2017, 12, 31)
         }
 
         SUT.isBetweenJanAndApril shouldBe false
@@ -50,7 +50,7 @@ class ResidencyYearResolverSpec extends AnyWordSpecLike with Matchers with Mocki
       "the date is after 6th April but before 31st December" in {
 
         val SUT = new ResidencyYearResolver {
-          override def currentDateTime = new DateTime(2017, 8, 22, 0, 0)
+          override def currentDate = LocalDate.of(2017, 8, 22)
         }
 
         SUT.isBetweenJanAndApril shouldBe false
@@ -61,7 +61,7 @@ class ResidencyYearResolverSpec extends AnyWordSpecLike with Matchers with Mocki
       "the date is on 1st January" in {
 
         val SUT = new ResidencyYearResolver {
-          override def currentDateTime = new DateTime(2017, 1, 22, 0, 0)
+          override def currentDate = LocalDate.of(2017, 1, 22)
         }
 
         SUT.isBetweenJanAndApril shouldBe true
@@ -70,7 +70,7 @@ class ResidencyYearResolverSpec extends AnyWordSpecLike with Matchers with Mocki
       "the date is on 5th April" in {
 
         val SUT = new ResidencyYearResolver {
-          override def currentDateTime = new DateTime(2017, 4, 5, 0, 0)
+          override def currentDate = LocalDate.of(2017, 4, 5)
         }
 
         SUT.isBetweenJanAndApril shouldBe true
@@ -79,7 +79,7 @@ class ResidencyYearResolverSpec extends AnyWordSpecLike with Matchers with Mocki
       "the date is between 1st Jan and 5th April" in {
 
         val SUT = new ResidencyYearResolver {
-          override def currentDateTime = new DateTime(2017, 2, 25, 0, 0)
+          override def currentDate = LocalDate.of(2017, 2, 25)
         }
 
         SUT.isBetweenJanAndApril shouldBe true

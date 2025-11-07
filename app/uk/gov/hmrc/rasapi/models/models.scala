@@ -16,8 +16,8 @@
 
 package uk.gov.hmrc.rasapi
 
-import org.joda.time.DateTime
-import org.joda.time.format.DateTimeFormat
+import java.time.LocalDate
+import java.time.format.{DateTimeFormatter, ResolverStyle}
 import org.mongodb.scala.gridfs.GridFSFile
 import play.api.libs.json._
 
@@ -38,19 +38,19 @@ package object models {
     private val ninoRegex = "^((?!(BG|GB|KN|NK|NT|TN|ZZ)|(D|F|I|Q|U|V)[A-Z]|[A-Z](D|F|I|O|Q|U|V))[A-Z]{2})[0-9]{6}[A-D]?$"
 
     private val isoDatePattern = Map(
-      "yyyy-MM-dd" -> "^[\\d]{4}-[\\d]{2}-[\\d]{2}$"
+      "uuuu-MM-dd" -> "^[\\d]{4}-[\\d]{2}-[\\d]{2}$"
     )
 
     private val bulkDatePatterns = isoDatePattern ++ Map(
-      "dd/MM/yyyy" -> "^[\\d]{2}/[\\d]{2}/[\\d]{4}$",
-      "dd-MM-yyyy" -> "^[\\d]{2}-[\\d]{2}-[\\d]{4}$",
-      "yyyy/MM/dd" -> "^[\\d]{4}/[\\d]{2}/[\\d]{2}$"
+      "dd/MM/uuuu" -> "^[\\d]{2}/[\\d]{2}/[\\d]{4}$",
+      "dd-MM-uuuu" -> "^[\\d]{2}-[\\d]{2}-[\\d]{4}$",
+      "uuuu/MM/dd" -> "^[\\d]{4}/[\\d]{2}/[\\d]{2}$"
     )
 
     val nino: Reads[NINO] = ninoReads()
     val name: Reads[Name] = nameReads()
-    val isoDate: Reads[DateTime] = dateReads(isoDatePattern)
-    val bulkDate: Reads[DateTime] = dateReads(bulkDatePatterns)
+    val isoDate: Reads[LocalDate] = dateReads(isoDatePattern)
+    val bulkDate: Reads[LocalDate] = dateReads(bulkDatePatterns)
 
     private def ninoReads(): Reads[NINO] = new Reads[NINO] {
 
@@ -88,18 +88,18 @@ package object models {
     }
 
     /**
-      * Reads a JSON value as a joda.org.time.DateTime object.
+      * Reads a JSON value as a java.time.LocalDate object.
       * This date cannot be in the future.
       *
       * @param patterns
       */
-    private def dateReads(patterns: Map[String, String]): Reads[DateTime] = new Reads[DateTime] {
-      def reads(json: JsValue): JsResult[DateTime] = json match {
+    private def dateReads(patterns: Map[String, String]): Reads[LocalDate] = new Reads[LocalDate] {
+      def reads(json: JsValue): JsResult[LocalDate] = json match {
         case JsString(s) if s.trim.nonEmpty =>
           s.extractDateFormat(patterns) match {
             case Some(format) =>
               s.toDateTime(format) match {
-                case Some(d: DateTime) if !d.isAfterNow => JsSuccess(d)
+                case Some(d: LocalDate) if !d.isAfter(LocalDate.now()) => JsSuccess(d)
                 case _ => JsError(Seq(JsPath() -> Seq(JsonValidationError(invalidDateValidation))))
               }
             case None => JsError(Seq(JsPath() -> Seq(JsonValidationError(invalidFormat))))
@@ -137,8 +137,11 @@ package object models {
         * @param format
         * @return
         */
-      def toDateTime(format: String): Option[DateTime] = {
-        scala.util.control.Exception.allCatch[DateTime] opt (DateTime.parse(date, DateTimeFormat.forPattern(format)))
+      def toDateTime(format: String): Option[LocalDate] = {
+        val formatter = DateTimeFormatter.ofPattern(format).withResolverStyle(ResolverStyle.STRICT)
+        scala.util.control.Exception.allCatch[LocalDate] opt (
+          LocalDate.parse(date, formatter)
+          )
       }
     }
 
