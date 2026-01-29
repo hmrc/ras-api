@@ -31,17 +31,24 @@ object FileMetadata {
 case class UploadDetails(uploadTimestamp: Instant, checksum: String, fileMimeType: String, fileName: String, size: Int)
 
 case class FailureDetails(failureReason: String, message: String)
-  object FailureDetails{
-    implicit val formats: OFormat[FailureDetails] = Json.format[FailureDetails]
-  }
+
+object FailureDetails {
+  implicit val formats: OFormat[FailureDetails] = Json.format[FailureDetails]
+}
 
 object UploadDetails {
   implicit val formats: OFormat[UploadDetails] = Json.format[UploadDetails]
 }
 
-case class UpscanCallbackData(reference: String, downloadUrl: Option[String], fileStatus: String, uploadDetails: Option[UploadDetails], failureDetails: Option[FailureDetails]) {
+case class UpscanCallbackData(
+  reference: String,
+  downloadUrl: Option[String],
+  fileStatus: String,
+  uploadDetails: Option[UploadDetails],
+  failureDetails: Option[FailureDetails]
+) {
   val failureReason: String = this.failureDetails.getOrElse(FailureDetails("unknown", "")).failureReason
-  val message: String = this.failureDetails.getOrElse(FailureDetails("unknown", "")).message
+  val message: String       = this.failureDetails.getOrElse(FailureDetails("unknown", "")).message
 
   def toFileMetadata: FileMetadata =
     FileMetadata(
@@ -49,6 +56,7 @@ case class UpscanCallbackData(reference: String, downloadUrl: Option[String], fi
       Some(this.uploadDetails.getOrElse(UploadDetails(Instant.now(), "", "", "", 0)).fileName),
       Some(this.uploadDetails.getOrElse(UploadDetails(Instant.now(), "", "", "", 0)).uploadTimestamp.toString)
     )
+
 }
 
 object UpscanCallbackData {
@@ -65,15 +73,16 @@ case class Chunks(_id: ObjectId, files_id: ObjectId)
 
 object Chunks {
   implicit val objectIdformats: Format[ObjectId] = MongoFormats.objectIdFormat
-  implicit val format: OFormat[Chunks] = Json.format[Chunks]
+  implicit val format: OFormat[Chunks]           = Json.format[Chunks]
 }
 
-case class FileSession(userFile: Option[UpscanCallbackData],
-                       resultsFile: Option[ResultsFileMetaData],
-                       userId: String,
-                       uploadTimeStamp: Option[Long],
-                       fileMetadata: Option[FileMetadata]
-                      )
+case class FileSession(
+  userFile: Option[UpscanCallbackData],
+  resultsFile: Option[ResultsFileMetaData],
+  userId: String,
+  uploadTimeStamp: Option[Long],
+  fileMetadata: Option[FileMetadata]
+)
 
 object FileSession {
   implicit val format: OFormat[FileSession] = Json.format[FileSession]

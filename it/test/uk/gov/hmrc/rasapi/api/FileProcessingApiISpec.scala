@@ -36,44 +36,52 @@ import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration._
 import scala.io.{BufferedSource, Source}
 
-class FileProcessingApiISpec extends PlaySpec with ScalaFutures
-  with GuiceOneServerPerSuite with FutureAwaits with DefaultAwaitTimeout with Eventually with WireMockServerHelper {
+class FileProcessingApiISpec
+    extends PlaySpec
+    with ScalaFutures
+    with GuiceOneServerPerSuite
+    with FutureAwaits
+    with DefaultAwaitTimeout
+    with Eventually
+    with WireMockServerHelper {
 
-  override implicit def defaultAwaitTimeout: Timeout = 20.seconds
+  implicit override def defaultAwaitTimeout: Timeout = 20.seconds
 
-  override implicit lazy val app: Application = new GuiceApplicationBuilder()
+  implicit override lazy val app: Application = new GuiceApplicationBuilder()
     .configure("microservice.services.auth.port" -> mockPort)
     .build()
 
   lazy val rasFileRepository: RasFilesRepository = app.injector.instanceOf[RasFilesRepository]
-  lazy val ws: WSClient = app.injector.instanceOf[WSClient]
-  lazy val client1:HttpClientV2 = app.injector.instanceOf[HttpClientV2]
-  private val uri = s"http://localhost:$port/ras-api/file/getFile/reference-1"
-  implicit val hc : HeaderCarrier = HeaderCarrier()
+  lazy val ws: WSClient                          = app.injector.instanceOf[WSClient]
+  lazy val client1: HttpClientV2                 = app.injector.instanceOf[HttpClientV2]
+  private val uri                                = s"http://localhost:$port/ras-api/file/getFile/reference-1"
+  implicit val hc: HeaderCarrier                 = HeaderCarrier()
 
   class Setup(filename: String) {
     val largeFile: File = new File("it/test/resources/testFiles/bulk.csv")
 
-    def insertFile(): ResultsFile = await(rasFileRepository.saveFile(
-      userId = "userid-1",
-      reference = "reference-1",
-      filePath = largeFile.toPath,
-    ))
+    def insertFile(): ResultsFile = await(
+      rasFileRepository.saveFile(
+        userId = "userid-1",
+        reference = "reference-1",
+        filePath = largeFile.toPath
+      )
+    )
 
-    def dropAll(): Boolean = {
+    def dropAll(): Boolean =
       await(rasFileRepository.removeFile(filename, "userid-1"))
-    }
+
   }
 
   "calling the getFile" should {
     "retrieve the file" in new Setup("reference-1") {
       insertFile()
-      val headers = Map("Authorization" -> "Bearer123")
+      val headers                    = Map("Authorization" -> "Bearer123")
       authMocks
       val testSource: BufferedSource = Source.fromFile("it/test/resources/testFiles/bulk.csv")
-      val response =   await(client1.get(url"$uri").setHeader(headers.toSeq:_*).execute)
-      response.status mustBe OK
-      response.body mustBe testSource.getLines().toList.mkString("\n")
+      val response                   = await(client1.get(url"$uri").setHeader(headers.toSeq: _*).execute)
+      response.status                 mustBe OK
+      response.body                   mustBe testSource.getLines().toList.mkString("\n")
       response.header("Content-Type") mustBe Some("application/csv")
 
       testSource.close()

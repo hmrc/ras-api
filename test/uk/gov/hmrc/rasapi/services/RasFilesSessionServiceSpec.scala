@@ -35,9 +35,15 @@ import java.time.Instant
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.{ExecutionContext, Future}
 
-class RasFilesSessionServiceSpec extends AnyWordSpec with GuiceOneAppPerSuite with Matchers with MockitoSugar with OptionValues with PlayMongoRepositorySupport[CacheItem] {
+class RasFilesSessionServiceSpec
+    extends AnyWordSpec
+    with GuiceOneAppPerSuite
+    with Matchers
+    with MockitoSugar
+    with OptionValues
+    with PlayMongoRepositorySupport[CacheItem] {
 
-  val appContext: AppContext = app.injector.instanceOf[AppContext]
+  val appContext: AppContext   = app.injector.instanceOf[AppContext]
   override lazy val repository = new RasFilesSessionRepository(mongoComponent, appContext, new CurrentTimestampSupport)
 
   val SUT: RasFilesSessionService = new RasFilesSessionService(repository)(ExecutionContext.global)
@@ -73,8 +79,9 @@ class RasFilesSessionServiceSpec extends AnyWordSpec with GuiceOneAppPerSuite wi
       when(sessionCacheRepositoryMock.put[FileSession]("A1234533")(DataKey("fileSession"), rasSession))
         .thenReturn(Future.successful(cacheItem))
 
-      val res: CacheItem = await(sessionService.updateFileSession("A1234533", callbackData, Some(resultsFile), Some(fileMetadata)))
-      res.id shouldBe "A1234533"
+      val res: CacheItem =
+        await(sessionService.updateFileSession("A1234533", callbackData, Some(resultsFile), Some(fileMetadata)))
+      res.id                  shouldBe "A1234533"
       res.data("fileSession") shouldBe json
     }
 
@@ -104,14 +111,33 @@ class RasFilesSessionServiceSpec extends AnyWordSpec with GuiceOneAppPerSuite wi
   }
 
   trait Setup {
-    val callbackData: UpscanCallbackData = UpscanCallbackData(reference = "reference", downloadUrl = Some("url"), fileStatus = "READY", uploadDetails = None, failureDetails = None)
+
+    val callbackData: UpscanCallbackData = UpscanCallbackData(
+      reference = "reference",
+      downloadUrl = Some("url"),
+      fileStatus = "READY",
+      uploadDetails = None,
+      failureDetails = None
+    )
+
     val resultsFile: ResultsFileMetaData = ResultsFileMetaData("file-id-1", "fileName.csv", 1234L, 123, 1234L)
-    val fileMetadata: FileMetadata = FileMetadata("file-id-1", Some("fileName"), None)
-    val rasSession: FileSession = FileSession(Some(callbackData), Some(resultsFile), "A1234533", Some(Instant.now().toEpochMilli), Some(fileMetadata))
-    val json: JsValue = Json.toJson(rasSession)
-    val cacheItem: CacheItem = CacheItem("A1234533", Json.toJson(Map("fileSession" -> json)).as[JsObject], Instant.now, Instant.now)
+    val fileMetadata: FileMetadata       = FileMetadata("file-id-1", Some("fileName"), None)
+
+    val rasSession: FileSession          = FileSession(
+      Some(callbackData),
+      Some(resultsFile),
+      "A1234533",
+      Some(Instant.now().toEpochMilli),
+      Some(fileMetadata)
+    )
+
+    val json: JsValue                    = Json.toJson(rasSession)
+
+    val cacheItem: CacheItem             =
+      CacheItem("A1234533", Json.toJson(Map("fileSession" -> json)).as[JsObject], Instant.now, Instant.now)
 
     protected val sessionCacheRepositoryMock: RasFilesSessionRepository = mock[RasFilesSessionRepository]
-    protected val sessionService: RasFilesSessionService = new RasFilesSessionService(sessionCacheRepositoryMock)
+    protected val sessionService: RasFilesSessionService                = new RasFilesSessionService(sessionCacheRepositoryMock)
   }
+
 }

@@ -3,8 +3,8 @@ import uk.gov.hmrc.DefaultBuildSettings.itSettings
 
 import scala.collection.Seq
 
-ThisBuild / scalaVersion        := "2.13.16"
-ThisBuild / majorVersion        := 1
+ThisBuild / scalaVersion := "2.13.16"
+ThisBuild / majorVersion := 1
 
 lazy val microservice = Project("ras-api", file("."))
   .enablePlugins(play.sbt.PlayScala, SbtDistributablesPlugin)
@@ -21,3 +21,5 @@ lazy val it = project
   .enablePlugins(PlayScala)
   .dependsOn(microservice % "test->test")
   .settings(itSettings())
+
+addCommandAlias("scalafmtAll", "all scalafmtSbt scalafmt Test/scalafmt it/Test/scalafmt")

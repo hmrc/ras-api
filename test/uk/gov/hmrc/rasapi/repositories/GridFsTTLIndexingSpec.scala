@@ -32,7 +32,8 @@ import uk.gov.hmrc.rasapi.repository.RasFilesRepository
 
 import scala.concurrent.ExecutionContext.Implicits.global
 
-class GridFsTTLIndexingSpec extends AnyWordSpecLike
+class GridFsTTLIndexingSpec
+    extends AnyWordSpecLike
     with Matchers
     with MockitoSugar
     with BeforeAndAfter
@@ -41,23 +42,25 @@ class GridFsTTLIndexingSpec extends AnyWordSpecLike
   val mockAppContext: AppContext = mock[AppContext]
   when(mockAppContext.resultsExpriyTime).thenReturn(3600)
 
-  override lazy val repository = new RasFilesRepository(mongoComponent, mockAppContext)
-  lazy val LastUpdatedIndex = "lastUpdatedIndex"
+  override lazy val repository   = new RasFilesRepository(mongoComponent, mockAppContext)
+  lazy val LastUpdatedIndex      = "lastUpdatedIndex"
   lazy val OptExpireAfterSeconds = "expireAfterSeconds"
-  lazy val UploadDate = "uploadDate"
+  lazy val UploadDate            = "uploadDate"
 
   "GridFsTTLIndexing" should {
     "Add the lastUpdatedIndex with TTL option to a collection" in {
-      await(repository.saveFile("user111","reference111",createFile))
-      val indexes: Seq[Document] = await(repository.mongoComponent.database.getCollection("resultsFiles.files").listIndexes().toFuture())
+      await(repository.saveFile("user111", "reference111", createFile))
+      val indexes: Seq[Document]  =
+        await(repository.mongoComponent.database.getCollection("resultsFiles.files").listIndexes().toFuture())
       val expectedIndex: Document = Document(
-        "v" -> BsonInt32(value = 2),
-        "key" -> "uploadDate: 1",
-        "name" -> BsonString(LastUpdatedIndex),
-        "ns" -> BsonString("test-GridFsTTLIndexingSpec.resultsFiles.files"),
+        "v"                   -> BsonInt32(value = 2),
+        "key"                 -> "uploadDate: 1",
+        "name"                -> BsonString(LastUpdatedIndex),
+        "ns"                  -> BsonString("test-GridFsTTLIndexingSpec.resultsFiles.files"),
         OptExpireAfterSeconds -> BsonInt64(repository.expireAfterSeconds)
       )
       indexes contains expectedIndex
     }
   }
+
 }

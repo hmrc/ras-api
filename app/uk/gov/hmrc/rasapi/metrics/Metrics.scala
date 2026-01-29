@@ -19,7 +19,7 @@ package uk.gov.hmrc.rasapi.metrics
 import com.codahale.metrics.{MetricRegistry, Timer}
 import javax.inject.Inject
 
-class Metrics @Inject()(val registry: MetricRegistry){
-  val responseTimer: Timer = registry.timer("ras-api-success")
+class Metrics @Inject() (val registry: MetricRegistry) {
+  val responseTimer: Timer          = registry.timer("ras-api-success")
   def register(name: String): Timer = registry.timer(name)
 }

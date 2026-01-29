@@ -35,13 +35,13 @@ trait WireMockServerHelper extends BeforeAndAfterAll {
     configureFor("localhost", mockPort)
   }
 
-  def authMocks: StubMapping = stubFor(post(urlEqualTo("/auth/authorise"))
-    .willReturn(
-      aResponse()
-        .withStatus(OK)
-        .withHeader("Authorization","Bearer 123")
-        .withBody(
-          """{
+  def authMocks: StubMapping = stubFor(
+    post(urlEqualTo("/auth/authorise"))
+      .willReturn(
+        aResponse()
+          .withStatus(OK)
+          .withHeader("Authorization", "Bearer 123")
+          .withBody("""{
             | "authorisedEnrolments": [
             |   {
             |     "key": "HMRC-PSA-ORG",
@@ -50,6 +50,7 @@ trait WireMockServerHelper extends BeforeAndAfterAll {
             |   }
             | ]
             |}""".stripMargin)
-    ))
+      )
+  )
 
 }

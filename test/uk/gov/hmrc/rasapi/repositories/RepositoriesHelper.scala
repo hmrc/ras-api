@@ -28,33 +28,34 @@ import scala.util.Random
 object TestFileWriter extends RasFileWriter with Logging {
 
   def generateFile(data: Iterator[Any]): Path = {
-    val file = Files.createTempFile(Random.nextInt().toString,".csv")
+    val file         = Files.createTempFile(Random.nextInt().toString, ".csv")
     val outputStream = new BufferedWriter(new FileWriter(file.toFile))
     try {
-      data.foreach { line => outputStream.write(line.toString)
+      data.foreach { line =>
+        outputStream.write(line.toString)
         outputStream.newLine()
       }
 
       file
-    }
-    catch {
-      case ex: Throwable => logger.error("Error creating file" + ex.getMessage)
-        outputStream.close() ;throw new RuntimeException("Exception in generating file" + ex.getMessage)
-    }
-    finally outputStream.close()
+    } catch {
+      case ex: Throwable =>
+        logger.error("Error creating file" + ex.getMessage)
+        outputStream.close(); throw new RuntimeException("Exception in generating file" + ex.getMessage)
+    } finally outputStream.close()
   }
+
 }
 
 object RepositoriesHelper {
-  lazy val createFile: Path = TestFileWriter.generateFile(resultsArr.iterator)
-  val resultsArr: Array[String] = Array("456C,John,Smith,1990-02-21,nino-INVALID_FORMAT",
+  lazy val createFile: Path                          = TestFileWriter.generateFile(resultsArr.iterator)
+
+  val resultsArr: Array[String]                      = Array(
+    "456C,John,Smith,1990-02-21,nino-INVALID_FORMAT",
     "AB123456C,John,Smith,1990-02-21,NOT_MATCHED",
-    "AB123456C,John,Smith,1990-02-21,otherUKResident,scotResident")
-  def getAll: Sink[Array[Byte], Future[Array[Byte]]] = {
-    Sink.fold[Array[Byte], Array[Byte]](Array()) { (result, chunk) => result ++ chunk }
-  }
+    "AB123456C,John,Smith,1990-02-21,otherUKResident,scotResident"
+  )
+
+  def getAll: Sink[Array[Byte], Future[Array[Byte]]] =
+    Sink.fold[Array[Byte], Array[Byte]](Array())((result, chunk) => result ++ chunk)
+
 }
-
-
-
-

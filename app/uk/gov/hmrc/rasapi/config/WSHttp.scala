@@ -25,7 +25,11 @@ import uk.gov.hmrc.play.bootstrap.http.DefaultHttpClient
 import javax.inject.Inject
 import scala.concurrent.Future
 
-class WSHttp @Inject()(httpAuditing: HttpAuditing, wsClient: WSClient, configuration: Configuration, actorSystem: ActorSystem)
-  extends DefaultHttpClient(configuration, httpAuditing, wsClient, actorSystem) {
+class WSHttp @Inject() (
+  httpAuditing: HttpAuditing,
+  wsClient: WSClient,
+  configuration: Configuration,
+  actorSystem: ActorSystem
+) extends DefaultHttpClient(configuration, httpAuditing, wsClient, actorSystem) {
   def buildRequestWithStream(uri: String): Future[WSResponse] = buildRequest(uri, Seq()).stream()
 }

@@ -24,34 +24,41 @@ import uk.gov.hmrc.rasapi.repository.{RasChunksRepository, RasFilesRepository}
 import javax.inject.Inject
 import scala.concurrent.{ExecutionContext, Future}
 
-class DataCleansingService @Inject()(
-                                      appContext: AppContext,
-                                      chunksRepo: RasChunksRepository,
-                                      fileRepo: RasFilesRepository)
-                                    (implicit val ec: ExecutionContext) extends Logging {
+class DataCleansingService @Inject() (
+  appContext: AppContext,
+  chunksRepo: RasChunksRepository,
+  fileRepo: RasFilesRepository
+)(implicit val ec: ExecutionContext)
+    extends Logging {
 
-  def removeOrphanedChunks(): Future[Seq[ObjectId]] = if(appContext.removeChunksDataExerciseEnabled){
+  def removeOrphanedChunks(): Future[Seq[ObjectId]] = if (appContext.removeChunksDataExerciseEnabled) {
     logger.info("[data-cleansing-exercise][removeOrphanedChunks] Starting data exercise for removing of chunks")
     for {
       chunks <- chunksRepo.getAllChunks.map(_.map(_.files_id).distinct)
 
       fileInfoList <- {
-        logger.info(s"[data-cleansing-exercise][removeOrphanedChunks] Size of chunks to verify is: ${chunks.size}" )
+        logger.info(s"[data-cleansing-exercise][removeOrphanedChunks] Size of chunks to verify is: ${chunks.size}")
         processFutures(chunks)(fileRepo.fetchResultsFile)
       }
 
       chunksDeleted <- {
-        val parentFileIds = fileInfoList.filter(_.isDefined).map(rec => rec.get.getObjectId)
+        val parentFileIds     = fileInfoList.filter(_.isDefined).map(rec => rec.get.getObjectId)
         val chunksToBeDeleted = chunks.diff(parentFileIds)
-        logger.info(s"[data-cleansing-exercise][removeOrphanedChunks] Size of fileId's to be deleted is: ${chunksToBeDeleted.length}")
+        logger.info(
+          s"[data-cleansing-exercise][removeOrphanedChunks] Size of fileId's to be deleted is: ${chunksToBeDeleted.length}"
+        )
 
-        processFutures(chunksToBeDeleted)(fileId => {
+        processFutures(chunksToBeDeleted) { fileId =>
           logger.warn(s"[data-cleansing-exercise][removeOrphanedChunks] fileId to be deleted is: $fileId")
-          chunksRepo.removeChunk(fileId).map{
-            case true => logger.info(s"[data-cleansing-exercise][removeOrphanedChunks] Chunk deletion succeeded, fileId is: $fileId")
-            case false => logger.warn(s"[data-cleansing-exercise][removeOrphanedChunks] Chunk deletion failed, fileId is: $fileId")
+          chunksRepo.removeChunk(fileId).map {
+            case true  =>
+              logger.info(
+                s"[data-cleansing-exercise][removeOrphanedChunks] Chunk deletion succeeded, fileId is: $fileId"
+              )
+            case false =>
+              logger.warn(s"[data-cleansing-exercise][removeOrphanedChunks] Chunk deletion failed, fileId is: $fileId")
           }
-        })
+        }
         Future(chunksToBeDeleted)
       }
     } yield chunksDeleted
@@ -60,14 +67,13 @@ class DataCleansingService @Inject()(
     Future.successful(Seq.empty)
   }
 
-  //Further refactor can be done on this
+  // Further refactor can be done on this
   private def processFutures[A, B](seq: Iterable[A])(fn: A => Future[B]): Future[List[B]] =
-    seq.foldLeft(Future(List.empty[B])) {
-      (previousFuture, next) =>
-        for {
-          previousResults <- previousFuture
-          next <- fn(next)
-        } yield previousResults :+ next
+    seq.foldLeft(Future(List.empty[B])) { (previousFuture, next) =>
+      for {
+        previousResults <- previousFuture
+        next            <- fn(next)
+      } yield previousResults :+ next
     }
 
   removeOrphanedChunks()

@@ -24,13 +24,15 @@ import javax.inject.{Inject, Singleton}
 import scala.concurrent.ExecutionContext
 
 @Singleton
-class RasFilesSessionRepository @Inject()(mongoComponent: MongoComponent,
-                                          appContext: AppContext,
-                                          timestampSupport: TimestampSupport
-                                      )(implicit ec: ExecutionContext) extends MongoCacheRepository(
-  mongoComponent = mongoComponent,
-  collectionName = "fileSessions",
-  ttl = appContext.rasFileSessionTTL,
-  timestampSupport = timestampSupport,
-  cacheIdType = CacheIdType.SimpleCacheId
-)
+class RasFilesSessionRepository @Inject() (
+  mongoComponent: MongoComponent,
+  appContext: AppContext,
+  timestampSupport: TimestampSupport
+)(implicit ec: ExecutionContext)
+    extends MongoCacheRepository(
+      mongoComponent = mongoComponent,
+      collectionName = "fileSessions",
+      ttl = appContext.rasFileSessionTTL,
+      timestampSupport = timestampSupport,
+      cacheIdType = CacheIdType.SimpleCacheId
+    )

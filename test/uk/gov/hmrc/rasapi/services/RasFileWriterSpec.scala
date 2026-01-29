@@ -27,16 +27,26 @@ import java.nio.file.Files
 import scala.collection.mutable.ListBuffer
 import scala.io.Source
 
-class RasFileWriterSpec extends AnyWordSpecLike with Matchers with GuiceOneServerPerSuite with ScalaFutures with MockitoSugar with BeforeAndAfter {
+class RasFileWriterSpec
+    extends AnyWordSpecLike
+    with Matchers
+    with GuiceOneServerPerSuite
+    with ScalaFutures
+    with MockitoSugar
+    with BeforeAndAfter {
   object fileWriter extends RasFileWriter
 
-  val resultsArr: Array[String] = Array("456C,John,Smith,1990-02-21,nino-INVALID_FORMAT",
+  val resultsArr: Array[String] = Array(
+    "456C,John,Smith,1990-02-21,nino-INVALID_FORMAT",
     "AB123456C,John,Smith,1990-02-21,MATCHING_FAILED",
-    "AB123456C,John,Smith,1990-02-21,otherUKResident,scotResident")
+    "AB123456C,John,Smith,1990-02-21,otherUKResident,scotResident"
+  )
 
-  val resultsList: ListBuffer[String] = ListBuffer("456C,John,Smith,1990-02-21,nino-INVALID_FORMAT",
+  val resultsList: ListBuffer[String] = ListBuffer(
+    "456C,John,Smith,1990-02-21,nino-INVALID_FORMAT",
     "AB123456C,John,Smith,1990-02-21,MATCHING_FAILED",
-    "AB123456C,John,Smith,1990-02-21,otherUKResident,scotResident")
+    "AB123456C,John,Smith,1990-02-21,otherUKResident,scotResident"
+  )
 
   val userId: String = "A1234567"
 
@@ -51,7 +61,7 @@ class RasFileWriterSpec extends AnyWordSpecLike with Matchers with GuiceOneServe
     "writes data to the file " in {
       val res = fileWriter.createFileWriter("5678", userId)
       Files.exists(res._1) shouldBe true
-      resultsArr.foreach(str => fileWriter.writeResultToFile(res._2,str, userId))
+      resultsArr.foreach(str => fileWriter.writeResultToFile(res._2, str, userId))
       fileWriter.closeWriter(res._2)
       val lines = Source.fromFile(res._1.toFile).getLines().toArray
 //      lines.size shouldBe 3
@@ -61,9 +71,10 @@ class RasFileWriterSpec extends AnyWordSpecLike with Matchers with GuiceOneServe
 
     "closes fileWriter " in {
       val res = fileWriter.createFileWriter("789", userId)
-      Files.exists(res._1) shouldBe true
-      resultsArr.foreach(str => fileWriter.writeResultToFile(res._2,str, userId))
+      Files.exists(res._1)           shouldBe true
+      resultsArr.foreach(str => fileWriter.writeResultToFile(res._2, str, userId))
       fileWriter.closeWriter(res._2) shouldBe true
     }
   }
+
 }

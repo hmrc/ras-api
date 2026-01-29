@@ -21,11 +21,7 @@ import java.time.format.DateTimeFormatter
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
 
-case class RawMemberDetails(nino: String = "",
-                            firstName: String = "",
-                            lastName: String = "",
-                            dateOfBirth: String = ""
-                           )
+case class RawMemberDetails(nino: String = "", firstName: String = "", lastName: String = "", dateOfBirth: String = "")
 
 object RawMemberDetails {
   implicit val formats: OFormat[RawMemberDetails] = Json.format[RawMemberDetails]
@@ -44,12 +40,12 @@ object IndividualDetails {
       (JsPath \ "firstName").write[String] and
       (JsPath \ "lastName").write[String] and
       (JsPath \ "dob").write[String].contramap[LocalDate](_.format(DateTimeFormatter.ofPattern("yyyy-MM-dd")))
-    )(unlift(IndividualDetails.unapply))
+  )(unlift(IndividualDetails.unapply))
 
   private def individualDetailsReadsWith(dateTimeReads: Reads[LocalDate]): Reads[IndividualDetails] =
     ((JsPath \ "nino").read[NINO](JsonReads.nino).map(_.padTo(9, " ").mkString.toUpperCase) and
-        (JsPath \ "firstName").read[Name](JsonReads.name).map(_.toUpperCase) and
-        (JsPath \ "lastName").read[Name](JsonReads.name).map(_.toUpperCase) and
-        (JsPath \ "dateOfBirth").read[LocalDate](dateTimeReads)
-      )(IndividualDetails.apply _)
+      (JsPath \ "firstName").read[Name](JsonReads.name).map(_.toUpperCase) and
+      (JsPath \ "lastName").read[Name](JsonReads.name).map(_.toUpperCase) and
+      (JsPath \ "dateOfBirth").read[LocalDate](dateTimeReads))(IndividualDetails.apply _)
+
 }

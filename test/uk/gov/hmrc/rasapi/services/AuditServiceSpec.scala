@@ -32,13 +32,19 @@ import uk.gov.hmrc.rasapi.config.AppContext
 
 import scala.concurrent.ExecutionContext
 
-class AuditServiceSpec extends AnyWordSpecLike with Matchers with MockitoSugar with GuiceOneAppPerSuite with BeforeAndAfter {
+class AuditServiceSpec
+    extends AnyWordSpecLike with Matchers with MockitoSugar with GuiceOneAppPerSuite with BeforeAndAfter {
 
-  implicit val hc: HeaderCarrier = HeaderCarrier()
+  implicit val hc: HeaderCarrier         = HeaderCarrier()
   val mockAuditConnector: AuditConnector = mock[AuditConnector]
-  val mockAppContext: AppContext = app.injector.instanceOf[AppContext]
+  val mockAppContext: AppContext         = app.injector.instanceOf[AppContext]
 
-  val SUT = new AuditService(mockAuditConnector, app.injector.instanceOf[Configuration], mockAppContext, ExecutionContext.global)
+  val SUT = new AuditService(
+    mockAuditConnector,
+    app.injector.instanceOf[Configuration],
+    mockAppContext,
+    ExecutionContext.global
+  )
 
   before {
     reset(mockAuditConnector)
@@ -47,7 +53,7 @@ class AuditServiceSpec extends AnyWordSpecLike with Matchers with MockitoSugar w
   "AuditService" should {
 
     val fakeAuditType = "fake-audit-type"
-    val fakeEndpoint = "/fake-endpoint"
+    val fakeEndpoint  = "/fake-endpoint"
 
     val auditDataMap: Map[String, String] = Map("testKey" -> "testValue")
 
@@ -60,7 +66,7 @@ class AuditServiceSpec extends AnyWordSpecLike with Matchers with MockitoSugar w
       val event = captor.getValue
 
       event.auditSource shouldBe "ras-api"
-      event.auditType shouldBe "fake-audit-type"
+      event.auditType   shouldBe "fake-audit-type"
     }
 
     "build an audit event with the correct tags" in {
@@ -71,7 +77,7 @@ class AuditServiceSpec extends AnyWordSpecLike with Matchers with MockitoSugar w
 
       val event = captor.getValue
 
-      event.tags should contain ("transactionName" -> "fake-audit-type")
+      event.tags should contain("transactionName" -> "fake-audit-type")
       event.tags should contain("path" -> "/fake-endpoint")
       event.tags should contain key "clientIP"
     }
@@ -84,7 +90,7 @@ class AuditServiceSpec extends AnyWordSpecLike with Matchers with MockitoSugar w
 
       val event = captor.getValue
 
-      event.detail should contain ("testKey" -> "testValue")
+      event.detail should contain("testKey" -> "testValue")
     }
 
     "send an event via the audit connector" in {
@@ -93,4 +99,5 @@ class AuditServiceSpec extends AnyWordSpecLike with Matchers with MockitoSugar w
       verify(mockAuditConnector).sendEvent(any())(any(), any())
     }
   }
+
 }

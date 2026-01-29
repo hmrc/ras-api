@@ -38,22 +38,39 @@ import java.time.Instant
 import scala.concurrent.ExecutionContext
 import scala.util.Random
 
-class FileProcessingControllerSpec extends AnyWordSpecLike with Matchers with MockitoSugar with GuiceOneAppPerSuite with BeforeAndAfter {
+class FileProcessingControllerSpec
+    extends AnyWordSpecLike with Matchers with MockitoSugar with GuiceOneAppPerSuite with BeforeAndAfter {
 
-  val downloadUrl = "/upscan-download/11370e18-6e24-453e-b45a-76d3e32ea33d"
-  val fileId = "file-id-1"
-  val fileStatus = "READY"
-  val reason: Option[String] = None
-  val uploadDetails = UploadDetails(uploadTimestamp = Instant.now(), checksum = "1234567890", fileMimeType = "text/csv", fileName = "test.csv", size = 1234)
-  val upscanCallbackData: UpscanCallbackData = UpscanCallbackData(reference = "reference", downloadUrl = Some(downloadUrl), fileStatus = fileStatus, uploadDetails = Some(uploadDetails), None)
-  val resultsFile: ResultsFileMetaData = ResultsFileMetaData(fileId, "fileName.csv", 1234L, 123, 1234L)
-  val userId: String = Random.nextInt(5).toString
+  val downloadUrl                            = "/upscan-download/11370e18-6e24-453e-b45a-76d3e32ea33d"
+  val fileId                                 = "file-id-1"
+  val fileStatus                             = "READY"
+  val reason: Option[String]                 = None
+
+  val uploadDetails                          = UploadDetails(
+    uploadTimestamp = Instant.now(),
+    checksum = "1234567890",
+    fileMimeType = "text/csv",
+    fileName = "test.csv",
+    size = 1234
+  )
+
+  val upscanCallbackData: UpscanCallbackData = UpscanCallbackData(
+    reference = "reference",
+    downloadUrl = Some(downloadUrl),
+    fileStatus = fileStatus,
+    uploadDetails = Some(uploadDetails),
+    None
+  )
+
+  val resultsFile: ResultsFileMetaData       = ResultsFileMetaData(fileId, "fileName.csv", 1234L, 123, 1234L)
+  val userId: String                         = Random.nextInt(5).toString
 
   val mockFileProcessingService: FileProcessingService = mock[FileProcessingService]
-  val mockSessionCacheService: RasFilesSessionService = mock[RasFilesSessionService]
-  val mockCC: ControllerComponents = app.injector.instanceOf[ControllerComponents]
+  val mockSessionCacheService: RasFilesSessionService  = mock[RasFilesSessionService]
+  val mockCC: ControllerComponents                     = app.injector.instanceOf[ControllerComponents]
 
-  val SUT = new FileProcessingController(mockSessionCacheService, mockFileProcessingService, mockCC, ExecutionContext.global)
+  val SUT =
+    new FileProcessingController(mockSessionCacheService, mockFileProcessingService, mockCC, ExecutionContext.global)
 
   before {
     reset(mockFileProcessingService)
@@ -70,7 +87,8 @@ class FileProcessingControllerSpec extends AnyWordSpecLike with Matchers with Mo
     "return Ok and interact with FileProcessingService and SessionCacheService" when {
       "an 'READY' status is given and processFile is successful" in {
         when(mockFileProcessingService.processFile(any(), any(), any())(any(), any())).thenReturn(true)
-        val result = SUT.statusCallback(userId, version = "2.0").apply(fakeRequest.withJsonBody(Json.toJson(upscanCallbackData)))
+        val result =
+          SUT.statusCallback(userId, version = "2.0").apply(fakeRequest.withJsonBody(Json.toJson(upscanCallbackData)))
 
         verify(mockFileProcessingService).processFile(Meq(userId), Meq(upscanCallbackData), Meq(V2_0))(any(), any())
         verify(mockSessionCacheService).updateFileSession(Meq(userId), Meq(upscanCallbackData), Meq(None), Meq(None))
@@ -83,13 +101,21 @@ class FileProcessingControllerSpec extends AnyWordSpecLike with Matchers with Mo
       "an 'FAILED' status is given" in {
         val fileStatus = "FAILED"
 
-        val result = SUT.statusCallback(userId, version = "2.0").apply(fakeRequest.withJsonBody(Json.toJson(upscanCallbackData.copy(fileStatus = fileStatus))))
+        val result = SUT
+          .statusCallback(userId, version = "2.0")
+          .apply(fakeRequest.withJsonBody(Json.toJson(upscanCallbackData.copy(fileStatus = fileStatus))))
 
         verifyNoInteractions(mockFileProcessingService)
-        verify(mockSessionCacheService).updateFileSession(Meq(userId), Meq(upscanCallbackData.copy(fileStatus = fileStatus)), Meq(None), Meq(None))
+        verify(mockSessionCacheService).updateFileSession(
+          Meq(userId),
+          Meq(upscanCallbackData.copy(fileStatus = fileStatus)),
+          Meq(None),
+          Meq(None)
+        )
 
         status(result) shouldBe OK
       }
     }
   }
+
 }

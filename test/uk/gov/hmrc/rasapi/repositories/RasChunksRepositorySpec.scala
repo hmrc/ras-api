@@ -31,30 +31,36 @@ import uk.gov.hmrc.rasapi.repository.{RasChunksRepository, RasFilesRepository}
 
 import scala.concurrent.ExecutionContext.Implicits.global
 
-class RasChunksRepositorySpec extends AnyWordSpecLike with Matchers with MockitoSugar with GuiceOneAppPerSuite
-  with BeforeAndAfter with DefaultPlayMongoRepositorySupport[Chunks] {
+class RasChunksRepositorySpec
+    extends AnyWordSpecLike
+    with Matchers
+    with MockitoSugar
+    with GuiceOneAppPerSuite
+    with BeforeAndAfter
+    with DefaultPlayMongoRepositorySupport[Chunks] {
 
   val mockAppContext: AppContext = mock[AppContext]
   when(mockAppContext.resultsExpriyTime).thenReturn(3600)
 
   override lazy val repository = new RasFilesRepository(mongoComponent, mockAppContext)
-  val chunksRepository = new RasChunksRepository(mongoComponent)
-  val userId: String = "A1234567"
+  val chunksRepository         = new RasChunksRepository(mongoComponent)
+  val userId: String           = "A1234567"
 
   "RasChunksRepository" should {
 
     "getAllChunks should return the correct amount of chunks as instances of the Chunk model" in {
-      await(repository.saveFile("user222","reference222",createFile))
+      await(repository.saveFile("user222", "reference222", createFile))
       val chunks = await(chunksRepository.getAllChunks)
       chunks.size shouldBe 1
     }
 
     "removeChunk should successfully delete a chunk when provided with an ObjectId" in {
-      val uploadedFile: ResultsFile = await(repository.saveFile("user222","reference222",createFile))
-      val result = await(chunksRepository.removeChunk(uploadedFile.getObjectId))
+      val uploadedFile: ResultsFile = await(repository.saveFile("user222", "reference222", createFile))
+      val result                    = await(chunksRepository.removeChunk(uploadedFile.getObjectId))
       result shouldBe true
       val chunks = await(chunksRepository.getAllChunks)
       chunks.exists(chunk => chunk.files_id == uploadedFile.getObjectId) shouldBe false
     }
   }
+
 }

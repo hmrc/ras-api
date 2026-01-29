@@ -32,42 +32,50 @@ import scala.concurrent.Future
 import scala.concurrent.duration._
 import scala.io.{BufferedSource, Source}
 
-class RasFileRepositoryISpec extends PlaySpec with ScalaFutures with GuiceOneAppPerSuite with FutureAwaits with DefaultAwaitTimeout with Eventually {
+class RasFileRepositoryISpec
+    extends PlaySpec
+    with ScalaFutures
+    with GuiceOneAppPerSuite
+    with FutureAwaits
+    with DefaultAwaitTimeout
+    with Eventually {
 
   class Setup(val filename: String) {
-    lazy val rasFileRepository: RasFilesRepository = app.injector.instanceOf[RasFilesRepository]
+    lazy val rasFileRepository: RasFilesRepository    = app.injector.instanceOf[RasFilesRepository]
     lazy val rasChunksRepository: RasChunksRepository = app.injector.instanceOf[RasChunksRepository]
-    val largeFile: File = new File("it/test/resources/testFiles/bulk.csv")
-    implicit lazy val system: ActorSystem        = ActorSystem()
-    implicit val materializers: Materializer = Materializer(system)
+    val largeFile: File                               = new File("it/test/resources/testFiles/bulk.csv")
+    implicit lazy val system: ActorSystem             = ActorSystem()
+    implicit val materializers: Materializer          = Materializer(system)
 
     val dropAll: Unit = {
       await(rasFileRepository.gridFSG.drop().head())
-      fileCount mustBe 0
+      fileCount   mustBe 0
       chunksCount mustBe 0
 
       app.materializer
     }
 
-    def fileCount: Long = {
+    def fileCount: Long =
       await(rasFileRepository.gridFSG.find().collect().head().map(_.length))
-    }
 
     def chunksCount: Int =
       await(rasChunksRepository.collection.find().collect().head().map(_.length))
 
     def saveFile(): Unit = {
-      await(rasFileRepository.saveFile(
-        userId = "userid-1",
-        reference = "reference-1",
-        filePath = largeFile.toPath,
-      ))
+      await(
+        rasFileRepository.saveFile(
+          userId = "userid-1",
+          reference = "reference-1",
+          filePath = largeFile.toPath
+        )
+      )
 
       eventually(Timeout(5.seconds), Interval(1.second)) {
-        fileCount mustBe 1
+        fileCount   mustBe 1
         chunksCount mustBe 7
       }
     }
+
   }
 
   "save the file" should {
@@ -82,16 +90,14 @@ class RasFileRepositoryISpec extends PlaySpec with ScalaFutures with GuiceOneApp
 
       val receiveFile: Option[FileData] = await(rasFileRepository.fetchFile(filename, "userid-1"))
 
-      def getAll: Sink[Array[Byte], Future[Array[Byte]]] = {
-        Sink.fold[Array[Byte], Array[Byte]](Array()) { (result, chunk) => result ++ chunk }
-      }
+      def getAll: Sink[Array[Byte], Future[Array[Byte]]] =
+        Sink.fold[Array[Byte], Array[Byte]](Array())((result, chunk) => result ++ chunk)
 
       var result = new String("")
 
       await(receiveFile.get.data.runWith(getAll.mapMaterializedValue {
         _.map { bytes =>
-          result =
-            result.concat(new String(bytes))
+          result = result.concat(new String(bytes))
         }
       }))
 
@@ -111,9 +117,10 @@ class RasFileRepositoryISpec extends PlaySpec with ScalaFutures with GuiceOneApp
       deleteFile mustBe true
 
       eventually(Timeout(5.seconds), Interval(1.second)) {
-        fileCount mustBe 0
+        fileCount   mustBe 0
         chunksCount mustBe 0
       }
     }
   }
+
 }

@@ -20,7 +20,7 @@ import java.time.LocalDate
 
 import javax.inject.Inject
 
-class ResidencyYearResolver @Inject()() {
+class ResidencyYearResolver @Inject() () {
 
   def currentDate: LocalDate = LocalDate.now()
 
@@ -32,4 +32,5 @@ class ResidencyYearResolver @Inject()() {
     val currentYear = currentDate.getYear
     !currentDate.isBefore(LocalDate.of(currentYear, 1, 1)) && !currentDate.isAfter(LocalDate.of(currentYear, 4, 5))
   }
+
 }

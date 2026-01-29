@@ -48,143 +48,165 @@ import uk.gov.hmrc.rasapi.utils.ErrorConverter
 import java.time.format.DateTimeFormatter
 import scala.concurrent.{ExecutionContext, Future}
 
-class LookupControllerSpec extends AnyWordSpecLike with Matchers with MockitoSugar with GuiceOneAppPerSuite with BeforeAndAfter {
+class LookupControllerSpec
+    extends AnyWordSpecLike with Matchers with MockitoSugar with GuiceOneAppPerSuite with BeforeAndAfter {
 
-  override implicit lazy val app: Application = new GuiceApplicationBuilder()
+  implicit override lazy val app: Application = new GuiceApplicationBuilder()
     .configure("api-v2_0.enabled" -> "true")
     .build()
 
   implicit val hc: HeaderCarrier = HeaderCarrier()
 
-  val acceptHeader: (String, String) = (HeaderNames.ACCEPT, "application/vnd.hmrc.2.0+json")
+  val acceptHeader: (String, String)   = (HeaderNames.ACCEPT, "application/vnd.hmrc.2.0+json")
   val acceptHeaderV1: (String, String) = (HeaderNames.ACCEPT, "application/vnd.hmrc.1.0+json")
 
-  val mockDesConnector: DesConnector = mock[DesConnector]
-  val mockAuditService: AuditService = mock[AuditService]
-  val mockAuthConnector: AuthConnector = mock[AuthConnector]
+  val mockDesConnector: DesConnector                   = mock[DesConnector]
+  val mockAuditService: AuditService                   = mock[AuditService]
+  val mockAuthConnector: AuthConnector                 = mock[AuthConnector]
   val mockResidencyYearResolver: ResidencyYearResolver = mock[ResidencyYearResolver]
-  val mockMetrics: Metrics = app.injector.instanceOf[Metrics]
-  val appContext: AppContext = app.injector.instanceOf[AppContext]
-  val errorConverer: ErrorConverter = app.injector.instanceOf[ErrorConverter]
-  val mockCC: ControllerComponents = mock[ControllerComponents]
-  val mockParser: BodyParsers.Default = mock[BodyParsers.Default]
+  val mockMetrics: Metrics                             = app.injector.instanceOf[Metrics]
+  val appContext: AppContext                           = app.injector.instanceOf[AppContext]
+  val errorConverer: ErrorConverter                    = app.injector.instanceOf[ErrorConverter]
+  val mockCC: ControllerComponents                     = mock[ControllerComponents]
+  val mockParser: BodyParsers.Default                  = mock[BodyParsers.Default]
 
   val expectedNino: Nino = uk.gov.hmrc.rasapi.models.Nino("LE241131B")
 
   private val enrolmentIdentifier1 = EnrolmentIdentifier("PSAID", "A123456")
-  private val enrolment1 = Enrolment(key = "HMRC-PSA-ORG", identifiers = List(enrolmentIdentifier1), state = "Activated", None)
+
+  private val enrolment1           =
+    Enrolment(key = "HMRC-PSA-ORG", identifiers = List(enrolmentIdentifier1), state = "Activated", None)
+
   private val enrolmentIdentifier2 = EnrolmentIdentifier("PPID", "A123456")
-  private val enrolment2 = Enrolment(key = "HMRC-PP-ORG", identifiers = List(enrolmentIdentifier2), state = "Activated", None)
+
+  private val enrolment2           =
+    Enrolment(key = "HMRC-PP-ORG", identifiers = List(enrolmentIdentifier2), state = "Activated", None)
+
   private val enrolmentIdentifier3 = EnrolmentIdentifier("PSAID", "A123456")
-  private val enrolment3 = new Enrolment(key = "HMRC-PODS-ORG", identifiers = List(enrolmentIdentifier3), state = "Activated", None)
+
+  private val enrolment3           =
+    new Enrolment(key = "HMRC-PODS-ORG", identifiers = List(enrolmentIdentifier3), state = "Activated", None)
+
   private val enrolmentIdentifier4 = EnrolmentIdentifier("PSPID", "A123456")
-  private val enrolment4 = new Enrolment(key = "HMRC-PODSPP-ORG", identifiers = List(enrolmentIdentifier4), state = "Activated", None)
-  private val enrolments = Enrolments(Set(enrolment1, enrolment2, enrolment3, enrolment4))
+
+  private val enrolment4           =
+    new Enrolment(key = "HMRC-PODSPP-ORG", identifiers = List(enrolmentIdentifier4), state = "Activated", None)
+
+  private val enrolments           = Enrolments(Set(enrolment1, enrolment2, enrolment3, enrolment4))
 
   val successfulRetrieval: Future[Enrolments] = Future.successful(enrolments)
 
-  val individualDetails: IndividualDetails = IndividualDetails("LE241131B", "Joe", "Bloggs", LocalDate.parse("1990-12-03", DateTimeFormatter.ofPattern("yyyy-MM-dd")))
+  val individualDetails: IndividualDetails = IndividualDetails(
+    "LE241131B",
+    "Joe",
+    "Bloggs",
+    LocalDate.parse("1990-12-03", DateTimeFormatter.ofPattern("yyyy-MM-dd"))
+  )
 
-  val STATUS_DECEASED: String = "DECEASED"
-  val STATUS_MATCHING_FAILED: String = "STATUS_UNAVAILABLE"
+  val STATUS_DECEASED: String              = "DECEASED"
+  val STATUS_MATCHING_FAILED: String       = "STATUS_UNAVAILABLE"
   val STATUS_INTERNAL_SERVER_ERROR: String = "INTERNAL_SERVER_ERROR"
-  val STATUS_TOO_MANY_REQUESTS: String = "TOO_MANY_REQUESTS"
-  val STATUS_SERVICE_UNAVAILABLE: String = "SERVICE_UNAVAILABLE"
+  val STATUS_TOO_MANY_REQUESTS: String     = "TOO_MANY_REQUESTS"
+  val STATUS_SERVICE_UNAVAILABLE: String   = "SERVICE_UNAVAILABLE"
 
   implicit val individualDetailssWrites: Writes[IndividualDetails] = (
     (JsPath \ "nino").write[String] and
       (JsPath \ "firstName").write[String] and
       (JsPath \ "lastName").write[String] and
       (JsPath \ "dateOfBirth").write[String].contramap[LocalDate](_.format(DateTimeFormatter.ofPattern("yyyy-MM-dd")))
-    ) (unlift(IndividualDetails.unapply))
+  )(unlift(IndividualDetails.unapply))
 
-  object TestLookupController extends LookupController(
-    mockDesConnector,
-    mockMetrics,
-    mockAuditService,
-    mockAuthConnector,
-    mockResidencyYearResolver,
-    appContext,
-    errorConverer,
-    mockCC,
-    ExecutionContext.global,
-    mockParser
-  ) {
+  object TestLookupController
+      extends LookupController(
+        mockDesConnector,
+        mockMetrics,
+        mockAuditService,
+        mockAuthConnector,
+        mockResidencyYearResolver,
+        appContext,
+        errorConverer,
+        mockCC,
+        ExecutionContext.global,
+        mockParser
+      ) {
 
     override def getCurrentDate: LocalDate = LocalDate.of(2018, 7, 6)
 
-    override lazy val allowDefaultRUK: Boolean = false
-    override lazy val STATUS_DECEASED: String = "DECEASED"
-    override lazy val STATUS_MATCHING_FAILED: String = "STATUS_UNAVAILABLE"
-    override lazy val STATUS_TOO_MANY_REQUESTS: String = "TOO_MANY_REQUESTS"
+    override lazy val allowDefaultRUK: Boolean           = false
+    override lazy val STATUS_DECEASED: String            = "DECEASED"
+    override lazy val STATUS_MATCHING_FAILED: String     = "STATUS_UNAVAILABLE"
+    override lazy val STATUS_TOO_MANY_REQUESTS: String   = "TOO_MANY_REQUESTS"
     override lazy val STATUS_SERVICE_UNAVAILABLE: String = "SERVICE_UNAVAILABLE"
-    override lazy val apiV2_0Enabled: Boolean = true
+    override lazy val apiV2_0Enabled: Boolean            = true
   }
 
-  object TestLookupControllerFeb18 extends LookupController(
-    mockDesConnector,
-    mockMetrics,
-    mockAuditService,
-    mockAuthConnector,
-    mockResidencyYearResolver,
-    appContext,
-    errorConverer,
-    mockCC,
-    ExecutionContext.global,
-    mockParser
-  ) {
+  object TestLookupControllerFeb18
+      extends LookupController(
+        mockDesConnector,
+        mockMetrics,
+        mockAuditService,
+        mockAuthConnector,
+        mockResidencyYearResolver,
+        appContext,
+        errorConverer,
+        mockCC,
+        ExecutionContext.global,
+        mockParser
+      ) {
     override def getCurrentDate: LocalDate = LocalDate.of(2018, 2, 15)
 
-    override lazy val allowDefaultRUK: Boolean = true
-    override lazy val STATUS_DECEASED: String = "DECEASED"
-    override lazy val STATUS_MATCHING_FAILED: String = "STATUS_UNAVAILABLE"
-    override lazy val STATUS_TOO_MANY_REQUESTS: String = "TOO_MANY_REQUESTS"
+    override lazy val allowDefaultRUK: Boolean           = true
+    override lazy val STATUS_DECEASED: String            = "DECEASED"
+    override lazy val STATUS_MATCHING_FAILED: String     = "STATUS_UNAVAILABLE"
+    override lazy val STATUS_TOO_MANY_REQUESTS: String   = "TOO_MANY_REQUESTS"
     override lazy val STATUS_SERVICE_UNAVAILABLE: String = "SERVICE_UNAVAILABLE"
-    override lazy val apiV2_0Enabled: Boolean = true
+    override lazy val apiV2_0Enabled: Boolean            = true
   }
 
-  object TestLookupControllerFeb19 extends LookupController(
-    mockDesConnector,
-    mockMetrics,
-    mockAuditService,
-    mockAuthConnector,
-    mockResidencyYearResolver,
-    appContext,
-    errorConverer,
-    mockCC,
-    ExecutionContext.global,
-    mockParser
-  ) {
+  object TestLookupControllerFeb19
+      extends LookupController(
+        mockDesConnector,
+        mockMetrics,
+        mockAuditService,
+        mockAuthConnector,
+        mockResidencyYearResolver,
+        appContext,
+        errorConverer,
+        mockCC,
+        ExecutionContext.global,
+        mockParser
+      ) {
     override def getCurrentDate: LocalDate = LocalDate.of(2019, 2, 15)
 
-    override lazy val allowDefaultRUK: Boolean = false
-    override lazy val STATUS_DECEASED: String = "DECEASED"
-    override lazy val STATUS_MATCHING_FAILED: String = "STATUS_UNAVAILABLE"
+    override lazy val allowDefaultRUK: Boolean           = false
+    override lazy val STATUS_DECEASED: String            = "DECEASED"
+    override lazy val STATUS_MATCHING_FAILED: String     = "STATUS_UNAVAILABLE"
     override lazy val STATUS_SERVICE_UNAVAILABLE: String = "SERVICE_UNAVAILABLE"
-    override lazy val STATUS_TOO_MANY_REQUESTS: String = "TOO_MANY_REQUESTS"
-    override lazy val apiV2_0Enabled: Boolean = true
+    override lazy val STATUS_TOO_MANY_REQUESTS: String   = "TOO_MANY_REQUESTS"
+    override lazy val apiV2_0Enabled: Boolean            = true
   }
 
-  object TestLookupControllerVersion1 extends LookupController(
-    mockDesConnector,
-    mockMetrics,
-    mockAuditService,
-    mockAuthConnector,
-    mockResidencyYearResolver,
-    appContext,
-    errorConverer,
-    mockCC,
-    ExecutionContext.global,
-    mockParser
-  ) {
+  object TestLookupControllerVersion1
+      extends LookupController(
+        mockDesConnector,
+        mockMetrics,
+        mockAuditService,
+        mockAuthConnector,
+        mockResidencyYearResolver,
+        appContext,
+        errorConverer,
+        mockCC,
+        ExecutionContext.global,
+        mockParser
+      ) {
     override def getCurrentDate: LocalDate = LocalDate.of(2019, 1, 1)
 
-    override lazy val allowDefaultRUK: Boolean = false
-    override lazy val STATUS_DECEASED: String = "DECEASED"
-    override lazy val STATUS_MATCHING_FAILED: String = "STATUS_UNAVAILABLE"
-    override lazy val STATUS_TOO_MANY_REQUESTS: String = "TOO_MANY_REQUESTS"
+    override lazy val allowDefaultRUK: Boolean           = false
+    override lazy val STATUS_DECEASED: String            = "DECEASED"
+    override lazy val STATUS_MATCHING_FAILED: String     = "STATUS_UNAVAILABLE"
+    override lazy val STATUS_TOO_MANY_REQUESTS: String   = "TOO_MANY_REQUESTS"
     override lazy val STATUS_SERVICE_UNAVAILABLE: String = "SERVICE_UNAVAILABLE"
-    override lazy val apiV2_0Enabled: Boolean = false
+    override lazy val apiV2_0Enabled: Boolean            = false
   }
 
   before {
@@ -205,22 +227,32 @@ class LookupControllerSpec extends AnyWordSpecLike with Matchers with MockitoSug
 
         val residencyStatus = ResidencyStatus("scotResident", Some("otherUKResident"))
 
-        when(mockDesConnector.getResidencyStatus(any(), any(), any(), any())).thenReturn(Future.successful(Left(residencyStatus)))
+        when(mockDesConnector.getResidencyStatus(any(), any(), any(), any()))
+          .thenReturn(Future.successful(Left(residencyStatus)))
 
-        await(TestLookupControllerFeb18.getResidencyStatus()
-          .apply(FakeRequest(Helpers.GET, s"/residency-status")
-            .withHeaders(acceptHeader)
-            .withJsonBody(Json.toJson(individualDetails)(individualDetailssWrites))))
+        await(
+          TestLookupControllerFeb18
+            .getResidencyStatus()
+            .apply(
+              FakeRequest(Helpers.GET, s"/residency-status")
+                .withHeaders(acceptHeader)
+                .withJsonBody(Json.toJson(individualDetails)(individualDetailssWrites))
+            )
+        )
 
         verify(mockAuditService).audit(
           auditType = Meq("ReliefAtSourceResidency"),
           path = Meq(s"/residency-status"),
-          auditData = Meq(Map("successfulLookup" -> "true",
-            "CYStatus" -> "otherUKResident",
-            "NextCYStatus" -> "otherUKResident",
-            "nino" -> "LE241131B",
-            "userIdentifier" -> "A123456",
-            "requestSource" -> "API"))
+          auditData = Meq(
+            Map(
+              "successfulLookup" -> "true",
+              "CYStatus"         -> "otherUKResident",
+              "NextCYStatus"     -> "otherUKResident",
+              "nino"             -> "LE241131B",
+              "userIdentifier"   -> "A123456",
+              "requestSource"    -> "API"
+            )
+          )
         )(any())
       }
 
@@ -232,22 +264,32 @@ class LookupControllerSpec extends AnyWordSpecLike with Matchers with MockitoSug
 
         val residencyStatus = ResidencyStatus("scotResident", Some("otherUKResident"))
 
-        when(mockDesConnector.getResidencyStatus(any(), any(), any(), any())).thenReturn(Future.successful(Left(residencyStatus)))
+        when(mockDesConnector.getResidencyStatus(any(), any(), any(), any()))
+          .thenReturn(Future.successful(Left(residencyStatus)))
 
-        await(TestLookupControllerFeb19.getResidencyStatus()
-          .apply(FakeRequest(Helpers.GET, s"/residency-status")
-            .withHeaders(acceptHeader)
-            .withJsonBody(Json.toJson(individualDetails)(individualDetailssWrites))))
+        await(
+          TestLookupControllerFeb19
+            .getResidencyStatus()
+            .apply(
+              FakeRequest(Helpers.GET, s"/residency-status")
+                .withHeaders(acceptHeader)
+                .withJsonBody(Json.toJson(individualDetails)(individualDetailssWrites))
+            )
+        )
 
         verify(mockAuditService).audit(
           auditType = Meq("ReliefAtSourceResidency"),
           path = Meq(s"/residency-status"),
-          auditData = Meq(Map("successfulLookup" -> "true",
-            "CYStatus" -> "scotResident",
-            "NextCYStatus" -> "otherUKResident",
-            "nino" -> "LE241131B",
-            "userIdentifier" -> "A123456",
-            "requestSource" -> "API"))
+          auditData = Meq(
+            Map(
+              "successfulLookup" -> "true",
+              "CYStatus"         -> "scotResident",
+              "NextCYStatus"     -> "otherUKResident",
+              "nino"             -> "LE241131B",
+              "userIdentifier"   -> "A123456",
+              "requestSource"    -> "API"
+            )
+          )
         )(any())
       }
 
@@ -259,21 +301,31 @@ class LookupControllerSpec extends AnyWordSpecLike with Matchers with MockitoSug
 
         val residencyStatus = ResidencyStatus("otherUKResident", Some("otherUKResident"))
 
-        when(mockDesConnector.getResidencyStatus(any(), any(), any(), any())).thenReturn(Future.successful(Left(residencyStatus)))
+        when(mockDesConnector.getResidencyStatus(any(), any(), any(), any()))
+          .thenReturn(Future.successful(Left(residencyStatus)))
 
-        await(TestLookupController.getResidencyStatus()
-          .apply(FakeRequest(Helpers.GET, s"/residency-status")
-            .withHeaders(acceptHeader)
-            .withJsonBody(Json.toJson(individualDetails)(individualDetailssWrites))))
+        await(
+          TestLookupController
+            .getResidencyStatus()
+            .apply(
+              FakeRequest(Helpers.GET, s"/residency-status")
+                .withHeaders(acceptHeader)
+                .withJsonBody(Json.toJson(individualDetails)(individualDetailssWrites))
+            )
+        )
 
         verify(mockAuditService).audit(
           auditType = Meq("ReliefAtSourceResidency"),
           path = Meq(s"/residency-status"),
-          auditData = Meq(Map("successfulLookup" -> "true",
-            "CYStatus" -> "otherUKResident",
-            "nino" -> "LE241131B",
-            "userIdentifier" -> "A123456",
-            "requestSource" -> "API"))
+          auditData = Meq(
+            Map(
+              "successfulLookup" -> "true",
+              "CYStatus"         -> "otherUKResident",
+              "nino"             -> "LE241131B",
+              "userIdentifier"   -> "A123456",
+              "requestSource"    -> "API"
+            )
+          )
         )(any())
       }
 
@@ -282,21 +334,31 @@ class LookupControllerSpec extends AnyWordSpecLike with Matchers with MockitoSug
 
         when(mockResidencyYearResolver.isBetweenJanAndApril).thenReturn(false)
 
-        when(mockDesConnector.getResidencyStatus(any(), any(), any(), any())).thenReturn(Future.successful(Right(ResidencyStatusFailure(STATUS_DECEASED, "Individual is deceased"))))
+        when(mockDesConnector.getResidencyStatus(any(), any(), any(), any()))
+          .thenReturn(Future.successful(Right(ResidencyStatusFailure(STATUS_DECEASED, "Individual is deceased"))))
 
-        await(TestLookupController.getResidencyStatus()
-          .apply(FakeRequest(Helpers.GET, s"/residency-status")
-            .withHeaders(acceptHeader)
-            .withJsonBody(Json.toJson(individualDetails)(individualDetailssWrites))))
+        await(
+          TestLookupController
+            .getResidencyStatus()
+            .apply(
+              FakeRequest(Helpers.GET, s"/residency-status")
+                .withHeaders(acceptHeader)
+                .withJsonBody(Json.toJson(individualDetails)(individualDetailssWrites))
+            )
+        )
 
         verify(mockAuditService).audit(
           auditType = Meq("ReliefAtSourceResidency"),
           path = Meq(s"/residency-status"),
-          auditData = Meq(Map("successfulLookup" -> "false",
-            "reason" -> STATUS_DECEASED,
-            "nino" -> "LE241131B",
-            "userIdentifier" -> "A123456",
-            "requestSource" -> "API"))
+          auditData = Meq(
+            Map(
+              "successfulLookup" -> "false",
+              "reason"           -> STATUS_DECEASED,
+              "nino"             -> "LE241131B",
+              "userIdentifier"   -> "A123456",
+              "requestSource"    -> "API"
+            )
+          )
         )(any())
       }
     }
@@ -309,21 +371,31 @@ class LookupControllerSpec extends AnyWordSpecLike with Matchers with MockitoSug
 
         val residencyStatusFailure = ResidencyStatusFailure("STATUS_UNAVAILABLE", "")
 
-        when(mockDesConnector.getResidencyStatus(any(), any(), any(), any())).thenReturn(Future.successful(Right(residencyStatusFailure)))
+        when(mockDesConnector.getResidencyStatus(any(), any(), any(), any()))
+          .thenReturn(Future.successful(Right(residencyStatusFailure)))
 
-        await(TestLookupController.getResidencyStatus()
-          .apply(FakeRequest(Helpers.GET, s"/residency-status")
-            .withHeaders(acceptHeader)
-            .withJsonBody(Json.toJson(individualDetails)(individualDetailssWrites))))
+        await(
+          TestLookupController
+            .getResidencyStatus()
+            .apply(
+              FakeRequest(Helpers.GET, s"/residency-status")
+                .withHeaders(acceptHeader)
+                .withJsonBody(Json.toJson(individualDetails)(individualDetailssWrites))
+            )
+        )
 
         verify(mockAuditService).audit(
           auditType = Meq("ReliefAtSourceResidency"),
           path = Meq(s"/residency-status"),
-          auditData = Meq(Map("nino" -> "LE241131B",
-            "successfulLookup" -> "false",
-            "reason" -> "MATCHING_FAILED",
-            "userIdentifier" -> "A123456",
-            "requestSource" -> "API"))
+          auditData = Meq(
+            Map(
+              "nino"             -> "LE241131B",
+              "successfulLookup" -> "false",
+              "reason"           -> "MATCHING_FAILED",
+              "userIdentifier"   -> "A123456",
+              "requestSource"    -> "API"
+            )
+          )
         )(any())
       }
 
@@ -333,21 +405,31 @@ class LookupControllerSpec extends AnyWordSpecLike with Matchers with MockitoSug
 
         val residencyStatusFailure = ResidencyStatusFailure("INTERNAL_SERVER_ERROR", "")
 
-        when(mockDesConnector.getResidencyStatus(any(), any(), any(), any())).thenReturn(Future.successful(Right(residencyStatusFailure)))
+        when(mockDesConnector.getResidencyStatus(any(), any(), any(), any()))
+          .thenReturn(Future.successful(Right(residencyStatusFailure)))
 
-        await(TestLookupController.getResidencyStatus()
-          .apply(FakeRequest(Helpers.GET, s"/residency-status")
-            .withHeaders(acceptHeader)
-            .withJsonBody(Json.toJson(individualDetails)(individualDetailssWrites))))
+        await(
+          TestLookupController
+            .getResidencyStatus()
+            .apply(
+              FakeRequest(Helpers.GET, s"/residency-status")
+                .withHeaders(acceptHeader)
+                .withJsonBody(Json.toJson(individualDetails)(individualDetailssWrites))
+            )
+        )
 
         verify(mockAuditService).audit(
           auditType = Meq("ReliefAtSourceResidency"),
           path = Meq(s"/residency-status"),
-          auditData = Meq(Map("nino" -> "LE241131B",
-            "successfulLookup" -> "false",
-            "reason" -> s"$STATUS_INTERNAL_SERVER_ERROR",
-            "userIdentifier" -> "A123456",
-            "requestSource" -> "API"))
+          auditData = Meq(
+            Map(
+              "nino"             -> "LE241131B",
+              "successfulLookup" -> "false",
+              "reason"           -> s"$STATUS_INTERNAL_SERVER_ERROR",
+              "userIdentifier"   -> "A123456",
+              "requestSource"    -> "API"
+            )
+          )
         )(any())
       }
     }
@@ -365,30 +447,40 @@ class LookupControllerSpec extends AnyWordSpecLike with Matchers with MockitoSug
 
           val residencyStatus = ResidencyStatus("scotResident", Some("otherUKResident"))
 
-          val expectedJsonResult = Json.parse(
-            """
+          val expectedJsonResult = Json.parse("""
               {
                 "currentYearResidencyStatus" : "scotResident",
                 "nextYearForecastResidencyStatus" : "otherUKResident"
               }
             """.stripMargin)
 
-          when(mockDesConnector.getResidencyStatus(any(), any(), ArgumentMatchers.eq(V1_0), any())).thenReturn(Future.successful(Left(residencyStatus)))
+          when(mockDesConnector.getResidencyStatus(any(), any(), ArgumentMatchers.eq(V1_0), any()))
+            .thenReturn(Future.successful(Left(residencyStatus)))
 
-          val result = TestLookupControllerVersion1.getResidencyStatus().apply(FakeRequest(Helpers.GET, "/").withHeaders(acceptHeaderV1)
-            .withJsonBody(Json.toJson(individualDetails)(individualDetailssWrites)))
+          val result = TestLookupControllerVersion1
+            .getResidencyStatus()
+            .apply(
+              FakeRequest(Helpers.GET, "/")
+                .withHeaders(acceptHeaderV1)
+                .withJsonBody(Json.toJson(individualDetails)(individualDetailssWrites))
+            )
 
-          status(result) shouldBe OK
+          status(result)        shouldBe OK
           contentAsJson(result) shouldBe expectedJsonResult
         }
       }
 
       "a version 2.0 request payload is given" should {
         "return status 406 with invalid accept header json" in {
-          val result = TestLookupControllerVersion1.getResidencyStatus().apply(FakeRequest(Helpers.GET, "/").withHeaders(acceptHeader)
-            .withJsonBody(Json.toJson(individualDetails)(individualDetailssWrites)))
+          val result = TestLookupControllerVersion1
+            .getResidencyStatus()
+            .apply(
+              FakeRequest(Helpers.GET, "/")
+                .withHeaders(acceptHeader)
+                .withJsonBody(Json.toJson(individualDetails)(individualDetailssWrites))
+            )
 
-          status(result) shouldBe NOT_ACCEPTABLE
+          status(result)        shouldBe NOT_ACCEPTABLE
           contentAsJson(result) shouldBe ErrorResponseHmrc.writes.writes(ErrorAcceptHeaderInvalid)
         }
       }
@@ -405,20 +497,25 @@ class LookupControllerSpec extends AnyWordSpecLike with Matchers with MockitoSug
 
           val residencyStatus = ResidencyStatus("scotResident", Some("otherUKResident"))
 
-          val expectedJsonResult = Json.parse(
-            """
+          val expectedJsonResult = Json.parse("""
             {
               "currentYearResidencyStatus" : "otherUKResident",
               "nextYearForecastResidencyStatus" : "otherUKResident"
             }
           """.stripMargin)
 
-          when(mockDesConnector.getResidencyStatus(any(), any(), any(), any())).thenReturn(Future.successful(Left(residencyStatus)))
+          when(mockDesConnector.getResidencyStatus(any(), any(), any(), any()))
+            .thenReturn(Future.successful(Left(residencyStatus)))
 
-          val result = TestLookupControllerFeb18.getResidencyStatus().apply(FakeRequest(Helpers.GET, "/").withHeaders(acceptHeader)
-            .withJsonBody(Json.toJson(individualDetails)(individualDetailssWrites)))
+          val result = TestLookupControllerFeb18
+            .getResidencyStatus()
+            .apply(
+              FakeRequest(Helpers.GET, "/")
+                .withHeaders(acceptHeader)
+                .withJsonBody(Json.toJson(individualDetails)(individualDetailssWrites))
+            )
 
-          status(result) shouldBe OK
+          status(result)        shouldBe OK
           contentAsJson(result) shouldBe expectedJsonResult
         }
 
@@ -430,20 +527,25 @@ class LookupControllerSpec extends AnyWordSpecLike with Matchers with MockitoSug
 
           val residencyStatus = ResidencyStatus("scotResident", Some("otherUKResident"))
 
-          val expectedJsonResult = Json.parse(
-            """
+          val expectedJsonResult = Json.parse("""
             {
               "currentYearResidencyStatus" : "otherUKResident",
               "nextYearForecastResidencyStatus" : "otherUKResident"
             }
           """.stripMargin)
 
-          when(mockDesConnector.getResidencyStatus(any(), any(), ArgumentMatchers.eq(V1_0), any())).thenReturn(Future.successful(Left(residencyStatus)))
+          when(mockDesConnector.getResidencyStatus(any(), any(), ArgumentMatchers.eq(V1_0), any()))
+            .thenReturn(Future.successful(Left(residencyStatus)))
 
-          val result = TestLookupControllerFeb18.getResidencyStatus().apply(FakeRequest(Helpers.GET, "/").withHeaders(acceptHeaderV1)
-            .withJsonBody(Json.toJson(individualDetails)(individualDetailssWrites)))
+          val result = TestLookupControllerFeb18
+            .getResidencyStatus()
+            .apply(
+              FakeRequest(Helpers.GET, "/")
+                .withHeaders(acceptHeaderV1)
+                .withJsonBody(Json.toJson(individualDetails)(individualDetailssWrites))
+            )
 
-          status(result) shouldBe OK
+          status(result)        shouldBe OK
           contentAsJson(result) shouldBe expectedJsonResult
         }
 
@@ -454,20 +556,25 @@ class LookupControllerSpec extends AnyWordSpecLike with Matchers with MockitoSug
 
           val residencyStatus = ResidencyStatus("scotResident", Some("otherUKResident"))
 
-          val expectedJsonResult = Json.parse(
-            """
+          val expectedJsonResult = Json.parse("""
             {
               "currentYearResidencyStatus" : "otherUKResident",
               "nextYearForecastResidencyStatus" : "otherUKResident"
             }
           """.stripMargin)
 
-          when(mockDesConnector.getResidencyStatus(any(), any(), ArgumentMatchers.eq(V2_0), any())).thenReturn(Future.successful(Left(residencyStatus)))
+          when(mockDesConnector.getResidencyStatus(any(), any(), ArgumentMatchers.eq(V2_0), any()))
+            .thenReturn(Future.successful(Left(residencyStatus)))
 
-          val result = TestLookupControllerFeb18.getResidencyStatus().apply(FakeRequest(Helpers.GET, "/").withHeaders(acceptHeader)
-            .withJsonBody(Json.toJson(individualDetails)(individualDetailssWrites)))
+          val result = TestLookupControllerFeb18
+            .getResidencyStatus()
+            .apply(
+              FakeRequest(Helpers.GET, "/")
+                .withHeaders(acceptHeader)
+                .withJsonBody(Json.toJson(individualDetails)(individualDetailssWrites))
+            )
 
-          status(result) shouldBe OK
+          status(result)        shouldBe OK
           contentAsJson(result) shouldBe expectedJsonResult
         }
 
@@ -479,20 +586,25 @@ class LookupControllerSpec extends AnyWordSpecLike with Matchers with MockitoSug
 
           val residencyStatus = ResidencyStatus("scotResident", Some("otherUKResident"))
 
-          val expectedJsonResult = Json.parse(
-            """
+          val expectedJsonResult = Json.parse("""
             {
               "currentYearResidencyStatus" : "scotResident",
               "nextYearForecastResidencyStatus" : "otherUKResident"
             }
           """.stripMargin)
 
-          when(mockDesConnector.getResidencyStatus(any(), any(), any(), any())).thenReturn(Future.successful(Left(residencyStatus)))
+          when(mockDesConnector.getResidencyStatus(any(), any(), any(), any()))
+            .thenReturn(Future.successful(Left(residencyStatus)))
 
-          val result = TestLookupControllerFeb19.getResidencyStatus().apply(FakeRequest(Helpers.GET, "/").withHeaders(acceptHeader)
-            .withJsonBody(Json.toJson(individualDetails)(individualDetailssWrites)))
+          val result = TestLookupControllerFeb19
+            .getResidencyStatus()
+            .apply(
+              FakeRequest(Helpers.GET, "/")
+                .withHeaders(acceptHeader)
+                .withJsonBody(Json.toJson(individualDetails)(individualDetailssWrites))
+            )
 
-          status(result) shouldBe OK
+          status(result)        shouldBe OK
           contentAsJson(result) shouldBe expectedJsonResult
         }
 
@@ -504,20 +616,25 @@ class LookupControllerSpec extends AnyWordSpecLike with Matchers with MockitoSug
 
           val residencyStatus = ResidencyStatus("otherUKResident", Some("otherUKResident"))
 
-          val expectedJsonResult = Json.parse(
-            """
+          val expectedJsonResult = Json.parse("""
             {
               "currentYearResidencyStatus" : "otherUKResident",
               "nextYearForecastResidencyStatus" : "otherUKResident"
             }
           """.stripMargin)
 
-          when(mockDesConnector.getResidencyStatus(any(), any(), any(), any())).thenReturn(Future.successful(Left(residencyStatus)))
+          when(mockDesConnector.getResidencyStatus(any(), any(), any(), any()))
+            .thenReturn(Future.successful(Left(residencyStatus)))
 
-          val result = TestLookupController.getResidencyStatus().apply(FakeRequest(Helpers.GET, "/").withHeaders(acceptHeader)
-            .withJsonBody(Json.toJson(individualDetails.copy(nino = individualDetails.nino.toLowerCase))))
+          val result = TestLookupController
+            .getResidencyStatus()
+            .apply(
+              FakeRequest(Helpers.GET, "/")
+                .withHeaders(acceptHeader)
+                .withJsonBody(Json.toJson(individualDetails.copy(nino = individualDetails.nino.toLowerCase)))
+            )
 
-          status(result) shouldBe OK
+          status(result)        shouldBe OK
           contentAsJson(result) shouldBe expectedJsonResult
         }
 
@@ -529,19 +646,24 @@ class LookupControllerSpec extends AnyWordSpecLike with Matchers with MockitoSug
 
           val residencyStatus = ResidencyStatus("otherUKResident", Some("otherUKResident"))
 
-          val expectedJsonResult = Json.parse(
-            """
+          val expectedJsonResult = Json.parse("""
             {
               "currentYearResidencyStatus" : "otherUKResident"
             }
           """.stripMargin)
 
-          when(mockDesConnector.getResidencyStatus(any(), any(), any(), any())).thenReturn(Future.successful(Left(residencyStatus)))
+          when(mockDesConnector.getResidencyStatus(any(), any(), any(), any()))
+            .thenReturn(Future.successful(Left(residencyStatus)))
 
-          val result = TestLookupController.getResidencyStatus().apply(FakeRequest(Helpers.GET, "/").withHeaders(acceptHeader)
-            .withJsonBody(Json.toJson(individualDetails)(individualDetailssWrites)))
+          val result = TestLookupController
+            .getResidencyStatus()
+            .apply(
+              FakeRequest(Helpers.GET, "/")
+                .withHeaders(acceptHeader)
+                .withJsonBody(Json.toJson(individualDetails)(individualDetailssWrites))
+            )
 
-          status(result) shouldBe OK
+          status(result)        shouldBe OK
           contentAsJson(result) shouldBe expectedJsonResult
         }
 
@@ -552,20 +674,25 @@ class LookupControllerSpec extends AnyWordSpecLike with Matchers with MockitoSug
 
           val residencyStatus = ResidencyStatus("otherUKResident", Some("otherUKResident"))
 
-          val expectedJsonResult = Json.parse(
-            """
+          val expectedJsonResult = Json.parse("""
             {
               "currentYearResidencyStatus" : "otherUKResident",
               "nextYearForecastResidencyStatus" : "otherUKResident"
             }
           """.stripMargin)
 
-          when(mockDesConnector.getResidencyStatus(any(), any(), any(), any())).thenReturn(Future.successful(Left(residencyStatus)))
+          when(mockDesConnector.getResidencyStatus(any(), any(), any(), any()))
+            .thenReturn(Future.successful(Left(residencyStatus)))
 
-          val result = TestLookupController.getResidencyStatus().apply(FakeRequest(Helpers.GET, "/").withHeaders(acceptHeader)
-            .withJsonBody(Json.toJson(individualDetails.copy(nino = "AA123456"))))
+          val result = TestLookupController
+            .getResidencyStatus()
+            .apply(
+              FakeRequest(Helpers.GET, "/")
+                .withHeaders(acceptHeader)
+                .withJsonBody(Json.toJson(individualDetails.copy(nino = "AA123456")))
+            )
 
-          status(result) shouldBe OK
+          status(result)        shouldBe OK
           contentAsJson(result) shouldBe expectedJsonResult
         }
       }
@@ -585,8 +712,7 @@ class LookupControllerSpec extends AnyWordSpecLike with Matchers with MockitoSug
             """.stripMargin
           )
 
-          val expectedJsonResult = Json.parse(
-            """
+          val expectedJsonResult = Json.parse("""
               |{
               |  "code": "BAD_REQUEST",
               |  "message": "Bad Request",
@@ -610,11 +736,15 @@ class LookupControllerSpec extends AnyWordSpecLike with Matchers with MockitoSug
               |}
             """.stripMargin)
 
-          val result = TestLookupController.getResidencyStatus().apply(FakeRequest(Helpers.GET, "/")
-            .withHeaders(acceptHeader)
-            .withJsonBody(invalidPayload))
+          val result = TestLookupController
+            .getResidencyStatus()
+            .apply(
+              FakeRequest(Helpers.GET, "/")
+                .withHeaders(acceptHeader)
+                .withJsonBody(invalidPayload)
+            )
 
-          status(result) shouldBe BAD_REQUEST
+          status(result)        shouldBe BAD_REQUEST
           contentAsJson(result) shouldBe expectedJsonResult
         }
       }
@@ -623,109 +753,126 @@ class LookupControllerSpec extends AnyWordSpecLike with Matchers with MockitoSug
     "return status 401 (Unauthorised)" when {
       "a valid lookup request has been submitted with no PSA or PP enrolments" in {
 
-        when(mockAuthConnector.authorise[Option[String]](any(), any())(any(), any())).thenReturn(Future.failed(new InsufficientEnrolments))
+        when(mockAuthConnector.authorise[Option[String]](any(), any())(any(), any()))
+          .thenReturn(Future.failed(new InsufficientEnrolments))
 
         val authorisationHeader: (String, String) = (HeaderNames.AUTHORIZATION, "Bearer ABC")
 
-        val expectedJsonResult = Json.parse(
-          """
+        val expectedJsonResult = Json.parse("""
             |{
             |  "code": "UNAUTHORIZED",
             |  "message": "Supplied OAuth token not authorised to access data for given tax identifier(s)"
             |}
           """.stripMargin)
 
-        val result = TestLookupController.getResidencyStatus().apply(FakeRequest(Helpers.GET, "/").
-          withHeaders(acceptHeader, authorisationHeader))
+        val result = TestLookupController
+          .getResidencyStatus()
+          .apply(FakeRequest(Helpers.GET, "/").withHeaders(acceptHeader, authorisationHeader))
 
-        status(result) shouldBe UNAUTHORIZED
+        status(result)        shouldBe UNAUTHORIZED
         contentAsJson(result) shouldBe expectedJsonResult
       }
 
       "a valid lookup request has been submitted with no authorization header present" in {
 
-        when(mockAuthConnector.authorise[Option[String]](any(), any())(any(), any())).thenReturn(Future.failed(new MissingBearerToken))
+        when(mockAuthConnector.authorise[Option[String]](any(), any())(any(), any()))
+          .thenReturn(Future.failed(new MissingBearerToken))
 
-        val expectedJsonResult = Json.parse(
-          """
+        val expectedJsonResult = Json.parse("""
             |{
             |  "code": "INVALID_CREDENTIALS",
             |  "message": "Invalid OAuth token supplied for user-restricted or application-restricted resource (including expired token)"
             |}
           """.stripMargin)
 
-        val result = TestLookupController.getResidencyStatus().apply(FakeRequest(Helpers.GET, "/")
-          .withHeaders(acceptHeader)
-          .withJsonBody(Json.toJson(individualDetails)(individualDetailssWrites)))
+        val result = TestLookupController
+          .getResidencyStatus()
+          .apply(
+            FakeRequest(Helpers.GET, "/")
+              .withHeaders(acceptHeader)
+              .withJsonBody(Json.toJson(individualDetails)(individualDetailssWrites))
+          )
 
-        status(result) shouldBe UNAUTHORIZED
+        status(result)        shouldBe UNAUTHORIZED
         contentAsJson(result) shouldBe expectedJsonResult
       }
 
       "a valid lookup request has been submitted with no value declared in the authorization header" in {
 
-        when(mockAuthConnector.authorise[Option[String]](any(), any())(any(), any())).thenReturn(Future.failed(new InvalidBearerToken))
+        when(mockAuthConnector.authorise[Option[String]](any(), any())(any(), any()))
+          .thenReturn(Future.failed(new InvalidBearerToken))
 
         val authorisationHeader: (String, String) = (HeaderNames.AUTHORIZATION, "")
 
-        val expectedJsonResult = Json.parse(
-          """
+        val expectedJsonResult = Json.parse("""
             |{
             |  "code": "INVALID_CREDENTIALS",
             |  "message": "Invalid OAuth token supplied for user-restricted or application-restricted resource (including expired token)"
             |}
           """.stripMargin)
 
-        val result = TestLookupController.getResidencyStatus().apply(FakeRequest(Helpers.GET, "/")
-          .withHeaders(acceptHeader, authorisationHeader)
-          .withJsonBody(Json.toJson(individualDetails)(individualDetailssWrites)))
+        val result = TestLookupController
+          .getResidencyStatus()
+          .apply(
+            FakeRequest(Helpers.GET, "/")
+              .withHeaders(acceptHeader, authorisationHeader)
+              .withJsonBody(Json.toJson(individualDetails)(individualDetailssWrites))
+          )
 
-        status(result) shouldBe UNAUTHORIZED
+        status(result)        shouldBe UNAUTHORIZED
         contentAsJson(result) shouldBe expectedJsonResult
       }
 
       "a valid lookup request has been submitted with an expired bearer token in the authorization header" in {
         // The bearer token used in this test is not valid but for purposes of testing is being treated as a valid bearer token.
 
-        when(mockAuthConnector.authorise[Option[String]](any(), any())(any(), any())).thenReturn(Future.failed(new BearerTokenExpired))
+        when(mockAuthConnector.authorise[Option[String]](any(), any())(any(), any()))
+          .thenReturn(Future.failed(new BearerTokenExpired))
 
         val authorisationHeader: (String, String) = (HeaderNames.AUTHORIZATION, "")
 
-        val expectedJsonResult = Json.parse(
-          """
+        val expectedJsonResult = Json.parse("""
             |{
             |  "code": "INVALID_CREDENTIALS",
             |  "message": "Invalid OAuth token supplied for user-restricted or application-restricted resource (including expired token)"
             |}
           """.stripMargin)
 
-        val result = TestLookupController.getResidencyStatus().apply(FakeRequest(Helpers.GET, "/")
-          .withHeaders(acceptHeader, authorisationHeader)
-          .withJsonBody(Json.toJson(individualDetails)(individualDetailssWrites)))
+        val result = TestLookupController
+          .getResidencyStatus()
+          .apply(
+            FakeRequest(Helpers.GET, "/")
+              .withHeaders(acceptHeader, authorisationHeader)
+              .withJsonBody(Json.toJson(individualDetails)(individualDetailssWrites))
+          )
 
-        status(result) shouldBe UNAUTHORIZED
+        status(result)        shouldBe UNAUTHORIZED
         contentAsJson(result) shouldBe expectedJsonResult
       }
 
       "a valid match request has been submitted with an invalid bearer token in the authorization header" in {
 
-        when(mockAuthConnector.authorise[Option[String]](any(), any())(any(), any())).thenReturn(Future.failed(new SessionRecordNotFound))
+        when(mockAuthConnector.authorise[Option[String]](any(), any())(any(), any()))
+          .thenReturn(Future.failed(new SessionRecordNotFound))
 
         val authorisationHeader: (String, String) = (HeaderNames.AUTHORIZATION, "Bearer ABC")
 
-        val expectedJsonResult = Json.parse(
-          """
+        val expectedJsonResult = Json.parse("""
             |{
             |  "code": "INVALID_CREDENTIALS",
             |  "message": "Invalid OAuth token supplied for user-restricted or application-restricted resource (including expired token)"
             |}
           """.stripMargin)
 
-        val result = TestLookupController.getResidencyStatus().apply(FakeRequest(Helpers.GET, "/")
-          .withHeaders(acceptHeader, authorisationHeader)
-          .withJsonBody(Json.toJson(individualDetails)(individualDetailssWrites)))
+        val result = TestLookupController
+          .getResidencyStatus()
+          .apply(
+            FakeRequest(Helpers.GET, "/")
+              .withHeaders(acceptHeader, authorisationHeader)
+              .withJsonBody(Json.toJson(individualDetails)(individualDetailssWrites))
+          )
 
-        status(result) shouldBe UNAUTHORIZED
+        status(result)        shouldBe UNAUTHORIZED
         contentAsJson(result) shouldBe expectedJsonResult
       }
     }
@@ -734,8 +881,7 @@ class LookupControllerSpec extends AnyWordSpecLike with Matchers with MockitoSug
       "MATCHING_FAILED is returned from the connector" in {
         when(mockAuthConnector.authorise[Enrolments](any(), any())(any(), any())).thenReturn(successfulRetrieval)
 
-        val expectedJsonResult = Json.parse(
-          s"""
+        val expectedJsonResult = Json.parse(s"""
              |{
              |  "code": "$STATUS_MATCHING_FAILED",
              |  "message": "Cannot provide a residency status for this pension scheme member."
@@ -744,13 +890,18 @@ class LookupControllerSpec extends AnyWordSpecLike with Matchers with MockitoSug
 
         val residencyStatusFailure = ResidencyStatusFailure("STATUS_UNAVAILABLE", "")
 
-        when(mockDesConnector.getResidencyStatus(any(), any(), any(), any())).thenReturn(Future.successful(Right(residencyStatusFailure)))
+        when(mockDesConnector.getResidencyStatus(any(), any(), any(), any()))
+          .thenReturn(Future.successful(Right(residencyStatusFailure)))
 
-        val result = TestLookupController.getResidencyStatus().apply(FakeRequest(Helpers.GET, "/")
-          .withHeaders(acceptHeader)
-          .withJsonBody(Json.toJson(individualDetails)(individualDetailssWrites)))
+        val result = TestLookupController
+          .getResidencyStatus()
+          .apply(
+            FakeRequest(Helpers.GET, "/")
+              .withHeaders(acceptHeader)
+              .withJsonBody(Json.toJson(individualDetails)(individualDetailssWrites))
+          )
 
-        status(result) shouldBe FORBIDDEN
+        status(result)        shouldBe FORBIDDEN
         contentAsJson(result) shouldBe expectedJsonResult
       }
     }
@@ -763,11 +914,16 @@ class LookupControllerSpec extends AnyWordSpecLike with Matchers with MockitoSug
 
         val residencyStatusFailure = ResidencyStatusFailure("TOO_MANY_REQUESTS", "")
 
-        when(mockDesConnector.getResidencyStatus(any(), any(), any(), any())).thenReturn(Future.successful(Right(residencyStatusFailure)))
+        when(mockDesConnector.getResidencyStatus(any(), any(), any(), any()))
+          .thenReturn(Future.successful(Right(residencyStatusFailure)))
 
-        val result = TestLookupController.getResidencyStatus().apply(FakeRequest(Helpers.GET, "/")
-          .withHeaders(acceptHeader)
-          .withJsonBody(Json.toJson(individualDetails)(individualDetailssWrites)))
+        val result = TestLookupController
+          .getResidencyStatus()
+          .apply(
+            FakeRequest(Helpers.GET, "/")
+              .withHeaders(acceptHeader)
+              .withJsonBody(Json.toJson(individualDetails)(individualDetailssWrites))
+          )
 
         status(result) shouldBe TOO_MANY_REQUESTS
       }
@@ -779,8 +935,7 @@ class LookupControllerSpec extends AnyWordSpecLike with Matchers with MockitoSug
 
         when(mockAuthConnector.authorise[Enrolments](any(), any())(any(), any())).thenReturn(successfulRetrieval)
 
-        val expectedJsonResult = Json.parse(
-          s"""
+        val expectedJsonResult = Json.parse(s"""
              |{
              |  "code": "$STATUS_INTERNAL_SERVER_ERROR",
              |  "message": "Internal server error"
@@ -789,13 +944,18 @@ class LookupControllerSpec extends AnyWordSpecLike with Matchers with MockitoSug
 
         val residencyStatusFailure = ResidencyStatusFailure("INTERNAL_SERVER_ERROR", "")
 
-        when(mockDesConnector.getResidencyStatus(any(), any(), any(), any())).thenReturn(Future.successful(Right(residencyStatusFailure)))
+        when(mockDesConnector.getResidencyStatus(any(), any(), any(), any()))
+          .thenReturn(Future.successful(Right(residencyStatusFailure)))
 
-        val result = TestLookupController.getResidencyStatus().apply(FakeRequest(Helpers.GET, "/")
-          .withHeaders(acceptHeader)
-          .withJsonBody(Json.toJson(individualDetails)(individualDetailssWrites)))
+        val result = TestLookupController
+          .getResidencyStatus()
+          .apply(
+            FakeRequest(Helpers.GET, "/")
+              .withHeaders(acceptHeader)
+              .withJsonBody(Json.toJson(individualDetails)(individualDetailssWrites))
+          )
 
-        status(result) shouldBe INTERNAL_SERVER_ERROR
+        status(result)        shouldBe INTERNAL_SERVER_ERROR
         contentAsJson(result) shouldBe expectedJsonResult
       }
     }
@@ -804,8 +964,7 @@ class LookupControllerSpec extends AnyWordSpecLike with Matchers with MockitoSug
       "DES returns a service unavailable response" in {
         when(mockAuthConnector.authorise[Enrolments](any(), any())(any(), any())).thenReturn(successfulRetrieval)
 
-        val expectedJsonResult = Json.parse(
-          s"""
+        val expectedJsonResult = Json.parse(s"""
              |{
              |  "code": "SERVER_ERROR",
              |  "message": "Service unavailable"
@@ -814,17 +973,21 @@ class LookupControllerSpec extends AnyWordSpecLike with Matchers with MockitoSug
 
         val residencyStatusFailure = ResidencyStatusFailure("SERVICE_UNAVAILABLE", "")
 
-        when(mockDesConnector.getResidencyStatus(any(), any(), any(), any())).thenReturn(Future.successful(Right(residencyStatusFailure)))
+        when(mockDesConnector.getResidencyStatus(any(), any(), any(), any()))
+          .thenReturn(Future.successful(Right(residencyStatusFailure)))
 
-        val result = TestLookupController.getResidencyStatus().apply(FakeRequest(Helpers.GET, "/")
-          .withHeaders(acceptHeader)
-          .withJsonBody(Json.toJson(individualDetails)(individualDetailssWrites)))
+        val result = TestLookupController
+          .getResidencyStatus()
+          .apply(
+            FakeRequest(Helpers.GET, "/")
+              .withHeaders(acceptHeader)
+              .withJsonBody(Json.toJson(individualDetails)(individualDetailssWrites))
+          )
 
-        status(result) shouldBe SERVICE_UNAVAILABLE
+        status(result)        shouldBe SERVICE_UNAVAILABLE
         contentAsJson(result) shouldBe expectedJsonResult
       }
     }
   }
 
 }
-

@@ -26,14 +26,16 @@ import uk.gov.hmrc.rasapi.config.AppContext
 import javax.inject.Inject
 import scala.concurrent.{ExecutionContext, Future}
 
-class AuditService @Inject()(
-                              val connector: AuditConnector,
-                              val appNameConfiguration: Configuration,
-                              appContext: AppContext,
-                              implicit val ec: ExecutionContext
-                            ) {
+class AuditService @Inject() (
+  val connector: AuditConnector,
+  val appNameConfiguration: Configuration,
+  appContext: AppContext,
+  implicit val ec: ExecutionContext
+) {
 
-  def audit(auditType: String, path: String, auditData: Map[String, String])(implicit hc: HeaderCarrier): Future[AuditResult] = {
+  def audit(auditType: String, path: String, auditData: Map[String, String])(implicit
+    hc: HeaderCarrier
+  ): Future[AuditResult] = {
     val event = DataEvent(
       auditSource = appContext.appName,
       auditType = auditType,
@@ -42,4 +44,5 @@ class AuditService @Inject()(
     )
     connector.sendEvent(event)
   }
+
 }
