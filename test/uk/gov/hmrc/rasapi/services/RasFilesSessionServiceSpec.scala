@@ -123,7 +123,7 @@ class RasFilesSessionServiceSpec
     val resultsFile: ResultsFileMetaData = ResultsFileMetaData("file-id-1", "fileName.csv", 1234L, 123, 1234L)
     val fileMetadata: FileMetadata       = FileMetadata("file-id-1", Some("fileName"), None)
 
-    val rasSession: FileSession          = FileSession(
+    val rasSession: FileSession = FileSession(
       Some(callbackData),
       Some(resultsFile),
       "A1234533",
@@ -131,9 +131,9 @@ class RasFilesSessionServiceSpec
       Some(fileMetadata)
     )
 
-    val json: JsValue                    = Json.toJson(rasSession)
+    val json: JsValue = Json.toJson(rasSession)
 
-    val cacheItem: CacheItem             =
+    val cacheItem: CacheItem =
       CacheItem("A1234533", Json.toJson(Map("fileSession" -> json)).as[JsObject], Instant.now, Instant.now)
 
     protected val sessionCacheRepositoryMock: RasFilesSessionRepository = mock[RasFilesSessionRepository]

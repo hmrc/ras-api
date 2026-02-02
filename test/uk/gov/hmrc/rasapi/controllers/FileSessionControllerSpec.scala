@@ -51,7 +51,7 @@ class FileSessionControllerSpec extends AnyWordSpecLike with TestEnrolments with
   val createFileSessionRequest: CreateFileSessionRequest =
     CreateFileSessionRequest("A123456", UUID.randomUUID().toString)
 
-  val fileSession: FileSession                           = FileSession(None, None, "A123456", Some(Instant.now().toEpochMilli), None)
+  val fileSession: FileSession = FileSession(None, None, "A123456", Some(Instant.now().toEpochMilli), None)
 
   "createFileSession" should {
     "return CREATED if file session successfully stored" in {

@@ -70,7 +70,7 @@ class LookupController @Inject() (
   override def parser: BodyParser[AnyContent]               = parser
   override protected def executionContext: ExecutionContext = ec
 
-  override val validateVersion: String => Boolean           = (version: String) =>
+  override val validateVersion: String => Boolean = (version: String) =>
     version == "1.0" || (apiV2_0Enabled && version == "2.0")
 
   implicit class VersionUtil(request: Request[_]) {

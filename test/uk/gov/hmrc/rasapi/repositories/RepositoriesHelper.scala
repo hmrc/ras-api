@@ -47,9 +47,9 @@ object TestFileWriter extends RasFileWriter with Logging {
 }
 
 object RepositoriesHelper {
-  lazy val createFile: Path                          = TestFileWriter.generateFile(resultsArr.iterator)
+  lazy val createFile: Path = TestFileWriter.generateFile(resultsArr.iterator)
 
-  val resultsArr: Array[String]                      = Array(
+  val resultsArr: Array[String] = Array(
     "456C,John,Smith,1990-02-21,nino-INVALID_FORMAT",
     "AB123456C,John,Smith,1990-02-21,NOT_MATCHED",
     "AB123456C,John,Smith,1990-02-21,otherUKResident,scotResident"

@@ -41,12 +41,12 @@ import scala.util.Random
 class FileProcessingControllerSpec
     extends AnyWordSpecLike with Matchers with MockitoSugar with GuiceOneAppPerSuite with BeforeAndAfter {
 
-  val downloadUrl                            = "/upscan-download/11370e18-6e24-453e-b45a-76d3e32ea33d"
-  val fileId                                 = "file-id-1"
-  val fileStatus                             = "READY"
-  val reason: Option[String]                 = None
+  val downloadUrl            = "/upscan-download/11370e18-6e24-453e-b45a-76d3e32ea33d"
+  val fileId                 = "file-id-1"
+  val fileStatus             = "READY"
+  val reason: Option[String] = None
 
-  val uploadDetails                          = UploadDetails(
+  val uploadDetails = UploadDetails(
     uploadTimestamp = Instant.now(),
     checksum = "1234567890",
     fileMimeType = "text/csv",
@@ -62,8 +62,8 @@ class FileProcessingControllerSpec
     None
   )
 
-  val resultsFile: ResultsFileMetaData       = ResultsFileMetaData(fileId, "fileName.csv", 1234L, 123, 1234L)
-  val userId: String                         = Random.nextInt(5).toString
+  val resultsFile: ResultsFileMetaData = ResultsFileMetaData(fileId, "fileName.csv", 1234L, 123, 1234L)
+  val userId: String                   = Random.nextInt(5).toString
 
   val mockFileProcessingService: FileProcessingService = mock[FileProcessingService]
   val mockSessionCacheService: RasFilesSessionService  = mock[RasFilesSessionService]

@@ -76,12 +76,12 @@ class DesConnectorSpec
     override def generateNewUUID: String = uuid
   }
 
-  val formatter: DateTimeFormatter         = DateTimeFormatter.ofPattern("yyyy-MM-dd")
+  val formatter: DateTimeFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd")
 
   val individualDetails: IndividualDetails =
     IndividualDetails("LE241131B", "Joe", "Bloggs", LocalDate.parse("1990-12-03", formatter))
 
-  val userId                               = "A123456"
+  val userId = "A123456"
 
   val residencyStatus: ResidencyStatus =
     ResidencyStatus(currentYearResidencyStatus = "scotResident", nextYearForecastResidencyStatus = Some("scotResident"))

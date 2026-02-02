@@ -40,7 +40,7 @@ class DataCleansingServiceSpec
   lazy val dataCleansingService: DataCleansingService      = app.injector.instanceOf[DataCleansingService]
   implicit lazy val rasFilesRepository: RasFilesRepository = app.injector.instanceOf[RasFilesRepository]
 
-  implicit override lazy val app: Application              = new GuiceApplicationBuilder()
+  implicit override lazy val app: Application = new GuiceApplicationBuilder()
     .configure("remove-chunks-data-exercise.enabled" -> true)
     .build()
 

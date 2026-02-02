@@ -74,25 +74,25 @@ class LookupControllerSpec
 
   private val enrolmentIdentifier1 = EnrolmentIdentifier("PSAID", "A123456")
 
-  private val enrolment1           =
+  private val enrolment1 =
     Enrolment(key = "HMRC-PSA-ORG", identifiers = List(enrolmentIdentifier1), state = "Activated", None)
 
   private val enrolmentIdentifier2 = EnrolmentIdentifier("PPID", "A123456")
 
-  private val enrolment2           =
+  private val enrolment2 =
     Enrolment(key = "HMRC-PP-ORG", identifiers = List(enrolmentIdentifier2), state = "Activated", None)
 
   private val enrolmentIdentifier3 = EnrolmentIdentifier("PSAID", "A123456")
 
-  private val enrolment3           =
+  private val enrolment3 =
     new Enrolment(key = "HMRC-PODS-ORG", identifiers = List(enrolmentIdentifier3), state = "Activated", None)
 
   private val enrolmentIdentifier4 = EnrolmentIdentifier("PSPID", "A123456")
 
-  private val enrolment4           =
+  private val enrolment4 =
     new Enrolment(key = "HMRC-PODSPP-ORG", identifiers = List(enrolmentIdentifier4), state = "Activated", None)
 
-  private val enrolments           = Enrolments(Set(enrolment1, enrolment2, enrolment3, enrolment4))
+  private val enrolments = Enrolments(Set(enrolment1, enrolment2, enrolment3, enrolment4))
 
   val successfulRetrieval: Future[Enrolments] = Future.successful(enrolments)
 
