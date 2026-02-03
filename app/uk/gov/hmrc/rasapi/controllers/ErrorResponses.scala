@@ -19,56 +19,59 @@ package uk.gov.hmrc.rasapi.controllers
 import play.api.http.Status._
 import play.api.libs.json.{Json, Writes}
 
-sealed abstract class ErrorResponse(
-                                       val httpStatusCode: Int,
-                                       val errorCode: String,
-                                       val message: String)
+sealed abstract class ErrorResponse(val httpStatusCode: Int, val errorCode: String, val message: String)
 
-sealed abstract class ErrorResponseWithErrors( val httpStatusCode: Int,
-                                               val errorCode: String,
-                                               val message: String,
-                                               val errors: Option[List[ErrorValidation]] = None)
+sealed abstract class ErrorResponseWithErrors(
+  val httpStatusCode: Int,
+  val errorCode: String,
+  val message: String,
+  val errors: Option[List[ErrorValidation]] = None
+)
 
-case class ErrorValidation(errorCode: String,
-                            message: String,
-                            path: Option[String] = None)
+case class ErrorValidation(errorCode: String, message: String, path: Option[String] = None)
 
-case class ErrorBadRequestResponse(errs: List[ErrorValidation]) extends ErrorResponseWithErrors(
-  BAD_REQUEST,
-  "BAD_REQUEST",
-  "Bad Request",
-  errors = Some(errs))
+case class ErrorBadRequestResponse(errs: List[ErrorValidation])
+    extends ErrorResponseWithErrors(BAD_REQUEST, "BAD_REQUEST", "Bad Request", errors = Some(errs))
 
-case object BadRequestResponse extends ErrorResponse(
-  BAD_REQUEST,
-  "BAD_REQUEST",
-  "Bad Request")
+case object BadRequestResponse extends ErrorResponse(BAD_REQUEST, "BAD_REQUEST", "Bad Request")
 
-case object Unauthorised extends ErrorResponse(
-  UNAUTHORIZED,
-  "UNAUTHORIZED",
-  "Supplied OAuth token not authorised to access data for given tax identifier(s)")
+case object Unauthorised
+    extends ErrorResponse(
+      UNAUTHORIZED,
+      "UNAUTHORIZED",
+      "Supplied OAuth token not authorised to access data for given tax identifier(s)"
+    )
 
-case object InvalidCredentials extends ErrorResponse(
-  UNAUTHORIZED,
-  "INVALID_CREDENTIALS",
-  "Invalid OAuth token supplied for user-restricted or application-restricted resource (including expired token)")
+case object InvalidCredentials
+    extends ErrorResponse(
+      UNAUTHORIZED,
+      "INVALID_CREDENTIALS",
+      "Invalid OAuth token supplied for user-restricted or application-restricted resource (including expired token)"
+    )
 
-case class IndividualNotFound(matchingFailedStatus: String) extends ErrorResponse(
-  FORBIDDEN,
-  matchingFailedStatus,
-  "Cannot provide a residency status for this pension scheme member.")
+case class IndividualNotFound(matchingFailedStatus: String)
+    extends ErrorResponse(
+      FORBIDDEN,
+      matchingFailedStatus,
+      "Cannot provide a residency status for this pension scheme member."
+    )
 
-case class TooManyRequestsResponse(tooManyRequestsStatus: String) extends ErrorResponse(
-  TOO_MANY_REQUESTS,
-  tooManyRequestsStatus,
-  "Request could not be sent 429 (Too Many Requests) was sent from the HoD.")
+case class TooManyRequestsResponse(tooManyRequestsStatus: String)
+    extends ErrorResponse(
+      TOO_MANY_REQUESTS,
+      tooManyRequestsStatus,
+      "Request could not be sent 429 (Too Many Requests) was sent from the HoD."
+    )
 
 object TooManyRequestsResponse {
   implicit val writes: Writes[TooManyRequestsResponse] = Json.writes[TooManyRequestsResponse]
 }
 
-case object ErrorServiceUnavailable extends
-  ErrorResponse(httpStatusCode = SERVICE_UNAVAILABLE, errorCode = "SERVER_ERROR", message = "Service unavailable")
+case object ErrorServiceUnavailable
+    extends ErrorResponse(
+      httpStatusCode = SERVICE_UNAVAILABLE,
+      errorCode = "SERVER_ERROR",
+      message = "Service unavailable"
+    )
 
 case object ErrorNotFound extends ErrorResponse(NOT_FOUND, "NOT_FOUND", "Resource Not Found")

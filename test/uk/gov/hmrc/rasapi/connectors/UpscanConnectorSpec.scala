@@ -40,12 +40,12 @@ class UpscanConnectorSpec extends AnyWordSpecLike with Matchers with GuiceOneApp
 
   implicit val hc: HeaderCarrier = HeaderCarrier()
 
-  val mockWsHttp: WSHttp = mock[WSHttp]
-  val appContext: AppContext = app.injector.instanceOf[AppContext]
+  val mockWsHttp: WSHttp         = mock[WSHttp]
+  val appContext: AppContext     = app.injector.instanceOf[AppContext]
   val wsResponseMock: WSResponse = mock[WSResponse]
 
-  val bodyAsSource: Source[ByteString, _] = Source(Seq(ByteString("Test"),  ByteString("\r\n"), ByteString("Passed")))
-  val headers = Map("CONTENT_TYPE" -> Seq("application/octet-stream"))
+  val bodyAsSource: Source[ByteString, _] = Source(Seq(ByteString("Test"), ByteString("\r\n"), ByteString("Passed")))
+  val headers                             = Map("CONTENT_TYPE" -> Seq("application/octet-stream"))
 
   private def createMockResponse(bodyAsSource: Source[ByteString, _], headers: Map[String, Seq[String]]): WSResponse = {
     when(wsResponseMock.status).thenReturn(200)
@@ -60,13 +60,12 @@ class UpscanConnectorSpec extends AnyWordSpecLike with Matchers with GuiceOneApp
 
   object TestConnector extends UpscanConnector(mockWsHttp, appContext, ExecutionContext.global)
 
-  val reference: String = "0b215e97-11d4-4006-91db-c067e74fc653"
-  val fileId: String = "file-id-1"
-  val userId: String = "A1234567"
-  val originalFileName: String = "origFileName"
-  val dateCreated: String = "2018-01-01T00:00:00Z"
+  val reference: String          = "0b215e97-11d4-4006-91db-c067e74fc653"
+  val fileId: String             = "file-id-1"
+  val userId: String             = "A1234567"
+  val originalFileName: String   = "origFileName"
+  val dateCreated: String        = "2018-01-01T00:00:00Z"
   val fileMetadata: FileMetadata = FileMetadata(fileId, Some(originalFileName), Some(dateCreated))
-
 
   "getUpscanFile" should {
 
@@ -78,7 +77,10 @@ class UpscanConnectorSpec extends AnyWordSpecLike with Matchers with GuiceOneApp
       val result = await(TestConnector.getUpscanFile(reference, fileId, userId))
       val reader = new BufferedReader(new InputStreamReader(result.get))
 
-      (Iterator continually reader.readLine takeWhile (_ != null) toList) should contain theSameElementsAs List("Test", "Passed")
+      (Iterator continually reader.readLine takeWhile (_ != null) toList) should contain theSameElementsAs List(
+        "Test",
+        "Passed"
+      )
     }
     "return a RuntimeException when Upscan throws error" in {
       when(mockWsHttp.buildRequestWithStream(any())).thenReturn(Future.failed(new RequestTimeoutException("")))
@@ -90,4 +92,5 @@ class UpscanConnectorSpec extends AnyWordSpecLike with Matchers with GuiceOneApp
       exception.getMessage.contains("Error Streaming file from Upscan service") shouldBe true
     }
   }
+
 }

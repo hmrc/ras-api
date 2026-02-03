@@ -31,87 +31,101 @@ import javax.inject.Inject
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.{Failure, Success, Try}
 
-class FileSessionController @Inject()(val filesSessionService: RasFilesSessionService,
-                                      val authConnector: AuthConnector,
-                                       cc: ControllerComponents)
-                                     (implicit val ec: ExecutionContext) extends BackendController(cc) with AuthorisedFunctions with Logging {
+class FileSessionController @Inject() (
+  val filesSessionService: RasFilesSessionService,
+  val authConnector: AuthConnector,
+  cc: ControllerComponents
+)(implicit val ec: ExecutionContext)
+    extends BackendController(cc) with AuthorisedFunctions with Logging {
 
-  def createFileSession(): Action[AnyContent] = Action.async {
-    implicit request =>
-      isAuthorised().flatMap {
-        case Right(_) =>
+  def createFileSession(): Action[AnyContent] = Action.async { implicit request =>
+    isAuthorised().flatMap {
+      case Right(_)   =>
         request.body.asJson match {
-          case Some(json) => Try(json.validate[CreateFileSessionRequest]) match {
-            case Success(JsSuccess(payload, _)) =>
-              filesSessionService.createFileSession(payload.userId, payload.reference).flatMap {
-                case true => Future.successful(Created)
-                case false =>
-                  logger.warn(s"[FileSessionController][createFileSession] Could not create FileSession. Json Data: $json")
-                  Future.successful(InternalServerError("[FileSessionController][createFileSession] Could not create FileSession"))
-              }
-            case Success(JsError(errors)) =>
-              logger.warn(s"[FileSessionController][createFileSession] Json could not be parsed. Json Data: $json, errors: $errors")
-              Future.successful(BadRequest(s"Json could not be parsed. Errors: $errors"))
-            case Failure(exception) =>
-              logger.warn(s"[FileSessionController][createFileSession] Json could not be parsed. Json Data: $json, exception: $exception")
-              Future.successful(BadRequest(s"Json could not be parsed. Exception: ${exception.getMessage}"))
-          }
-          case None =>
+          case Some(json) =>
+            Try(json.validate[CreateFileSessionRequest]) match {
+              case Success(JsSuccess(payload, _)) =>
+                filesSessionService.createFileSession(payload.userId, payload.reference).flatMap {
+                  case true  => Future.successful(Created)
+                  case false =>
+                    logger.warn(
+                      s"[FileSessionController][createFileSession] Could not create FileSession. Json Data: $json"
+                    )
+                    Future.successful(
+                      InternalServerError("[FileSessionController][createFileSession] Could not create FileSession")
+                    )
+                }
+              case Success(JsError(errors))       =>
+                logger.warn(
+                  s"[FileSessionController][createFileSession] Json could not be parsed. Json Data: $json, errors: $errors"
+                )
+                Future.successful(BadRequest(s"Json could not be parsed. Errors: $errors"))
+              case Failure(exception)             =>
+                logger.warn(
+                  s"[FileSessionController][createFileSession] Json could not be parsed. Json Data: $json, exception: $exception"
+                )
+                Future.successful(BadRequest(s"Json could not be parsed. Exception: ${exception.getMessage}"))
+            }
+          case None       =>
             logger.warn(s"[FileSessionController][createFileSession] Missing or invalid json body.")
             Future.successful(BadRequest("Missing or invalid json body"))
         }
-        case Left(resp) =>
-          logger.info("[FileSessionController][createFileSession] user not authorised")
-          Future.successful(resp)
-      }
+      case Left(resp) =>
+        logger.info("[FileSessionController][createFileSession] user not authorised")
+        Future.successful(resp)
+    }
   }
 
-  def fetchFileSession(userId: String): Action[AnyContent] = Action.async {
-    implicit request =>
-      isAuthorised().flatMap {
-        case Right(uid) if uid == userId => filesSessionService.fetchFileSession(userId).flatMap {
+  def fetchFileSession(userId: String): Action[AnyContent] = Action.async { implicit request =>
+    isAuthorised().flatMap {
+      case Right(uid) if uid == userId =>
+        filesSessionService.fetchFileSession(userId).flatMap {
           case Some(fileSession) => Future.successful(Ok(Json.toJson(fileSession)))
-          case None =>
+          case None              =>
             logger.warn(s"[FileSessionController][fetchFileSession] Could not find file session for user: $userId")
             Future.successful(NotFound(s"Could not find file session for user: $userId"))
         }
-        case Right(uid) =>
-          logger.warn(s"[FileSessionController][fetchFileSession] Enrolled userId: '$uid' does not match the userId in the request: $userId")
-          Future.successful(BadRequest(s"Enrolled userId: '$uid' does not match the userId in the request: $userId"))
-        case Left(resp) =>
-          logger.info("[FileSessionController][fetchFileSession] user not authorised")
-          Future.successful(resp)
-      }
+      case Right(uid)                  =>
+        logger.warn(
+          s"[FileSessionController][fetchFileSession] Enrolled userId: '$uid' does not match the userId in the request: $userId"
+        )
+        Future.successful(BadRequest(s"Enrolled userId: '$uid' does not match the userId in the request: $userId"))
+      case Left(resp)                  =>
+        logger.info("[FileSessionController][fetchFileSession] user not authorised")
+        Future.successful(resp)
+    }
   }
 
-  def deleteFileSession(userId: String): Action[AnyContent] = Action.async {
-    implicit request =>
-      isAuthorised().flatMap {
-        case Right(uid) if uid == userId => filesSessionService.removeFileSession(userId).flatMap {
-          case true => Future.successful(NoContent)
+  def deleteFileSession(userId: String): Action[AnyContent] = Action.async { implicit request =>
+    isAuthorised().flatMap {
+      case Right(uid) if uid == userId =>
+        filesSessionService.removeFileSession(userId).flatMap {
+          case true  => Future.successful(NoContent)
           case false =>
             logger.warn(s"[FileSessionController][deleteFileSession] Delete operation failed for userId: $userId")
             Future.successful(InternalServerError("Delete operation failed"))
         }
-        case Right(uid) =>
-          logger.warn(s"[FileSessionController][deleteFileSession] Enrolled userId: '$uid' does not match the userId in the request: $userId")
-          Future.successful(BadRequest(s"Enrolled userId: '$uid' does not match the userId in the request: $userId"))
-        case Left(resp) =>
-          logger.info("[FileSessionController][deleteFileSession] user not authorised")
-          Future.successful(resp)
-      }
-  }
-
-  def isAuthorised()(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Either[Result, String]] = {
-    authorised(AuthProviders(GovernmentGateway) and (Enrolment("HMRC-PSA-ORG") or Enrolment("HMRC-PP-ORG") or Enrolment("HMRC-PODS-ORG") or Enrolment("HMRC-PODSPP-ORG"))
-    ).retrieve(authorisedEnrolments) {
-      enrolments =>
-        Future(Right(enrolments.enrolments.head.identifiers.head.value))
-    } recover {
-      case ex: AuthorisationException => {
-        logger.warn(s"[FileSessionController][isAuthorised] user not authorised: $ex")
-        Left(Unauthorized(ex.getMessage))
-      }
+      case Right(uid)                  =>
+        logger.warn(
+          s"[FileSessionController][deleteFileSession] Enrolled userId: '$uid' does not match the userId in the request: $userId"
+        )
+        Future.successful(BadRequest(s"Enrolled userId: '$uid' does not match the userId in the request: $userId"))
+      case Left(resp)                  =>
+        logger.info("[FileSessionController][deleteFileSession] user not authorised")
+        Future.successful(resp)
     }
   }
+
+  def isAuthorised()(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Either[Result, String]] =
+    authorised(
+      AuthProviders(GovernmentGateway) and (Enrolment("HMRC-PSA-ORG") or Enrolment("HMRC-PP-ORG") or Enrolment(
+        "HMRC-PODS-ORG"
+      ) or Enrolment("HMRC-PODSPP-ORG"))
+    ).retrieve(authorisedEnrolments) { enrolments =>
+      Future(Right(enrolments.enrolments.head.identifiers.head.value))
+    } recover { case ex: AuthorisationException =>
+      logger.warn(s"[FileSessionController][isAuthorised] user not authorised: $ex")
+      Left(Unauthorized(ex.getMessage))
+    }
+
 }

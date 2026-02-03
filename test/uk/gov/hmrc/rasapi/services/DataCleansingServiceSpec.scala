@@ -29,37 +29,45 @@ import uk.gov.hmrc.rasapi.models.ResultsFile
 import uk.gov.hmrc.rasapi.repositories.RepositoriesHelper.createFile
 import uk.gov.hmrc.rasapi.repository.RasFilesRepository
 
-class DataCleansingServiceSpec extends AnyWordSpecLike with Matchers with MockitoSugar with GuiceOneAppPerSuite
-with BeforeAndAfterEach with Logging {
+class DataCleansingServiceSpec
+    extends AnyWordSpecLike
+    with Matchers
+    with MockitoSugar
+    with GuiceOneAppPerSuite
+    with BeforeAndAfterEach
+    with Logging {
 
-  lazy val dataCleansingService: DataCleansingService = app.injector.instanceOf[DataCleansingService]
+  lazy val dataCleansingService: DataCleansingService      = app.injector.instanceOf[DataCleansingService]
   implicit lazy val rasFilesRepository: RasFilesRepository = app.injector.instanceOf[RasFilesRepository]
-  override implicit lazy val app: Application = new GuiceApplicationBuilder()
+
+  implicit override lazy val app: Application = new GuiceApplicationBuilder()
     .configure("remove-chunks-data-exercise.enabled" -> true)
     .build()
 
   override protected def beforeEach(): Unit =
     rasFilesRepository.collection.drop()
 
-  "DataCleansingService" should{
+  "DataCleansingService" should {
 
     "not remove chunks that are not orphaned" in {
-      await(rasFilesRepository.saveFile("user14","reference14",createFile))
-      await(rasFilesRepository.saveFile("user15","reference15",createFile))
+      await(rasFilesRepository.saveFile("user14", "reference14", createFile))
+      await(rasFilesRepository.saveFile("user15", "reference15", createFile))
       val result = await(dataCleansingService.removeOrphanedChunks())
       result.size shouldEqual 0
     }
 
-    "remove orphaned chunks" in  {
-      val uploadedFile1: ResultsFile = await(rasFilesRepository.saveFile("user14","reference14",createFile))
-      val uploadedFile2: ResultsFile = await(rasFilesRepository.saveFile("user15","reference15",createFile))
-      val uploadedFiles = List(uploadedFile1.getObjectId, uploadedFile2.getObjectId)
+    "remove orphaned chunks" in {
+      val uploadedFile1: ResultsFile = await(rasFilesRepository.saveFile("user14", "reference14", createFile))
+      val uploadedFile2: ResultsFile = await(rasFilesRepository.saveFile("user15", "reference15", createFile))
+      val uploadedFiles              = List(uploadedFile1.getObjectId, uploadedFile2.getObjectId)
 
-      val filesCollection: MongoCollection[Document] = rasFilesRepository.mongoComponent.database.getCollection("resultsFiles.files")
+      val filesCollection: MongoCollection[Document] =
+        rasFilesRepository.mongoComponent.database.getCollection("resultsFiles.files")
       await(filesCollection.findOneAndDelete(Document("_id" -> uploadedFile1.getObjectId)).toFuture())
       await(filesCollection.findOneAndDelete(Document("_id" -> uploadedFile2.getObjectId)).toFuture())
-      val result = await(dataCleansingService.removeOrphanedChunks())
+      val result                                     = await(dataCleansingService.removeOrphanedChunks())
       result shouldEqual uploadedFiles
     }
   }
+
 }

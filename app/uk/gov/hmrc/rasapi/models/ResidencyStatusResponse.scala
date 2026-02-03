@@ -20,8 +20,14 @@ import play.api.libs.json.{Json, OFormat}
 
 case class ResidencyStatusResponse(success: Option[ResidencyStatusSuccess], failure: Option[ResidencyStatusFailure])
 
-case class ResidencyStatusSuccess(nino: String, deathDate: Option[String], deathDateStatus: Option[String],
-                                  deseasedIndicator: Option[Boolean], currentYearResidencyStatus: String, nextYearResidencyStatus: Option[String])
+case class ResidencyStatusSuccess(
+  nino: String,
+  deathDate: Option[String],
+  deathDateStatus: Option[String],
+  deseasedIndicator: Option[Boolean],
+  currentYearResidencyStatus: String,
+  nextYearResidencyStatus: Option[String]
+)
 
 case class ResidencyStatusFailure(code: String, reason: String)
 

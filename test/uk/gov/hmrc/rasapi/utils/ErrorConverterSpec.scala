@@ -24,10 +24,12 @@ import org.scalatestplus.play.guice.GuiceOneAppPerSuite
 import play.api.libs.json.{JsPath, JsonValidationError}
 import uk.gov.hmrc.rasapi.controllers.ErrorValidation
 
-class ErrorConverterSpec extends AnyWordSpecLike with Matchers with GuiceOneAppPerSuite with BeforeAndAfter with MockitoSugar {
+class ErrorConverterSpec
+    extends AnyWordSpecLike with Matchers with GuiceOneAppPerSuite with BeforeAndAfter with MockitoSugar {
+
   "Convert method in a " should {
     "convert an invalid data type" in {
-     val error = JsonValidationError("INVALID_DATA_TYPE")
+      val error  = JsonValidationError("INVALID_DATA_TYPE")
       val errors = Seq((JsPath(), Seq(error)))
 
       val errorConverter = new ErrorConverter
@@ -36,7 +38,7 @@ class ErrorConverterSpec extends AnyWordSpecLike with Matchers with GuiceOneAppP
         List(ErrorValidation("INVALID_DATA_TYPE", "Invalid data type has been used", Some("")))
     }
     "convert an invalid date" in {
-      val error = JsonValidationError("INVALID_DATE")
+      val error  = JsonValidationError("INVALID_DATE")
       val errors = Seq((JsPath(), Seq(error)))
 
       val errorConverter = new ErrorConverter
@@ -45,4 +47,5 @@ class ErrorConverterSpec extends AnyWordSpecLike with Matchers with GuiceOneAppP
         List(ErrorValidation("INVALID_DATE", "Date is invalid", Some("")))
     }
   }
+
 }

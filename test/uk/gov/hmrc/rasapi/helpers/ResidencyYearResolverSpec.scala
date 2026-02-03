@@ -23,7 +23,8 @@ import org.scalatest.wordspec.AnyWordSpecLike
 import org.scalatestplus.mockito.MockitoSugar
 import org.scalatestplus.play.guice.GuiceOneAppPerTest
 
-class ResidencyYearResolverSpec extends AnyWordSpecLike with Matchers with MockitoSugar with GuiceOneAppPerTest with BeforeAndAfter {
+class ResidencyYearResolverSpec
+    extends AnyWordSpecLike with Matchers with MockitoSugar with GuiceOneAppPerTest with BeforeAndAfter {
 
   "isBetweenJanAndApril" should {
 
@@ -86,4 +87,5 @@ class ResidencyYearResolverSpec extends AnyWordSpecLike with Matchers with Mocki
       }
     }
   }
+
 }

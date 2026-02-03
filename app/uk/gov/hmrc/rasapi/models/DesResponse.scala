@@ -18,7 +18,8 @@ package uk.gov.hmrc.rasapi.models
 
 sealed abstract class DesResponse(val residencyStatus: Option[ResidencyStatus])
 
-case class SuccessfulDesResponse(override val residencyStatus: Option[ResidencyStatus]) extends DesResponse(residencyStatus)
+case class SuccessfulDesResponse(override val residencyStatus: Option[ResidencyStatus])
+    extends DesResponse(residencyStatus)
 
 case object InternalServerErrorResponse extends DesResponse(residencyStatus = None)
 

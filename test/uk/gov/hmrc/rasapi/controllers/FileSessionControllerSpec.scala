@@ -38,16 +38,19 @@ import scala.concurrent.{ExecutionContext, Future}
 
 class FileSessionControllerSpec extends AnyWordSpecLike with TestEnrolments with GuiceOneAppPerSuite with Matchers {
 
-  val successfulRetrieval: Future[Enrolments] = Future.successful(enrolments)
-  val failedRetrieval: Future[Enrolments] = Future.failed(new InsufficientEnrolments)
-  val mockAuthConnector: AuthConnector = mock[AuthConnector]
+  val successfulRetrieval: Future[Enrolments]         = Future.successful(enrolments)
+  val failedRetrieval: Future[Enrolments]             = Future.failed(new InsufficientEnrolments)
+  val mockAuthConnector: AuthConnector                = mock[AuthConnector]
   val mockFilesSessionService: RasFilesSessionService = mock[RasFilesSessionService]
-  val mockCC: ControllerComponents = app.injector.instanceOf[ControllerComponents]
+  val mockCC: ControllerComponents                    = app.injector.instanceOf[ControllerComponents]
 
+  val fileSessionController = new FileSessionController(mockFilesSessionService, mockAuthConnector, mockCC)(
+    ExecutionContext.global
+  )
 
-  val fileSessionController = new FileSessionController(mockFilesSessionService, mockAuthConnector, mockCC)(ExecutionContext.global)
+  val createFileSessionRequest: CreateFileSessionRequest =
+    CreateFileSessionRequest("A123456", UUID.randomUUID().toString)
 
-  val createFileSessionRequest: CreateFileSessionRequest = CreateFileSessionRequest("A123456", UUID.randomUUID().toString)
   val fileSession: FileSession = FileSession(None, None, "A123456", Some(Instant.now().toEpochMilli), None)
 
   "createFileSession" should {
@@ -56,9 +59,12 @@ class FileSessionControllerSpec extends AnyWordSpecLike with TestEnrolments with
       when(mockFilesSessionService.createFileSession(any(), any())).thenReturn(Future.successful(true))
       val jsonRequest = Json.toJson(createFileSessionRequest)
 
-      val result = fileSessionController.createFileSession()
-        .apply(FakeRequest(Helpers.POST, "/create-file-session")
-          .withJsonBody(jsonRequest))
+      val result = fileSessionController
+        .createFileSession()
+        .apply(
+          FakeRequest(Helpers.POST, "/create-file-session")
+            .withJsonBody(jsonRequest)
+        )
         .futureValue
 
       result.header.status shouldBe Status.CREATED
@@ -69,9 +75,12 @@ class FileSessionControllerSpec extends AnyWordSpecLike with TestEnrolments with
       when(mockFilesSessionService.createFileSession(any(), any())).thenReturn(Future.successful(false))
       val jsonRequest = Json.toJson(createFileSessionRequest)
 
-      val result = fileSessionController.createFileSession()
-        .apply(FakeRequest(Helpers.POST, "/create-file-session")
-          .withJsonBody(jsonRequest))
+      val result = fileSessionController
+        .createFileSession()
+        .apply(
+          FakeRequest(Helpers.POST, "/create-file-session")
+            .withJsonBody(jsonRequest)
+        )
         .futureValue
 
       result.header.status shouldBe Status.INTERNAL_SERVER_ERROR
@@ -81,9 +90,12 @@ class FileSessionControllerSpec extends AnyWordSpecLike with TestEnrolments with
       when(mockAuthConnector.authorise[Enrolments](any(), any())(any(), any())).thenReturn(successfulRetrieval)
       val jsonRequest = Json.toJson(createFileSessionRequest).as[JsObject] - "userId"
 
-      val result = fileSessionController.createFileSession()
-        .apply(FakeRequest(Helpers.POST, "/create-file-session")
-          .withJsonBody(jsonRequest))
+      val result = fileSessionController
+        .createFileSession()
+        .apply(
+          FakeRequest(Helpers.POST, "/create-file-session")
+            .withJsonBody(jsonRequest)
+        )
         .futureValue
 
       result.header.status shouldBe Status.BAD_REQUEST
@@ -93,9 +105,12 @@ class FileSessionControllerSpec extends AnyWordSpecLike with TestEnrolments with
       when(mockAuthConnector.authorise[Enrolments](any(), any())(any(), any())).thenReturn(successfulRetrieval)
       val jsonRequest = Json.toJson(createFileSessionRequest).as[JsObject] - "reference"
 
-      val result = fileSessionController.createFileSession()
-        .apply(FakeRequest(Helpers.POST, "/create-file-session")
-          .withJsonBody(jsonRequest))
+      val result = fileSessionController
+        .createFileSession()
+        .apply(
+          FakeRequest(Helpers.POST, "/create-file-session")
+            .withJsonBody(jsonRequest)
+        )
         .futureValue
 
       result.header.status shouldBe Status.BAD_REQUEST
@@ -105,9 +120,12 @@ class FileSessionControllerSpec extends AnyWordSpecLike with TestEnrolments with
       when(mockAuthConnector.authorise[Enrolments](any(), any())(any(), any())).thenReturn(successfulRetrieval)
       val jsonRequest = Json.toJson(createFileSessionRequest.copy(reference = ""))
 
-      val result = fileSessionController.createFileSession()
-        .apply(FakeRequest(Helpers.POST, "/create-file-session")
-          .withJsonBody(jsonRequest))
+      val result = fileSessionController
+        .createFileSession()
+        .apply(
+          FakeRequest(Helpers.POST, "/create-file-session")
+            .withJsonBody(jsonRequest)
+        )
         .futureValue
 
       result.header.status shouldBe Status.BAD_REQUEST
@@ -117,9 +135,12 @@ class FileSessionControllerSpec extends AnyWordSpecLike with TestEnrolments with
       when(mockAuthConnector.authorise[Enrolments](any(), any())(any(), any())).thenReturn(successfulRetrieval)
       val jsonRequest = Json.toJson(createFileSessionRequest.copy(userId = ""))
 
-      val result = fileSessionController.createFileSession()
-        .apply(FakeRequest(Helpers.POST, "/create-file-session")
-          .withJsonBody(jsonRequest))
+      val result = fileSessionController
+        .createFileSession()
+        .apply(
+          FakeRequest(Helpers.POST, "/create-file-session")
+            .withJsonBody(jsonRequest)
+        )
         .futureValue
 
       result.header.status shouldBe Status.BAD_REQUEST
@@ -128,7 +149,8 @@ class FileSessionControllerSpec extends AnyWordSpecLike with TestEnrolments with
     "return BAD_REQUEST if request body is empty" in {
       when(mockAuthConnector.authorise[Enrolments](any(), any())(any(), any())).thenReturn(successfulRetrieval)
 
-      val result = fileSessionController.createFileSession()
+      val result = fileSessionController
+        .createFileSession()
         .apply(FakeRequest(Helpers.POST, "/create-file-session"))
         .futureValue
 
@@ -138,7 +160,8 @@ class FileSessionControllerSpec extends AnyWordSpecLike with TestEnrolments with
     "return UNAUTHORIZED if user is not authorised" in {
       when(mockAuthConnector.authorise[Enrolments](any(), any())(any(), any())).thenReturn(failedRetrieval)
 
-      val result = fileSessionController.createFileSession()
+      val result = fileSessionController
+        .createFileSession()
         .apply(FakeRequest(Helpers.POST, "/create-file-session"))
         .futureValue
 
@@ -151,7 +174,8 @@ class FileSessionControllerSpec extends AnyWordSpecLike with TestEnrolments with
       when(mockAuthConnector.authorise[Enrolments](any(), any())(any(), any())).thenReturn(successfulRetrieval)
       when(mockFilesSessionService.fetchFileSession(any())).thenReturn(Future.successful(Some(fileSession)))
 
-      val result = fileSessionController.fetchFileSession("A123456")
+      val result = fileSessionController
+        .fetchFileSession("A123456")
         .apply(FakeRequest(Helpers.GET, "/get-file-session/:userId"))
         .futureValue
 
@@ -162,7 +186,8 @@ class FileSessionControllerSpec extends AnyWordSpecLike with TestEnrolments with
       when(mockAuthConnector.authorise[Enrolments](any(), any())(any(), any())).thenReturn(successfulRetrieval)
       when(mockFilesSessionService.fetchFileSession(any())).thenReturn(Future.successful(None))
 
-      val result = fileSessionController.fetchFileSession("A123456")
+      val result = fileSessionController
+        .fetchFileSession("A123456")
         .apply(FakeRequest(Helpers.GET, "/get-file-session/:userId"))
         .futureValue
 
@@ -172,7 +197,8 @@ class FileSessionControllerSpec extends AnyWordSpecLike with TestEnrolments with
     "return BAD_REQUEST if userId in request is not matching the enrolled userId" in {
       when(mockAuthConnector.authorise[Enrolments](any(), any())(any(), any())).thenReturn(successfulRetrieval)
 
-      val result = fileSessionController.fetchFileSession("A123457") //wrong userId
+      val result = fileSessionController
+        .fetchFileSession("A123457") // wrong userId
         .apply(FakeRequest(Helpers.GET, "/get-file-session/:userId"))
         .futureValue
 
@@ -182,7 +208,8 @@ class FileSessionControllerSpec extends AnyWordSpecLike with TestEnrolments with
     "return UNAUTHORIZED if user is not authorised" in {
       when(mockAuthConnector.authorise[Enrolments](any(), any())(any(), any())).thenReturn(failedRetrieval)
 
-      val result = fileSessionController.fetchFileSession("A123456")
+      val result = fileSessionController
+        .fetchFileSession("A123456")
         .apply(FakeRequest(Helpers.GET, "/get-file-session/:userId"))
         .futureValue
 
@@ -195,7 +222,8 @@ class FileSessionControllerSpec extends AnyWordSpecLike with TestEnrolments with
       when(mockAuthConnector.authorise[Enrolments](any(), any())(any(), any())).thenReturn(successfulRetrieval)
       when(mockFilesSessionService.removeFileSession(any())).thenReturn(Future.successful(true))
 
-      val result = fileSessionController.deleteFileSession("A123456")
+      val result = fileSessionController
+        .deleteFileSession("A123456")
         .apply(FakeRequest(Helpers.DELETE, "/delete-file-session/:userId"))
         .futureValue
 
@@ -206,7 +234,8 @@ class FileSessionControllerSpec extends AnyWordSpecLike with TestEnrolments with
       when(mockAuthConnector.authorise[Enrolments](any(), any())(any(), any())).thenReturn(successfulRetrieval)
       when(mockFilesSessionService.removeFileSession(any())).thenReturn(Future.successful(false))
 
-      val result = fileSessionController.deleteFileSession("A123456")
+      val result = fileSessionController
+        .deleteFileSession("A123456")
         .apply(FakeRequest(Helpers.DELETE, "/delete-file-session/:userId"))
         .futureValue
 
@@ -216,7 +245,8 @@ class FileSessionControllerSpec extends AnyWordSpecLike with TestEnrolments with
     "return BAD_REQUEST if userId in request is not matching the enrolled userId" in {
       when(mockAuthConnector.authorise[Enrolments](any(), any())(any(), any())).thenReturn(successfulRetrieval)
 
-      val result = fileSessionController.deleteFileSession("A123457")  //wrong userId
+      val result = fileSessionController
+        .deleteFileSession("A123457") // wrong userId
         .apply(FakeRequest(Helpers.DELETE, "/delete-file-session/:userId"))
         .futureValue
 
@@ -226,11 +256,13 @@ class FileSessionControllerSpec extends AnyWordSpecLike with TestEnrolments with
     "return UNAUTHORIZED if user is not authorised" in {
       when(mockAuthConnector.authorise[Enrolments](any(), any())(any(), any())).thenReturn(failedRetrieval)
 
-      val result = fileSessionController.deleteFileSession("A123456")
+      val result = fileSessionController
+        .deleteFileSession("A123456")
         .apply(FakeRequest(Helpers.DELETE, "/delete-file-session/:userId"))
         .futureValue
 
       result.header.status shouldBe Status.UNAUTHORIZED
     }
   }
+
 }

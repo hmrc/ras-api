@@ -21,10 +21,10 @@ import uk.gov.hmrc.rasapi.controllers.ErrorValidation
 
 import javax.inject.Inject
 
-class ErrorConverter @Inject()() {
+class ErrorConverter @Inject() () {
 
-  def convert(error: scala.collection.Seq[(JsPath, scala.collection.Seq[JsonValidationError])]):List[ErrorValidation] = {
-    error.map(e => {
+  def convert(error: scala.collection.Seq[(JsPath, scala.collection.Seq[JsonValidationError])]): List[ErrorValidation] =
+    error.map { e =>
       val details = getErrorDetails(e._2.head.message)
 
       ErrorValidation(
@@ -32,17 +32,15 @@ class ErrorConverter @Inject()() {
         message = details._2,
         path = Some(e._1.toString())
       )
-    }).toList
-  }
+    }.toList
 
-  private def getErrorDetails(key: String):(String, String) = {
+  private def getErrorDetails(key: String): (String, String) =
     key match {
-      case "INVALID_DATA_TYPE" => ("INVALID_DATA_TYPE", "Invalid data type has been used")
-      case "INVALID_DATE" => ("INVALID_DATE", "Date is invalid")
-      case "INVALID_FORMAT" => ("INVALID_FORMAT", "Invalid format has been used")
+      case "INVALID_DATA_TYPE"                    => ("INVALID_DATA_TYPE", "Invalid data type has been used")
+      case "INVALID_DATE"                         => ("INVALID_DATE", "Date is invalid")
+      case "INVALID_FORMAT"                       => ("INVALID_FORMAT", "Invalid format has been used")
       case "error.path.missing" | "MISSING_FIELD" => ("MISSING_FIELD", "This field is required")
-      case _ => throw new MatchError("Could not match the JSON Validation error")
+      case _                                      => throw new MatchError("Could not match the JSON Validation error")
     }
-  }
 
 }

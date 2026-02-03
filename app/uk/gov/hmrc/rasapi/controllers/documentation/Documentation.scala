@@ -25,21 +25,28 @@ import uk.gov.hmrc.rasapi.views.txt
 
 import javax.inject.Inject
 
+class Documentation @Inject() (
+  appContext: AppContext,
+  cc: ControllerComponents,
+  httpErrorHandler: HttpErrorHandler,
+  assets: Assets
+) extends DocumentationController(cc, assets, httpErrorHandler) {
 
-class Documentation @Inject()(appContext: AppContext,
-                              cc: ControllerComponents,
-                              httpErrorHandler: HttpErrorHandler,
-                              assets: Assets) extends DocumentationController(cc, assets, httpErrorHandler) {
-
-  override def documentation(version: String, endpointName: String): Action[AnyContent] = {
+  override def documentation(version: String, endpointName: String): Action[AnyContent] =
     assets.at(s"/public/api/documentation/$version", s"${endpointName.replaceAll(" ", "-")}.xml")
-  }
 
   override def definition(): Action[AnyContent] = Action {
-    Ok(txt.definition(appContext.apiContext, appContext.apiStatus, appContext.endpointsEnabled, appContext.apiV2_0Enabled))
+    Ok(
+      txt.definition(
+        appContext.apiContext,
+        appContext.apiStatus,
+        appContext.endpointsEnabled,
+        appContext.apiV2_0Enabled
+      )
+    )
   }
 
-  def specification(version: String, file: String): Action[AnyContent] = {
+  def specification(version: String, file: String): Action[AnyContent] =
     assets.at(s"/public/api/conf/$version", file)
-  }
+
 }

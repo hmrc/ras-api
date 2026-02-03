@@ -30,17 +30,22 @@ package object controllers {
   }
 
   implicit val errorResponseWithErrorsWrites: Writes[ErrorResponseWithErrors] = new Writes[ErrorResponseWithErrors] {
-    def writes(e: ErrorResponseWithErrors): JsValue = Json.obj("code" -> e.errorCode, "message" -> e.message, "errors" -> e.errors)
+    def writes(e: ErrorResponseWithErrors): JsValue =
+      Json.obj("code" -> e.errorCode, "message" -> e.message, "errors" -> e.errors)
   }
 
   // Auth Constants
-  val PSA_ENROLMENT = "HMRC-PSA-ORG"
-  val PP_ENROLMENT = "HMRC-PP-ORG"
+  val PSA_ENROLMENT      = "HMRC-PSA-ORG"
+  val PP_ENROLMENT       = "HMRC-PP-ORG"
   val PSA_PODS_ENROLMENT = "HMRC-PODS-ORG"
-  val PSP_ENROLMENT = "HMRC-PODSPP-ORG"
+  val PSP_ENROLMENT      = "HMRC-PODSPP-ORG"
 
-  def getEnrolmentIdentifier(enrols:Enrolments): String = {
-    enrols.enrolments.filter(res => res.key == PSA_ENROLMENT || res.key == PP_ENROLMENT || res.key == PSA_PODS_ENROLMENT || res.key == PSP_ENROLMENT).map(
-      res => res.identifiers.head.value).head
-  }
+  def getEnrolmentIdentifier(enrols: Enrolments): String =
+    enrols.enrolments
+      .filter(res =>
+        res.key == PSA_ENROLMENT || res.key == PP_ENROLMENT || res.key == PSA_PODS_ENROLMENT || res.key == PSP_ENROLMENT
+      )
+      .map(res => res.identifiers.head.value)
+      .head
+
 }

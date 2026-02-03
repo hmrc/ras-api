@@ -44,19 +44,25 @@ import uk.gov.hmrc.rasapi.services.AuditService
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.{Failure, Try}
 
-class FileControllerSpec extends AnyWordSpecLike with Matchers with MockitoSugar with GuiceOneAppPerSuite with BeforeAndAfter with TestEnrolments {
+class FileControllerSpec
+    extends AnyWordSpecLike
+    with Matchers
+    with MockitoSugar
+    with GuiceOneAppPerSuite
+    with BeforeAndAfter
+    with TestEnrolments {
 
   implicit val hc: HeaderCarrier = HeaderCarrier()
 
-  val successfulRetrieval: Future[Enrolments] = Future.successful(enrolments)
-  val mockAuthConnector: AuthConnector = mock[AuthConnector]
-  val mockAuditService: AuditService = mock[AuditService]
+  val successfulRetrieval: Future[Enrolments]      = Future.successful(enrolments)
+  val mockAuthConnector: AuthConnector             = mock[AuthConnector]
+  val mockAuditService: AuditService               = mock[AuditService]
   val mockRasChunksRepository: RasChunksRepository = mock[RasChunksRepository]
-  val mockRasFileRepository: RasFilesRepository = mock[RasFilesRepository]
-  val mockMetrics: Metrics = app.injector.instanceOf[Metrics]
-  val mockCC: ControllerComponents = app.injector.instanceOf[ControllerComponents]
+  val mockRasFileRepository: RasFilesRepository    = mock[RasFilesRepository]
+  val mockMetrics: Metrics                         = app.injector.instanceOf[Metrics]
+  val mockCC: ControllerComponents                 = app.injector.instanceOf[ControllerComponents]
 
-  val fileData: FileData = FileData(length = 124L,Source.single("TEST START ".getBytes))
+  val fileData: FileData = FileData(length = 124L, Source.single("TEST START ".getBytes))
 
   val fileController: FileController = new FileController(
     mockRasFileRepository,
@@ -68,19 +74,19 @@ class FileControllerSpec extends AnyWordSpecLike with Matchers with MockitoSugar
     ExecutionContext.global
   ) {
     override def getFile(name: String, userId: String): Future[Option[FileData]] = Future(Some(fileData))
-    override def deleteFile(name: String, userId: String): Future[Boolean] = Future(true)
+    override def deleteFile(name: String, userId: String): Future[Boolean]       = Future(true)
   }
 
   override def fakeApplication(): Application =
     GuiceApplicationBuilder()
       .build()
 
-  implicit val actorSystem: ActorSystem = ActorSystem()
+  implicit val actorSystem: ActorSystem   = ActorSystem()
   implicit val materializer: Materializer = app.materializer
 
   when(mockRasFileRepository.removeFile(any(), any())).thenReturn(Future.successful(true))
 
-  before{
+  before {
     reset(mockAuditService)
   }
 
@@ -89,11 +95,13 @@ class FileControllerSpec extends AnyWordSpecLike with Matchers with MockitoSugar
       "valid filename is provided" in {
         when(mockAuthConnector.authorise[Enrolments](any(), any())(any(), any())).thenReturn(successfulRetrieval)
 
-        val result = await(fileController.serveFile("testFile.csv").apply(FakeRequest(Helpers.GET, "/ras-api/file/getFile/:testFile")))
+        val result = await(
+          fileController.serveFile("testFile.csv").apply(FakeRequest(Helpers.GET, "/ras-api/file/getFile/:testFile"))
+        )
         result.header.status shouldBe Status.OK
         val headers = result.header.headers
-        headers("Content-Length") shouldBe "124"
-        headers("Content-Type") shouldBe "application/csv"
+        headers("Content-Length")      shouldBe "124"
+        headers("Content-Type")        shouldBe "application/csv"
         headers("Content-Disposition") shouldBe "attachment; filename=\"testFile.csv\""
       }
     }
@@ -114,7 +122,9 @@ class FileControllerSpec extends AnyWordSpecLike with Matchers with MockitoSugar
       "the file is not available" in {
         when(mockAuthConnector.authorise[Enrolments](any(), any())(any(), any())).thenReturn(successfulRetrieval)
 
-        val result = await(fileController.serveFile("testFile.csv").apply(FakeRequest(Helpers.GET, "/ras-api/file/getFile/:testFile")))
+        val result = await(
+          fileController.serveFile("testFile.csv").apply(FakeRequest(Helpers.GET, "/ras-api/file/getFile/:testFile"))
+        )
         result.header.status shouldBe Status.NOT_FOUND
       }
     }
@@ -122,16 +132,18 @@ class FileControllerSpec extends AnyWordSpecLike with Matchers with MockitoSugar
     "return status 401 (Unauthorised)" when {
       "a valid lookup request has been submitted with no PSA or PP enrolments" in {
 
-        when(mockAuthConnector.authorise[Option[String]](any(), any())(any(), any())).thenReturn(Future.failed(new InsufficientEnrolments))
+        when(mockAuthConnector.authorise[Option[String]](any(), any())(any(), any()))
+          .thenReturn(Future.failed(new InsufficientEnrolments))
 
-        val result = fileController.serveFile("testFile.csv").apply(FakeRequest(Helpers.GET, "/ras-api/file/getFile/:testFile"))
+        val result =
+          fileController.serveFile("testFile.csv").apply(FakeRequest(Helpers.GET, "/ras-api/file/getFile/:testFile"))
         status(result) shouldBe UNAUTHORIZED
       }
     }
 
     "remove a file" when {
       "already saved fileName is provided" in {
-        val fileController = new FileController (
+        val fileController = new FileController(
           mockRasFileRepository,
           mockRasChunksRepository,
           mockMetrics,
@@ -139,27 +151,29 @@ class FileControllerSpec extends AnyWordSpecLike with Matchers with MockitoSugar
           mockAuthConnector,
           mockCC,
           ExecutionContext.global
-        ){
+        ) {
           override def getFile(name: String, userId: String): Future[Option[FileData]] = Future(Some(fileData))
         }
 
         when(mockAuthConnector.authorise[Enrolments](any(), any())(any(), any())).thenReturn(successfulRetrieval)
         when(mockRasChunksRepository.removeChunk(any())).thenReturn(Future.successful(true))
         val fileName = "5b4628e02f00002501139c8c"
-        val userId = "A123456"
-        val result = await(fileController.remove(fileName, userId).apply(FakeRequest(Helpers.DELETE, s"/ras-api/file/remove/:$fileName/:$userId")))
+        val userId   = "A123456"
+        val result   = await(
+          fileController
+            .remove(fileName, userId)
+            .apply(FakeRequest(Helpers.DELETE, s"/ras-api/file/remove/:$fileName/:$userId"))
+        )
         result.header.status shouldBe Status.OK
         verify(mockAuditService).audit(
           auditType = Meq("FileDeletion"),
           path = any(),
-          auditData = Meq(Map("userIdentifier" -> "A123456",
-            "fileName" -> fileName,
-            "chunkDeletionSuccess" -> "true"))
+          auditData = Meq(Map("userIdentifier" -> "A123456", "fileName" -> fileName, "chunkDeletionSuccess" -> "true"))
         )(any())
       }
 
       "chunks deletion fails as id cannot be converted to a ObjectId" in {
-        val fileController = new FileController (
+        val fileController = new FileController(
           mockRasFileRepository,
           mockRasChunksRepository,
           mockMetrics,
@@ -167,7 +181,7 @@ class FileControllerSpec extends AnyWordSpecLike with Matchers with MockitoSugar
           mockAuthConnector,
           mockCC,
           ExecutionContext.global
-        ){
+        ) {
           override def getFile(name: String, userId: String): Future[Option[FileData]] = Future(Some(fileData))
 
           override def parseStringIdToObjectId(id: String): Try[ObjectId] = Failure(new Throwable("Failure"))
@@ -176,23 +190,29 @@ class FileControllerSpec extends AnyWordSpecLike with Matchers with MockitoSugar
         when(mockAuthConnector.authorise[Enrolments](any(), any())(any(), any())).thenReturn(successfulRetrieval)
         when(mockRasChunksRepository.removeChunk(any())).thenReturn(Future.successful(true))
         val fileName = "testFile.csv"
-        val userId = "A123456"
-        val result = await(fileController.remove(fileName, userId).apply(FakeRequest(Helpers.DELETE, s"/ras-api/file/remove/:$fileName")))
+        val userId   = "A123456"
+        val result   = await(
+          fileController.remove(fileName, userId).apply(FakeRequest(Helpers.DELETE, s"/ras-api/file/remove/:$fileName"))
+        )
         result.header.status shouldBe Status.OK
 
         verify(mockAuditService).audit(
           auditType = Meq("FileDeletion"),
           path = any(),
-          auditData = Meq(Map("userIdentifier" -> userId,
-            "fileName" -> fileName,
-            "chunkDeletionSuccess" -> "false",
-            "reason" -> "fileName could not be converted to ObjectId"))
+          auditData = Meq(
+            Map(
+              "userIdentifier"       -> userId,
+              "fileName"             -> fileName,
+              "chunkDeletionSuccess" -> "false",
+              "reason"               -> "fileName could not be converted to ObjectId"
+            )
+          )
         )(any())
       }
 
       "chunks deletion fails" in {
 
-        val fileController = new FileController (
+        val fileController = new FileController(
           mockRasFileRepository,
           mockRasChunksRepository,
           mockMetrics,
@@ -200,21 +220,25 @@ class FileControllerSpec extends AnyWordSpecLike with Matchers with MockitoSugar
           mockAuthConnector,
           mockCC,
           ExecutionContext.global
-        ){
+        ) {
           override def getFile(name: String, userId: String): Future[Option[FileData]] = Future(Some(fileData))
         }
 
         when(mockAuthConnector.authorise[Enrolments](any(), any())(any(), any())).thenReturn(successfulRetrieval)
         when(mockRasChunksRepository.removeChunk(any())).thenReturn(Future.successful(false))
         val fileName = "testFile.csv"
-        val result = await(fileController.remove(fileName,"5b4628e02f00002501139c8c").apply(FakeRequest(Helpers.DELETE, s"/ras-api/file/remove/:$fileName")))
+        val result   = await(
+          fileController
+            .remove(fileName, "5b4628e02f00002501139c8c")
+            .apply(FakeRequest(Helpers.DELETE, s"/ras-api/file/remove/:$fileName"))
+        )
         result.header.status shouldBe Status.OK
       }
     }
 
     "internalservererror" when {
       "when a file doesnt exist" in {
-        val fileController = new FileController (
+        val fileController = new FileController(
           mockRasFileRepository,
           mockRasChunksRepository,
           mockMetrics,
@@ -228,7 +252,11 @@ class FileControllerSpec extends AnyWordSpecLike with Matchers with MockitoSugar
         when(mockRasFileRepository.removeFile(any(), any())).thenReturn(Future.successful(false))
 
         val fileName = "testFile.csv"
-        val result = await(fileController.remove(fileName,"5b4628e02f00002501139c8c").apply(FakeRequest(Helpers.DELETE, s"/ras-api/file/remove/:$fileName")))
+        val result   = await(
+          fileController
+            .remove(fileName, "5b4628e02f00002501139c8c")
+            .apply(FakeRequest(Helpers.DELETE, s"/ras-api/file/remove/:$fileName"))
+        )
         result.header.status shouldBe Status.INTERNAL_SERVER_ERROR
       }
     }
@@ -236,10 +264,13 @@ class FileControllerSpec extends AnyWordSpecLike with Matchers with MockitoSugar
     "not remove file and return status 401 (Unauthorised)" when {
       "a remove request has been submitted with no PSA or PP enrolments" in {
 
-        when(mockAuthConnector.authorise[Option[String]](any(), any())(any(), any())).thenReturn(Future.failed(new InsufficientEnrolments))
+        when(mockAuthConnector.authorise[Option[String]](any(), any())(any(), any()))
+          .thenReturn(Future.failed(new InsufficientEnrolments))
 
         val fileName = "testFile.csv"
-        val result = fileController.remove(fileName, "5b4628e02f00002501139c8c").apply(FakeRequest(Helpers.DELETE, s"/ras-api/file/remove/:$fileName"))
+        val result   = fileController
+          .remove(fileName, "5b4628e02f00002501139c8c")
+          .apply(FakeRequest(Helpers.DELETE, s"/ras-api/file/remove/:$fileName"))
         status(result) shouldBe UNAUTHORIZED
       }
     }
@@ -247,12 +278,16 @@ class FileControllerSpec extends AnyWordSpecLike with Matchers with MockitoSugar
     "not remove file return 401 (Unauthorised) for no auth session" when {
       "a remove request has been submitted with no PSA or PP enrolments" in {
 
-        when(mockAuthConnector.authorise[Option[String]](any(), any())(any(),any())).thenReturn(Future.failed(new SessionRecordNotFound))
+        when(mockAuthConnector.authorise[Option[String]](any(), any())(any(), any()))
+          .thenReturn(Future.failed(new SessionRecordNotFound))
 
         val fileName = "testFile.csv"
-        val result = fileController.remove(fileName,"5b4628e02f00002501139c8c").apply(FakeRequest(Helpers.DELETE, s"/ras-api/file/remove/:$fileName"))
+        val result   = fileController
+          .remove(fileName, "5b4628e02f00002501139c8c")
+          .apply(FakeRequest(Helpers.DELETE, s"/ras-api/file/remove/:$fileName"))
         status(result) shouldBe UNAUTHORIZED
       }
     }
   }
+
 }

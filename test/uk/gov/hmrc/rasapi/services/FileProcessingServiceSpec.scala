@@ -52,37 +52,38 @@ import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.Try
 
-class FileProcessingServiceSpec extends AnyWordSpecLike
-  with Matchers
-  with GuiceOneAppPerSuite
-  with ScalaFutures
-  with MockitoSugar
-  with BeforeAndAfter
-  with DefaultPlayMongoRepositorySupport[Chunks] {
+class FileProcessingServiceSpec
+    extends AnyWordSpecLike
+    with Matchers
+    with GuiceOneAppPerSuite
+    with ScalaFutures
+    with MockitoSugar
+    with BeforeAndAfter
+    with DefaultPlayMongoRepositorySupport[Chunks] {
 
-  implicit val hc: HeaderCarrier = HeaderCarrier()
+  implicit val hc: HeaderCarrier                            = HeaderCarrier()
   implicit val fakeReq: FakeRequest[AnyContentAsEmpty.type] = FakeRequest("POST", "/residency-status")
-  implicit lazy val system: ActorSystem        = ActorSystem()
-  implicit val materializers: Materializer = Materializer(system)
+  implicit lazy val system: ActorSystem                     = ActorSystem()
+  implicit val materializers: Materializer                  = Materializer(system)
 
   val mockUpscanConnector: UpscanConnector = mock[UpscanConnector]
 
-  val mockDesConnector: DesConnector = mock[DesConnector]
-  val mockSessionCache: RasFilesSessionService = mock[RasFilesSessionService]
+  val mockDesConnector: DesConnector                   = mock[DesConnector]
+  val mockSessionCache: RasFilesSessionService         = mock[RasFilesSessionService]
   val mockResidencyYearResolver: ResidencyYearResolver = mock[ResidencyYearResolver]
-  val mockAuditService: AuditService = mock[AuditService]
-  val appContext: AppContext = app.injector.instanceOf[AppContext]
-  val metrics: Metrics = app.injector.instanceOf[Metrics]
+  val mockAuditService: AuditService                   = mock[AuditService]
+  val appContext: AppContext                           = app.injector.instanceOf[AppContext]
+  val metrics: Metrics                                 = app.injector.instanceOf[Metrics]
 
-  val STATUS_DECEASED: String = "DECEASED"
-  val STATUS_MATCHING_FAILED: String = "STATUS_UNAVAILABLE"
-  val STATUS_INTERNAL_SERVER_ERROR: String = "INTERNAL_SERVER_ERROR"
-  val STATUS_SERVICE_UNAVAILABLE: String = "SERVICE_UNAVAILABLE"
-  val STATUS_FILE_PROCESSING_MATCHING_FAILED: String = "cannot_provide_status"
+  val STATUS_DECEASED: String                              = "DECEASED"
+  val STATUS_MATCHING_FAILED: String                       = "STATUS_UNAVAILABLE"
+  val STATUS_INTERNAL_SERVER_ERROR: String                 = "INTERNAL_SERVER_ERROR"
+  val STATUS_SERVICE_UNAVAILABLE: String                   = "SERVICE_UNAVAILABLE"
+  val STATUS_FILE_PROCESSING_MATCHING_FAILED: String       = "cannot_provide_status"
   val STATUS_FILE_PROCESSING_INTERNAL_SERVER_ERROR: String = "problem-getting-status"
-  override lazy val repository = new RasFilesRepository(mongoComponent, appContext)
+  override lazy val repository                             = new RasFilesRepository(mongoComponent, appContext)
 
-  val SUT: FileProcessingService = new FileProcessingService (
+  val SUT: FileProcessingService = new FileProcessingService(
     mockUpscanConnector,
     mockDesConnector,
     mockResidencyYearResolver,
@@ -97,16 +98,17 @@ class FileProcessingServiceSpec extends AnyWordSpecLike
 
     override val allowDefaultRUK: Boolean = false
 
-    override val DECEASED: String = STATUS_DECEASED
-    override val MATCHING_FAILED: String = STATUS_MATCHING_FAILED
-    override val INTERNAL_SERVER_ERROR: String = STATUS_INTERNAL_SERVER_ERROR
-    override val FILE_PROCESSING_MATCHING_FAILED: String = STATUS_FILE_PROCESSING_MATCHING_FAILED
+    override val DECEASED: String                              = STATUS_DECEASED
+    override val MATCHING_FAILED: String                       = STATUS_MATCHING_FAILED
+    override val INTERNAL_SERVER_ERROR: String                 = STATUS_INTERNAL_SERVER_ERROR
+    override val FILE_PROCESSING_MATCHING_FAILED: String       = STATUS_FILE_PROCESSING_MATCHING_FAILED
     override val FILE_PROCESSING_INTERNAL_SERVER_ERROR: String = STATUS_FILE_PROCESSING_INTERNAL_SERVER_ERROR
-    override val SERVICE_UNAVAILABLE: String = STATUS_SERVICE_UNAVAILABLE
+    override val SERVICE_UNAVAILABLE: String                   = STATUS_SERVICE_UNAVAILABLE
   }
 
   def getTestFilePath: Path = {
-    val successresultsArr = Array("LE241131B,Jim,Jimson,1990-02-21",
+    val successresultsArr = Array(
+      "LE241131B,Jim,Jimson,1990-02-21",
       "LE241131B,GARY,BRAVO,1990-02-21",
       "LE241131B,SIMON,DAWSON,1990-02-21",
       "LE241131B,MICHEAL,SLATER,1990-02-21"
@@ -134,7 +136,7 @@ class FileProcessingServiceSpec extends AnyWordSpecLike
 
         val testFilePath = getTestFilePath
 
-        val SUT = new FileProcessingService (
+        val SUT = new FileProcessingService(
           mockUpscanConnector,
           mockDesConnector,
           mockResidencyYearResolver,
@@ -145,37 +147,51 @@ class FileProcessingServiceSpec extends AnyWordSpecLike
           metrics,
           ExecutionContext.global
         ) {
-          override def getCurrentDate: LocalDate = LocalDate.parse("2018-02-04", DateTimeFormatter.ofPattern("yyyy-MM-dd"))
+          override def getCurrentDate: LocalDate =
+            LocalDate.parse("2018-02-04", DateTimeFormatter.ofPattern("yyyy-MM-dd"))
 
           override val allowDefaultRUK: Boolean = true
 
-          override val DECEASED: String = STATUS_DECEASED
-          override val MATCHING_FAILED: String = STATUS_MATCHING_FAILED
-          override val INTERNAL_SERVER_ERROR: String = STATUS_INTERNAL_SERVER_ERROR
-          override val FILE_PROCESSING_MATCHING_FAILED: String = STATUS_FILE_PROCESSING_MATCHING_FAILED
+          override val DECEASED: String                              = STATUS_DECEASED
+          override val MATCHING_FAILED: String                       = STATUS_MATCHING_FAILED
+          override val INTERNAL_SERVER_ERROR: String                 = STATUS_INTERNAL_SERVER_ERROR
+          override val FILE_PROCESSING_MATCHING_FAILED: String       = STATUS_FILE_PROCESSING_MATCHING_FAILED
           override val FILE_PROCESSING_INTERNAL_SERVER_ERROR: String = STATUS_FILE_PROCESSING_INTERNAL_SERVER_ERROR
-          override val SERVICE_UNAVAILABLE: String = STATUS_SERVICE_UNAVAILABLE
+          override val SERVICE_UNAVAILABLE: String                   = STATUS_SERVICE_UNAVAILABLE
         }
 
-        when(mockUpscanConnector.getUpscanFile(any(), any(), any())).thenReturn(Future.successful(Some(new FileInputStream(testFilePath.toFile))))
+        when(mockUpscanConnector.getUpscanFile(any(), any(), any()))
+          .thenReturn(Future.successful(Some(new FileInputStream(testFilePath.toFile))))
 
         when(mockDesConnector.otherUk).thenReturn("otherUKResident")
         when(mockDesConnector.scotRes).thenReturn("scotResident")
 
-        val expectedResultsFile = "National Insurance number,First name,Last name,Date of birth,2017 to 2018 residency status,2018 to 2019 residency status" +
-          "LE241131B,Jim,Jimson,1990-02-21,otherUKResident,otherUKResident" +
-          "LE241131B,GARY,BRAVO,1990-02-21,otherUKResident,otherUKResident" +
-          "LE241131B,SIMON,DAWSON,1990-02-21,otherUKResident,otherUKResident" +
-          "LE241131B,MICHEAL,SLATER,1990-02-21,otherUKResident,otherUKResident"
+        val expectedResultsFile =
+          "National Insurance number,First name,Last name,Date of birth,2017 to 2018 residency status,2018 to 2019 residency status" +
+            "LE241131B,Jim,Jimson,1990-02-21,otherUKResident,otherUKResident" +
+            "LE241131B,GARY,BRAVO,1990-02-21,otherUKResident,otherUKResident" +
+            "LE241131B,SIMON,DAWSON,1990-02-21,otherUKResident,otherUKResident" +
+            "LE241131B,MICHEAL,SLATER,1990-02-21,otherUKResident,otherUKResident"
 
-        val callbackData: UpscanCallbackData = UpscanCallbackData(reference = fileId, downloadUrl = Some("url"), fileStatus = "READY", uploadDetails = None, failureDetails = None)
-        val cacheItem = CacheItem("sessionValue", Json.toJson(Map("user1234" -> Json.toJson(callbackData))).as[JsObject], Instant.now, Instant.now)
+        val callbackData: UpscanCallbackData = UpscanCallbackData(
+          reference = fileId,
+          downloadUrl = Some("url"),
+          fileStatus = "READY",
+          uploadDetails = None,
+          failureDetails = None
+        )
+        val cacheItem                        = CacheItem(
+          "sessionValue",
+          Json.toJson(Map("user1234" -> Json.toJson(callbackData))).as[JsObject],
+          Instant.now,
+          Instant.now
+        )
 
         when(mockSessionCache.updateFileSession(any(), any(), any(), any()))
           .thenReturn(Future.successful(cacheItem))
 
-        when(mockDesConnector.getResidencyStatus(any[IndividualDetails], any(), any(), any())).thenReturn(
-          Future.successful(Left(ResidencyStatus("scotResident", Some("otherUKResident")))))
+        when(mockDesConnector.getResidencyStatus(any[IndividualDetails], any(), any(), any()))
+          .thenReturn(Future.successful(Left(ResidencyStatus("scotResident", Some("otherUKResident")))))
 
         when(mockResidencyYearResolver.isBetweenJanAndApril).thenReturn(true)
 
@@ -183,12 +199,11 @@ class FileProcessingServiceSpec extends AnyWordSpecLike
 
         Thread.sleep(5000)
 
-        val res = await(repository.fetchFile(fileId, userId))
+        val res    = await(repository.fetchFile(fileId, userId))
         var result = new String("")
         await(res.get.data.runWith(getAll.mapMaterializedValue {
           _.map { bytes =>
-            result =
-              result.concat(new String(bytes))
+            result = result.concat(new String(bytes))
           }
         }))
         result.replaceAll("(\\r|\\n)", "") shouldBe expectedResultsFile.mkString
@@ -198,13 +213,17 @@ class FileProcessingServiceSpec extends AnyWordSpecLike
         verify(mockAuditService, times(4)).audit(
           auditType = Meq("ReliefAtSourceResidency"),
           path = Meq(s"/residency-status"),
-          auditData = Meq(Map("successfulLookup" -> "true",
-            "CYStatus" -> "otherUKResident",
-            "NextCYStatus" -> "otherUKResident",
-            "fileId" -> fileId,
-            "nino" -> "LE241131B",
-            "userIdentifier" -> "user1234",
-            "requestSource" -> "FE_BULK"))
+          auditData = Meq(
+            Map(
+              "successfulLookup" -> "true",
+              "CYStatus"         -> "otherUKResident",
+              "NextCYStatus"     -> "otherUKResident",
+              "fileId"           -> fileId,
+              "nino"             -> "LE241131B",
+              "userIdentifier"   -> "user1234",
+              "requestSource"    -> "FE_BULK"
+            )
+          )
         )(any())
       }
 
@@ -212,7 +231,7 @@ class FileProcessingServiceSpec extends AnyWordSpecLike
 
         val testFilePath = getTestFilePath
 
-        val SUT = new FileProcessingService (
+        val SUT = new FileProcessingService(
           mockUpscanConnector,
           mockDesConnector,
           mockResidencyYearResolver,
@@ -223,37 +242,51 @@ class FileProcessingServiceSpec extends AnyWordSpecLike
           metrics,
           ExecutionContext.global
         ) {
-          override def getCurrentDate: LocalDate = LocalDate.parse("2019-02-04", DateTimeFormatter.ofPattern("yyyy-MM-dd"))
+          override def getCurrentDate: LocalDate =
+            LocalDate.parse("2019-02-04", DateTimeFormatter.ofPattern("yyyy-MM-dd"))
 
           override val allowDefaultRUK: Boolean = true
 
-          override val DECEASED: String = STATUS_DECEASED
-          override val MATCHING_FAILED: String = STATUS_MATCHING_FAILED
-          override val INTERNAL_SERVER_ERROR: String = STATUS_INTERNAL_SERVER_ERROR
-          override val FILE_PROCESSING_MATCHING_FAILED: String = STATUS_FILE_PROCESSING_MATCHING_FAILED
+          override val DECEASED: String                              = STATUS_DECEASED
+          override val MATCHING_FAILED: String                       = STATUS_MATCHING_FAILED
+          override val INTERNAL_SERVER_ERROR: String                 = STATUS_INTERNAL_SERVER_ERROR
+          override val FILE_PROCESSING_MATCHING_FAILED: String       = STATUS_FILE_PROCESSING_MATCHING_FAILED
           override val FILE_PROCESSING_INTERNAL_SERVER_ERROR: String = STATUS_FILE_PROCESSING_INTERNAL_SERVER_ERROR
-          override val SERVICE_UNAVAILABLE: String = STATUS_SERVICE_UNAVAILABLE
+          override val SERVICE_UNAVAILABLE: String                   = STATUS_SERVICE_UNAVAILABLE
         }
 
-        when(mockUpscanConnector.getUpscanFile(any(), any(), any())).thenReturn(Future.successful(Some(new FileInputStream(testFilePath.toFile))))
+        when(mockUpscanConnector.getUpscanFile(any(), any(), any()))
+          .thenReturn(Future.successful(Some(new FileInputStream(testFilePath.toFile))))
 
         when(mockDesConnector.otherUk).thenReturn("otherUKResident")
         when(mockDesConnector.scotRes).thenReturn("scotResident")
 
-        val expectedResultsFile = "National Insurance number,First name,Last name,Date of birth,2018 to 2019 residency status,2019 to 2020 residency status" +
-          "LE241131B,Jim,Jimson,1990-02-21,scotResident,scotResident" +
-          "LE241131B,GARY,BRAVO,1990-02-21,scotResident,scotResident" +
-          "LE241131B,SIMON,DAWSON,1990-02-21,scotResident,scotResident" +
-          "LE241131B,MICHEAL,SLATER,1990-02-21,scotResident,scotResident"
+        val expectedResultsFile =
+          "National Insurance number,First name,Last name,Date of birth,2018 to 2019 residency status,2019 to 2020 residency status" +
+            "LE241131B,Jim,Jimson,1990-02-21,scotResident,scotResident" +
+            "LE241131B,GARY,BRAVO,1990-02-21,scotResident,scotResident" +
+            "LE241131B,SIMON,DAWSON,1990-02-21,scotResident,scotResident" +
+            "LE241131B,MICHEAL,SLATER,1990-02-21,scotResident,scotResident"
 
-        val callbackData: UpscanCallbackData = UpscanCallbackData(reference = fileId, downloadUrl = Some("url"), fileStatus = "READY", uploadDetails = None, failureDetails = None)
-        val cacheItem = CacheItem("sessionValue", Json.toJson(Map("user1234" -> Json.toJson(callbackData))).as[JsObject], Instant.now, Instant.now)
+        val callbackData: UpscanCallbackData = UpscanCallbackData(
+          reference = fileId,
+          downloadUrl = Some("url"),
+          fileStatus = "READY",
+          uploadDetails = None,
+          failureDetails = None
+        )
+        val cacheItem                        = CacheItem(
+          "sessionValue",
+          Json.toJson(Map("user1234" -> Json.toJson(callbackData))).as[JsObject],
+          Instant.now,
+          Instant.now
+        )
 
         when(mockSessionCache.updateFileSession(any(), any(), any(), any()))
           .thenReturn(Future.successful(cacheItem))
 
-        when(mockDesConnector.getResidencyStatus(any[IndividualDetails], any(), any(), any())).thenReturn(
-          Future.successful(Left(ResidencyStatus("scotResident", Some("scotResident")))))
+        when(mockDesConnector.getResidencyStatus(any[IndividualDetails], any(), any(), any()))
+          .thenReturn(Future.successful(Left(ResidencyStatus("scotResident", Some("scotResident")))))
 
         when(mockResidencyYearResolver.isBetweenJanAndApril).thenReturn(true)
 
@@ -261,12 +294,11 @@ class FileProcessingServiceSpec extends AnyWordSpecLike
 
         Thread.sleep(20000)
 
-        val res = await(repository.fetchFile(fileId, userId))
+        val res    = await(repository.fetchFile(fileId, userId))
         var result = new String("")
         await(res.get.data.runWith(getAll.mapMaterializedValue {
           _.map { bytes =>
-            result =
-              result.concat(new String(bytes))
+            result = result.concat(new String(bytes))
           }
         }))
         result.replaceAll("(\\r|\\n)", "") shouldBe expectedResultsFile.mkString
@@ -275,13 +307,17 @@ class FileProcessingServiceSpec extends AnyWordSpecLike
         verify(mockAuditService, times(4)).audit(
           auditType = Meq("ReliefAtSourceResidency"),
           path = Meq(s"/residency-status"),
-          auditData = Meq(Map("successfulLookup" -> "true",
-            "CYStatus" -> "scotResident",
-            "NextCYStatus" -> "scotResident",
-            "fileId" -> fileId,
-            "nino" -> "LE241131B",
-            "userIdentifier" -> "user1234",
-            "requestSource" -> "FE_BULK"))
+          auditData = Meq(
+            Map(
+              "successfulLookup" -> "true",
+              "CYStatus"         -> "scotResident",
+              "NextCYStatus"     -> "scotResident",
+              "fileId"           -> fileId,
+              "nino"             -> "LE241131B",
+              "userIdentifier"   -> "user1234",
+              "requestSource"    -> "FE_BULK"
+            )
+          )
         )(any())
       }
 
@@ -289,7 +325,7 @@ class FileProcessingServiceSpec extends AnyWordSpecLike
 
         val testFilePath = getTestFilePath
 
-        val SUT = new FileProcessingService (
+        val SUT = new FileProcessingService(
           mockUpscanConnector,
           mockDesConnector,
           mockResidencyYearResolver,
@@ -300,37 +336,51 @@ class FileProcessingServiceSpec extends AnyWordSpecLike
           metrics,
           ExecutionContext.global
         ) {
-          override def getCurrentDate: LocalDate = LocalDate.parse("2018-06-04", DateTimeFormatter.ofPattern("yyyy-MM-dd"))
+          override def getCurrentDate: LocalDate =
+            LocalDate.parse("2018-06-04", DateTimeFormatter.ofPattern("yyyy-MM-dd"))
 
           override val allowDefaultRUK: Boolean = true
 
-          override val DECEASED: String = STATUS_DECEASED
-          override val MATCHING_FAILED: String = STATUS_MATCHING_FAILED
-          override val INTERNAL_SERVER_ERROR: String = STATUS_INTERNAL_SERVER_ERROR
-          override val FILE_PROCESSING_MATCHING_FAILED: String = STATUS_FILE_PROCESSING_MATCHING_FAILED
+          override val DECEASED: String                              = STATUS_DECEASED
+          override val MATCHING_FAILED: String                       = STATUS_MATCHING_FAILED
+          override val INTERNAL_SERVER_ERROR: String                 = STATUS_INTERNAL_SERVER_ERROR
+          override val FILE_PROCESSING_MATCHING_FAILED: String       = STATUS_FILE_PROCESSING_MATCHING_FAILED
           override val FILE_PROCESSING_INTERNAL_SERVER_ERROR: String = STATUS_FILE_PROCESSING_INTERNAL_SERVER_ERROR
-          override val SERVICE_UNAVAILABLE: String = STATUS_SERVICE_UNAVAILABLE
+          override val SERVICE_UNAVAILABLE: String                   = STATUS_SERVICE_UNAVAILABLE
         }
 
-        when(mockUpscanConnector.getUpscanFile(any(), any(), any())).thenReturn(Future.successful(Some(new FileInputStream(testFilePath.toFile))))
+        when(mockUpscanConnector.getUpscanFile(any(), any(), any()))
+          .thenReturn(Future.successful(Some(new FileInputStream(testFilePath.toFile))))
 
         when(mockDesConnector.otherUk).thenReturn("otherUKResident")
         when(mockDesConnector.scotRes).thenReturn("scotResident")
 
-        val expectedResultsFile = "National Insurance number,First name,Last name,Date of birth,2018 to 2019 residency status" +
-          "LE241131B,Jim,Jimson,1990-02-21,otherUKResident" +
-          "LE241131B,GARY,BRAVO,1990-02-21,otherUKResident" +
-          "LE241131B,SIMON,DAWSON,1990-02-21,otherUKResident" +
-          "LE241131B,MICHEAL,SLATER,1990-02-21,otherUKResident"
+        val expectedResultsFile =
+          "National Insurance number,First name,Last name,Date of birth,2018 to 2019 residency status" +
+            "LE241131B,Jim,Jimson,1990-02-21,otherUKResident" +
+            "LE241131B,GARY,BRAVO,1990-02-21,otherUKResident" +
+            "LE241131B,SIMON,DAWSON,1990-02-21,otherUKResident" +
+            "LE241131B,MICHEAL,SLATER,1990-02-21,otherUKResident"
 
-        val upscanCallbackData = UpscanCallbackData(reference = fileId, downloadUrl = Some("url"), fileStatus = "READY", uploadDetails = None, failureDetails = None)
-        val cacheItem = CacheItem("sessionValue", Json.toJson(Map("user1234" -> Json.toJson(upscanCallbackData))).as[JsObject], Instant.now, Instant.now)
+        val upscanCallbackData = UpscanCallbackData(
+          reference = fileId,
+          downloadUrl = Some("url"),
+          fileStatus = "READY",
+          uploadDetails = None,
+          failureDetails = None
+        )
+        val cacheItem          = CacheItem(
+          "sessionValue",
+          Json.toJson(Map("user1234" -> Json.toJson(upscanCallbackData))).as[JsObject],
+          Instant.now,
+          Instant.now
+        )
 
         when(mockSessionCache.updateFileSession(any(), any(), any(), any()))
           .thenReturn(Future.successful(cacheItem))
 
-        when(mockDesConnector.getResidencyStatus(any[IndividualDetails], any(), any(), any())).thenReturn(
-          Future.successful(Left(ResidencyStatus("otherUKResident", Some("scotResident")))))
+        when(mockDesConnector.getResidencyStatus(any[IndividualDetails], any(), any(), any()))
+          .thenReturn(Future.successful(Left(ResidencyStatus("otherUKResident", Some("scotResident")))))
 
         when(mockResidencyYearResolver.isBetweenJanAndApril).thenReturn(false)
 
@@ -338,12 +388,11 @@ class FileProcessingServiceSpec extends AnyWordSpecLike
 
         Thread.sleep(20000)
 
-        val res = await(repository.fetchFile(fileId, userId))
+        val res    = await(repository.fetchFile(fileId, userId))
         var result = new String("")
         await(res.get.data.runWith(getAll.mapMaterializedValue {
           _.map { bytes =>
-            result =
-              result.concat(new String(bytes))
+            result = result.concat(new String(bytes))
           }
         }))
         result.replaceAll("(\\r|\\n)", "") shouldBe expectedResultsFile.mkString
@@ -352,12 +401,16 @@ class FileProcessingServiceSpec extends AnyWordSpecLike
         verify(mockAuditService, times(4)).audit(
           auditType = Meq("ReliefAtSourceResidency"),
           path = Meq(s"/residency-status"),
-          auditData = Meq(Map("successfulLookup" -> "true",
-            "CYStatus" -> "otherUKResident",
-            "fileId" -> fileId,
-            "nino" -> "LE241131B",
-            "userIdentifier" -> "user1234",
-            "requestSource" -> "FE_BULK"))
+          auditData = Meq(
+            Map(
+              "successfulLookup" -> "true",
+              "CYStatus"         -> "otherUKResident",
+              "fileId"           -> fileId,
+              "nino"             -> "LE241131B",
+              "userIdentifier"   -> "user1234",
+              "requestSource"    -> "FE_BULK"
+            )
+          )
         )(any())
       }
 
@@ -365,7 +418,7 @@ class FileProcessingServiceSpec extends AnyWordSpecLike
 
         val testFilePath = getTestFilePath
 
-        val SUT = new FileProcessingService (
+        val SUT = new FileProcessingService(
           mockUpscanConnector,
           mockDesConnector,
           mockResidencyYearResolver,
@@ -376,37 +429,54 @@ class FileProcessingServiceSpec extends AnyWordSpecLike
           metrics,
           ExecutionContext.global
         ) {
-          override def getCurrentDate: LocalDate = LocalDate.parse("2018-02-04", DateTimeFormatter.ofPattern("yyyy-MM-dd"))
+          override def getCurrentDate: LocalDate =
+            LocalDate.parse("2018-02-04", DateTimeFormatter.ofPattern("yyyy-MM-dd"))
 
           override val allowDefaultRUK: Boolean = true
 
-          override val DECEASED: String = STATUS_DECEASED
-          override val MATCHING_FAILED: String = STATUS_MATCHING_FAILED
-          override val INTERNAL_SERVER_ERROR: String = STATUS_INTERNAL_SERVER_ERROR
-          override val FILE_PROCESSING_MATCHING_FAILED: String = STATUS_FILE_PROCESSING_MATCHING_FAILED
+          override val DECEASED: String                              = STATUS_DECEASED
+          override val MATCHING_FAILED: String                       = STATUS_MATCHING_FAILED
+          override val INTERNAL_SERVER_ERROR: String                 = STATUS_INTERNAL_SERVER_ERROR
+          override val FILE_PROCESSING_MATCHING_FAILED: String       = STATUS_FILE_PROCESSING_MATCHING_FAILED
           override val FILE_PROCESSING_INTERNAL_SERVER_ERROR: String = STATUS_FILE_PROCESSING_INTERNAL_SERVER_ERROR
-          override val SERVICE_UNAVAILABLE: String = STATUS_SERVICE_UNAVAILABLE
+          override val SERVICE_UNAVAILABLE: String                   = STATUS_SERVICE_UNAVAILABLE
         }
 
-        when(mockUpscanConnector.getUpscanFile(any(), any(), any())).thenReturn(Future.successful(Some(new FileInputStream(testFilePath.toFile))))
+        when(mockUpscanConnector.getUpscanFile(any(), any(), any()))
+          .thenReturn(Future.successful(Some(new FileInputStream(testFilePath.toFile))))
 
         when(mockDesConnector.otherUk).thenReturn("otherUKResident")
         when(mockDesConnector.scotRes).thenReturn("scotResident")
 
-        val expectedResultsFile = "National Insurance number,First name,Last name,Date of birth,2017 to 2018 residency status,2018 to 2019 residency status" +
-          s"LE241131B,Jim,Jimson,1990-02-21,$STATUS_FILE_PROCESSING_MATCHING_FAILED" +
-          s"LE241131B,GARY,BRAVO,1990-02-21,$STATUS_FILE_PROCESSING_MATCHING_FAILED" +
-          s"LE241131B,SIMON,DAWSON,1990-02-21,$STATUS_FILE_PROCESSING_MATCHING_FAILED" +
-          s"LE241131B,MICHEAL,SLATER,1990-02-21,$STATUS_FILE_PROCESSING_MATCHING_FAILED"
+        val expectedResultsFile =
+          "National Insurance number,First name,Last name,Date of birth,2017 to 2018 residency status,2018 to 2019 residency status" +
+            s"LE241131B,Jim,Jimson,1990-02-21,$STATUS_FILE_PROCESSING_MATCHING_FAILED" +
+            s"LE241131B,GARY,BRAVO,1990-02-21,$STATUS_FILE_PROCESSING_MATCHING_FAILED" +
+            s"LE241131B,SIMON,DAWSON,1990-02-21,$STATUS_FILE_PROCESSING_MATCHING_FAILED" +
+            s"LE241131B,MICHEAL,SLATER,1990-02-21,$STATUS_FILE_PROCESSING_MATCHING_FAILED"
 
-        val upscanCallbackData = UpscanCallbackData(reference = fileId, downloadUrl = Some("url"), fileStatus = "READY", uploadDetails = None, failureDetails = None)
-        val cacheItem = CacheItem("sessionValue", Json.toJson(Map("user1234" -> Json.toJson(upscanCallbackData))).as[JsObject], Instant.now, Instant.now)
+        val upscanCallbackData = UpscanCallbackData(
+          reference = fileId,
+          downloadUrl = Some("url"),
+          fileStatus = "READY",
+          uploadDetails = None,
+          failureDetails = None
+        )
+        val cacheItem          = CacheItem(
+          "sessionValue",
+          Json.toJson(Map("user1234" -> Json.toJson(upscanCallbackData))).as[JsObject],
+          Instant.now,
+          Instant.now
+        )
 
         when(mockSessionCache.updateFileSession(any(), any(), any(), any()))
           .thenReturn(Future.successful(cacheItem))
 
         when(mockDesConnector.getResidencyStatus(any[IndividualDetails], any(), any(), any())).thenReturn(
-          Future.successful(Right(ResidencyStatusFailure(code = s"$STATUS_MATCHING_FAILED", reason = s"$STATUS_MATCHING_FAILED"))))
+          Future.successful(
+            Right(ResidencyStatusFailure(code = s"$STATUS_MATCHING_FAILED", reason = s"$STATUS_MATCHING_FAILED"))
+          )
+        )
 
         when(mockResidencyYearResolver.isBetweenJanAndApril).thenReturn(true)
 
@@ -414,12 +484,11 @@ class FileProcessingServiceSpec extends AnyWordSpecLike
 
         Thread.sleep(20000)
 
-        val res = await(repository.fetchFile(fileId, userId))
+        val res    = await(repository.fetchFile(fileId, userId))
         var result = new String("")
         await(res.get.data.runWith(getAll.mapMaterializedValue {
           _.map { bytes =>
-            result =
-              result.concat(new String(bytes))
+            result = result.concat(new String(bytes))
           }
         }))
         result.replaceAll("(\\r|\\n)", "") shouldBe expectedResultsFile.mkString
@@ -428,12 +497,16 @@ class FileProcessingServiceSpec extends AnyWordSpecLike
         verify(mockAuditService, times(4)).audit(
           auditType = Meq("ReliefAtSourceResidency"),
           path = Meq(s"/residency-status"),
-          auditData = Meq(Map("nino" -> "LE241131B",
-            "successfulLookup" -> "false",
-            "fileId" -> fileId,
-            "reason" -> "MATCHING_FAILED",
-            "userIdentifier" -> "user1234",
-            "requestSource" -> "FE_BULK"))
+          auditData = Meq(
+            Map(
+              "nino"             -> "LE241131B",
+              "successfulLookup" -> "false",
+              "fileId"           -> fileId,
+              "reason"           -> "MATCHING_FAILED",
+              "userIdentifier"   -> "user1234",
+              "requestSource"    -> "FE_BULK"
+            )
+          )
         )(any())
       }
 
@@ -441,7 +514,7 @@ class FileProcessingServiceSpec extends AnyWordSpecLike
 
         val testFilePath = getTestFilePath
 
-        val SUT = new FileProcessingService (
+        val SUT = new FileProcessingService(
           mockUpscanConnector,
           mockDesConnector,
           mockResidencyYearResolver,
@@ -452,37 +525,52 @@ class FileProcessingServiceSpec extends AnyWordSpecLike
           metrics,
           ExecutionContext.global
         ) {
-          override def getCurrentDate: LocalDate = LocalDate.parse("2018-02-04", DateTimeFormatter.ofPattern("yyyy-MM-dd"))
+          override def getCurrentDate: LocalDate =
+            LocalDate.parse("2018-02-04", DateTimeFormatter.ofPattern("yyyy-MM-dd"))
 
           override val allowDefaultRUK: Boolean = true
 
-          override val DECEASED: String = STATUS_DECEASED
-          override val MATCHING_FAILED: String = STATUS_MATCHING_FAILED
-          override val INTERNAL_SERVER_ERROR: String = STATUS_INTERNAL_SERVER_ERROR
-          override val FILE_PROCESSING_MATCHING_FAILED: String = STATUS_FILE_PROCESSING_MATCHING_FAILED
+          override val DECEASED: String                              = STATUS_DECEASED
+          override val MATCHING_FAILED: String                       = STATUS_MATCHING_FAILED
+          override val INTERNAL_SERVER_ERROR: String                 = STATUS_INTERNAL_SERVER_ERROR
+          override val FILE_PROCESSING_MATCHING_FAILED: String       = STATUS_FILE_PROCESSING_MATCHING_FAILED
           override val FILE_PROCESSING_INTERNAL_SERVER_ERROR: String = STATUS_FILE_PROCESSING_INTERNAL_SERVER_ERROR
-          override val SERVICE_UNAVAILABLE: String = STATUS_SERVICE_UNAVAILABLE
+          override val SERVICE_UNAVAILABLE: String                   = STATUS_SERVICE_UNAVAILABLE
         }
 
-        when(mockUpscanConnector.getUpscanFile(any(), any(), any())).thenReturn(Future.successful(Some(new FileInputStream(testFilePath.toFile))))
+        when(mockUpscanConnector.getUpscanFile(any(), any(), any()))
+          .thenReturn(Future.successful(Some(new FileInputStream(testFilePath.toFile))))
 
         when(mockDesConnector.otherUk).thenReturn("otherUKResident")
         when(mockDesConnector.scotRes).thenReturn("scotResident")
 
-        val expectedResultsFile = "National Insurance number,First name,Last name,Date of birth,2017 to 2018 residency status,2018 to 2019 residency status" +
-          s"LE241131B,Jim,Jimson,1990-02-21,$STATUS_FILE_PROCESSING_MATCHING_FAILED" +
-          s"LE241131B,GARY,BRAVO,1990-02-21,$STATUS_FILE_PROCESSING_MATCHING_FAILED" +
-          s"LE241131B,SIMON,DAWSON,1990-02-21,$STATUS_FILE_PROCESSING_MATCHING_FAILED" +
-          s"LE241131B,MICHEAL,SLATER,1990-02-21,$STATUS_FILE_PROCESSING_MATCHING_FAILED"
+        val expectedResultsFile =
+          "National Insurance number,First name,Last name,Date of birth,2017 to 2018 residency status,2018 to 2019 residency status" +
+            s"LE241131B,Jim,Jimson,1990-02-21,$STATUS_FILE_PROCESSING_MATCHING_FAILED" +
+            s"LE241131B,GARY,BRAVO,1990-02-21,$STATUS_FILE_PROCESSING_MATCHING_FAILED" +
+            s"LE241131B,SIMON,DAWSON,1990-02-21,$STATUS_FILE_PROCESSING_MATCHING_FAILED" +
+            s"LE241131B,MICHEAL,SLATER,1990-02-21,$STATUS_FILE_PROCESSING_MATCHING_FAILED"
 
-        val callbackData: UpscanCallbackData = UpscanCallbackData(reference = fileId, downloadUrl = Some("url"), fileStatus = "READY", uploadDetails = None, failureDetails = None)
-        val cacheItem = CacheItem("sessionValue", Json.toJson(Map("user1234" -> Json.toJson(callbackData))).as[JsObject], Instant.now, Instant.now)
+        val callbackData: UpscanCallbackData = UpscanCallbackData(
+          reference = fileId,
+          downloadUrl = Some("url"),
+          fileStatus = "READY",
+          uploadDetails = None,
+          failureDetails = None
+        )
+        val cacheItem                        = CacheItem(
+          "sessionValue",
+          Json.toJson(Map("user1234" -> Json.toJson(callbackData))).as[JsObject],
+          Instant.now,
+          Instant.now
+        )
 
         when(mockSessionCache.updateFileSession(any(), any(), any(), any()))
           .thenReturn(Future.successful(cacheItem))
 
         when(mockDesConnector.getResidencyStatus(any[IndividualDetails], any(), any(), any())).thenReturn(
-          Future.successful(Right(ResidencyStatusFailure(code = s"$STATUS_DECEASED", reason = s"$STATUS_DECEASED"))))
+          Future.successful(Right(ResidencyStatusFailure(code = s"$STATUS_DECEASED", reason = s"$STATUS_DECEASED")))
+        )
 
         when(mockResidencyYearResolver.isBetweenJanAndApril).thenReturn(true)
 
@@ -490,12 +578,11 @@ class FileProcessingServiceSpec extends AnyWordSpecLike
 
         Thread.sleep(20000)
 
-        val res = await(repository.fetchFile(fileId, userId))
+        val res    = await(repository.fetchFile(fileId, userId))
         var result = new String("")
         await(res.get.data.runWith(getAll.mapMaterializedValue {
           _.map { bytes =>
-            result =
-              result.concat(new String(bytes))
+            result = result.concat(new String(bytes))
           }
         }))
         result.replaceAll("(\\r|\\n)", "") shouldBe expectedResultsFile.mkString
@@ -504,19 +591,23 @@ class FileProcessingServiceSpec extends AnyWordSpecLike
         verify(mockAuditService, times(4)).audit(
           auditType = Meq("ReliefAtSourceResidency"),
           path = Meq(s"/residency-status"),
-          auditData = Meq(Map("nino" -> "LE241131B",
-            "successfulLookup" -> "false",
-            "fileId" -> fileId,
-            "reason" -> s"$STATUS_DECEASED",
-            "userIdentifier" -> "user1234",
-            "requestSource" -> "FE_BULK"))
+          auditData = Meq(
+            Map(
+              "nino"             -> "LE241131B",
+              "successfulLookup" -> "false",
+              "fileId"           -> fileId,
+              "reason"           -> s"$STATUS_DECEASED",
+              "userIdentifier"   -> "user1234",
+              "requestSource"    -> "FE_BULK"
+            )
+          )
         )(any())
       }
 
       "there is a SERVICE_UNAVAILABLE result" in {
         val testFilePath = getTestFilePath
 
-        val SUT = new FileProcessingService (
+        val SUT = new FileProcessingService(
           mockUpscanConnector,
           mockDesConnector,
           mockResidencyYearResolver,
@@ -527,37 +618,56 @@ class FileProcessingServiceSpec extends AnyWordSpecLike
           metrics,
           ExecutionContext.global
         ) {
-          override def getCurrentDate: LocalDate = LocalDate.parse("2018-02-04", DateTimeFormatter.ofPattern("yyyy-MM-dd"))
+          override def getCurrentDate: LocalDate =
+            LocalDate.parse("2018-02-04", DateTimeFormatter.ofPattern("yyyy-MM-dd"))
 
           override val allowDefaultRUK: Boolean = true
 
-          override val DECEASED: String = STATUS_DECEASED
-          override val MATCHING_FAILED: String = STATUS_MATCHING_FAILED
-          override val INTERNAL_SERVER_ERROR: String = STATUS_INTERNAL_SERVER_ERROR
-          override val FILE_PROCESSING_MATCHING_FAILED: String = STATUS_FILE_PROCESSING_MATCHING_FAILED
+          override val DECEASED: String                              = STATUS_DECEASED
+          override val MATCHING_FAILED: String                       = STATUS_MATCHING_FAILED
+          override val INTERNAL_SERVER_ERROR: String                 = STATUS_INTERNAL_SERVER_ERROR
+          override val FILE_PROCESSING_MATCHING_FAILED: String       = STATUS_FILE_PROCESSING_MATCHING_FAILED
           override val FILE_PROCESSING_INTERNAL_SERVER_ERROR: String = STATUS_FILE_PROCESSING_INTERNAL_SERVER_ERROR
-          override val SERVICE_UNAVAILABLE: String = STATUS_SERVICE_UNAVAILABLE
+          override val SERVICE_UNAVAILABLE: String                   = STATUS_SERVICE_UNAVAILABLE
         }
 
-        when(mockUpscanConnector.getUpscanFile(any(), any(), any())).thenReturn(Future.successful(Some(new FileInputStream(testFilePath.toFile))))
+        when(mockUpscanConnector.getUpscanFile(any(), any(), any()))
+          .thenReturn(Future.successful(Some(new FileInputStream(testFilePath.toFile))))
 
         when(mockDesConnector.otherUk).thenReturn("otherUKResident")
         when(mockDesConnector.scotRes).thenReturn("scotResident")
 
-        val expectedResultsFile = "National Insurance number,First name,Last name,Date of birth,2017 to 2018 residency status,2018 to 2019 residency status" +
-          s"LE241131B,Jim,Jimson,1990-02-21,$STATUS_FILE_PROCESSING_INTERNAL_SERVER_ERROR" +
-          s"LE241131B,GARY,BRAVO,1990-02-21,$STATUS_FILE_PROCESSING_INTERNAL_SERVER_ERROR" +
-          s"LE241131B,SIMON,DAWSON,1990-02-21,$STATUS_FILE_PROCESSING_INTERNAL_SERVER_ERROR" +
-          s"LE241131B,MICHEAL,SLATER,1990-02-21,$STATUS_FILE_PROCESSING_INTERNAL_SERVER_ERROR"
+        val expectedResultsFile =
+          "National Insurance number,First name,Last name,Date of birth,2017 to 2018 residency status,2018 to 2019 residency status" +
+            s"LE241131B,Jim,Jimson,1990-02-21,$STATUS_FILE_PROCESSING_INTERNAL_SERVER_ERROR" +
+            s"LE241131B,GARY,BRAVO,1990-02-21,$STATUS_FILE_PROCESSING_INTERNAL_SERVER_ERROR" +
+            s"LE241131B,SIMON,DAWSON,1990-02-21,$STATUS_FILE_PROCESSING_INTERNAL_SERVER_ERROR" +
+            s"LE241131B,MICHEAL,SLATER,1990-02-21,$STATUS_FILE_PROCESSING_INTERNAL_SERVER_ERROR"
 
-        val callbackData: UpscanCallbackData = UpscanCallbackData(reference = fileId, downloadUrl = Some("url"), fileStatus = "READY", uploadDetails = None, failureDetails = None)
-        val cacheItem = CacheItem("sessionValue", Json.toJson(Map("user1234" -> Json.toJson(callbackData))).as[JsObject], Instant.now, Instant.now)
+        val callbackData: UpscanCallbackData = UpscanCallbackData(
+          reference = fileId,
+          downloadUrl = Some("url"),
+          fileStatus = "READY",
+          uploadDetails = None,
+          failureDetails = None
+        )
+        val cacheItem                        = CacheItem(
+          "sessionValue",
+          Json.toJson(Map("user1234" -> Json.toJson(callbackData))).as[JsObject],
+          Instant.now,
+          Instant.now
+        )
 
         when(mockSessionCache.updateFileSession(any(), any(), any(), any()))
           .thenReturn(Future.successful(cacheItem))
 
         when(mockDesConnector.getResidencyStatus(any[IndividualDetails], any(), any(), any())).thenReturn(
-          Future.successful(Right(ResidencyStatusFailure(code = s"$STATUS_SERVICE_UNAVAILABLE", reason = s"$STATUS_SERVICE_UNAVAILABLE"))))
+          Future.successful(
+            Right(
+              ResidencyStatusFailure(code = s"$STATUS_SERVICE_UNAVAILABLE", reason = s"$STATUS_SERVICE_UNAVAILABLE")
+            )
+          )
+        )
 
         when(mockResidencyYearResolver.isBetweenJanAndApril).thenReturn(true)
 
@@ -565,12 +675,11 @@ class FileProcessingServiceSpec extends AnyWordSpecLike
 
         Thread.sleep(20000)
 
-        val res = await(repository.fetchFile(fileId, userId))
+        val res    = await(repository.fetchFile(fileId, userId))
         var result = new String("")
         await(res.get.data.runWith(getAll.mapMaterializedValue {
           _.map { bytes =>
-            result =
-              result.concat(new String(bytes))
+            result = result.concat(new String(bytes))
           }
         }))
         result.replaceAll("(\\r|\\n)", "") shouldBe expectedResultsFile.mkString
@@ -579,12 +688,16 @@ class FileProcessingServiceSpec extends AnyWordSpecLike
         verify(mockAuditService, times(4)).audit(
           auditType = Meq("ReliefAtSourceResidency"),
           path = Meq(s"/residency-status"),
-          auditData = Meq(Map("nino" -> "LE241131B",
-            "successfulLookup" -> "false",
-            "fileId" -> fileId,
-            "reason" -> s"$STATUS_SERVICE_UNAVAILABLE",
-            "userIdentifier" -> "user1234",
-            "requestSource" -> "FE_BULK"))
+          auditData = Meq(
+            Map(
+              "nino"             -> "LE241131B",
+              "successfulLookup" -> "false",
+              "fileId"           -> fileId,
+              "reason"           -> s"$STATUS_SERVICE_UNAVAILABLE",
+              "userIdentifier"   -> "user1234",
+              "requestSource"    -> "FE_BULK"
+            )
+          )
         )(any())
       }
     }
@@ -595,9 +708,9 @@ class FileProcessingServiceSpec extends AnyWordSpecLike
       "ISO_8859_1 file with accented characters" in {
 
         val reference: String = "0b215e97-11d4-4006-91db-c067e74fc656"
-        val fileId: String = "file-id-1"
+        val fileId: String    = "file-id-1"
 
-        val row1 = "Johné,Smithè,AB123456C,1990-02-21".getBytes(StandardCharsets.ISO_8859_1)
+        val row1        = "Johné,Smithè,AB123456C,1990-02-21".getBytes(StandardCharsets.ISO_8859_1)
         val inputStream = new ByteArrayInputStream(row1)
 
         when(mockUpscanConnector.getUpscanFile(any(), any(), any())).thenReturn(Future.successful(Some(inputStream)))
@@ -623,7 +736,14 @@ class FileProcessingServiceSpec extends AnyWordSpecLike
 
         val result = SUT.createMatchingData(inputData)
 
-        result shouldBe Right(List("firstName-INVALID_FORMAT", "lastName-INVALID_FORMAT", "dateOfBirth-MISSING_FIELD", "nino-INVALID_FORMAT"))
+        result shouldBe Right(
+          List(
+            "firstName-INVALID_FORMAT",
+            "lastName-INVALID_FORMAT",
+            "dateOfBirth-MISSING_FIELD",
+            "nino-INVALID_FORMAT"
+          )
+        )
       }
 
       "parse empty line as raw data and convert to RawMemberDetails object" in {
@@ -631,7 +751,9 @@ class FileProcessingServiceSpec extends AnyWordSpecLike
 
         val result = SUT.createMatchingData(inputData)
 
-        result shouldBe Right(List("firstName-MISSING_FIELD", "lastName-MISSING_FIELD", "dateOfBirth-MISSING_FIELD", "nino-MISSING_FIELD"))
+        result shouldBe Right(
+          List("firstName-MISSING_FIELD", "lastName-MISSING_FIELD", "dateOfBirth-MISSING_FIELD", "nino-MISSING_FIELD")
+        )
       }
 
       "date format is dd/mm/yyyy" when {
@@ -640,7 +762,14 @@ class FileProcessingServiceSpec extends AnyWordSpecLike
 
           val result = SUT.createMatchingData(inputData)
 
-          result shouldBe Left(IndividualDetails("AB123456C", "JOHN", "SMITH", LocalDate.parse("1995-02-21", DateTimeFormatter.ofPattern("yyyy-MM-dd"))))
+          result shouldBe Left(
+            IndividualDetails(
+              "AB123456C",
+              "JOHN",
+              "SMITH",
+              LocalDate.parse("1995-02-21", DateTimeFormatter.ofPattern("yyyy-MM-dd"))
+            )
+          )
         }
       }
 
@@ -650,7 +779,14 @@ class FileProcessingServiceSpec extends AnyWordSpecLike
 
           val result = SUT.createMatchingData(inputData)
 
-          result shouldBe Left(IndividualDetails("AB123456C", "JOHN", "SMITH", LocalDate.parse("1995-02-21", DateTimeFormatter.ofPattern("yyyy-MM-dd"))))
+          result shouldBe Left(
+            IndividualDetails(
+              "AB123456C",
+              "JOHN",
+              "SMITH",
+              LocalDate.parse("1995-02-21", DateTimeFormatter.ofPattern("yyyy-MM-dd"))
+            )
+          )
         }
       }
 
@@ -660,7 +796,14 @@ class FileProcessingServiceSpec extends AnyWordSpecLike
 
           val result = SUT.createMatchingData(inputData)
 
-          result shouldBe Left(IndividualDetails("AB123456C", "JOHN", "SMITH", LocalDate.parse("1995-02-21", DateTimeFormatter.ofPattern("yyyy-MM-dd"))))
+          result shouldBe Left(
+            IndividualDetails(
+              "AB123456C",
+              "JOHN",
+              "SMITH",
+              LocalDate.parse("1995-02-21", DateTimeFormatter.ofPattern("yyyy-MM-dd"))
+            )
+          )
         }
       }
 
@@ -671,7 +814,14 @@ class FileProcessingServiceSpec extends AnyWordSpecLike
 
           val result = SUT.createMatchingData(inputData)
 
-          result shouldBe Left(IndividualDetails("AB123456C", "JOHN", "SMITH", LocalDate.parse("1995-02-21", DateTimeFormatter.ofPattern("yyyy-MM-dd"))))
+          result shouldBe Left(
+            IndividualDetails(
+              "AB123456C",
+              "JOHN",
+              "SMITH",
+              LocalDate.parse("1995-02-21", DateTimeFormatter.ofPattern("yyyy-MM-dd"))
+            )
+          )
         }
 
         "parse line as raw data and convert to RawMemberDetails object when there is an invalid date" in {
@@ -716,50 +866,55 @@ class FileProcessingServiceSpec extends AnyWordSpecLike
       }
     }
 
-    val data = IndividualDetails("AB123456C", "JOHN", "SMITH", LocalDate.parse("1992-02-21", DateTimeFormatter.ofPattern("yyyy-MM-dd")))
+    val data = IndividualDetails(
+      "AB123456C",
+      "JOHN",
+      "SMITH",
+      LocalDate.parse("1992-02-21", DateTimeFormatter.ofPattern("yyyy-MM-dd"))
+    )
 
     "fetch result" when {
       "input row is valid and the date of processing is between january and april" in {
-        when(mockDesConnector.getResidencyStatus(data, userId, V2_0, isBulkRequest = true)).thenReturn(
-          Future.successful(Left(ResidencyStatus("otherUKResident", Some("scotResident")))))
+        when(mockDesConnector.getResidencyStatus(data, userId, V2_0, isBulkRequest = true))
+          .thenReturn(Future.successful(Left(ResidencyStatus("otherUKResident", Some("scotResident")))))
 
         when(mockResidencyYearResolver.isBetweenJanAndApril).thenReturn(true)
 
         val inputRow = "AB123456C,John,Smith,1992-02-21"
-        val result = SUT.fetchResult(inputRow, userId, fileId, V2_0)
+        val result   = SUT.fetchResult(inputRow, userId, fileId, V2_0)
         result shouldBe "AB123456C,John,Smith,1992-02-21,otherUKResident,scotResident"
       }
 
       "input row is valid and the date of processing is between april and december" in {
-        when(mockDesConnector.getResidencyStatus(data, userId, V2_0, isBulkRequest = true)).thenReturn(
-          Future.successful(Left(ResidencyStatus("otherUKResident", Some("scotResident")))))
+        when(mockDesConnector.getResidencyStatus(data, userId, V2_0, isBulkRequest = true))
+          .thenReturn(Future.successful(Left(ResidencyStatus("otherUKResident", Some("scotResident")))))
 
         when(mockResidencyYearResolver.isBetweenJanAndApril).thenReturn(false)
 
         val inputRow = "AB123456C,John,Smith,1992-02-21"
-        val result = SUT.fetchResult(inputRow, userId, fileId, V2_0)
+        val result   = SUT.fetchResult(inputRow, userId, fileId, V2_0)
         result shouldBe "AB123456C,John,Smith,1992-02-21,otherUKResident"
       }
 
       "input row matching failed" in {
-        when(mockDesConnector.getResidencyStatus(data, userId, V2_0, isBulkRequest = true)).thenReturn(
-          Future.successful(Right(ResidencyStatusFailure(STATUS_MATCHING_FAILED, STATUS_MATCHING_FAILED))))
+        when(mockDesConnector.getResidencyStatus(data, userId, V2_0, isBulkRequest = true))
+          .thenReturn(Future.successful(Right(ResidencyStatusFailure(STATUS_MATCHING_FAILED, STATUS_MATCHING_FAILED))))
         val inputRow = "AB123456C,John,Smith,1992-02-21"
-        val result = SUT.fetchResult(inputRow, userId, fileId, V2_0)
+        val result   = SUT.fetchResult(inputRow, userId, fileId, V2_0)
         result shouldBe s"AB123456C,John,Smith,1992-02-21,$STATUS_FILE_PROCESSING_MATCHING_FAILED"
       }
 
       "input row returns deceased" in {
-        when(mockDesConnector.getResidencyStatus(data, userId, V2_0, isBulkRequest = true)).thenReturn(
-          Future.successful(Right(ResidencyStatusFailure(STATUS_DECEASED, STATUS_DECEASED))))
+        when(mockDesConnector.getResidencyStatus(data, userId, V2_0, isBulkRequest = true))
+          .thenReturn(Future.successful(Right(ResidencyStatusFailure(STATUS_DECEASED, STATUS_DECEASED))))
         val inputRow = "AB123456C,John,Smith,1992-02-21"
-        val result = SUT.fetchResult(inputRow, userId, fileId, V2_0)
+        val result   = SUT.fetchResult(inputRow, userId, fileId, V2_0)
         result shouldBe s"AB123456C,John,Smith,1992-02-21,$STATUS_FILE_PROCESSING_MATCHING_FAILED"
       }
 
       "input row is inValid" in {
         val inputRow = "456C,John,Smith,1994-02-21"
-        val result = SUT.fetchResult(inputRow, userId, fileId, V2_0)
+        val result   = SUT.fetchResult(inputRow, userId, fileId, V2_0)
         result shouldBe "456C,John,Smith,1994-02-21,nino-INVALID_FORMAT"
       }
     }
@@ -769,37 +924,47 @@ class FileProcessingServiceSpec extends AnyWordSpecLike
 
         val testFilePath = getTestFilePath
 
-        when(mockUpscanConnector.getUpscanFile(any(), any(), any())).thenReturn(Future.successful(Some(new FileInputStream(testFilePath.toFile))))
+        when(mockUpscanConnector.getUpscanFile(any(), any(), any()))
+          .thenReturn(Future.successful(Some(new FileInputStream(testFilePath.toFile))))
 
-        val expectedResultsFile = "National Insurance number,First name,Last name,Date of birth,2017 to 2018 residency status,2018 to 2019 residency status" +
-          "LE241131B,Jim,Jimson,1990-02-21,otherUKResident,scotResident" +
-          "LE241131B,GARY,BRAVO,1990-02-21,otherUKResident,scotResident" +
-          "LE241131B,SIMON,DAWSON,1990-02-21,otherUKResident,scotResident" +
-          "LE241131B,MICHEAL,SLATER,1990-02-21,otherUKResident,scotResident"
+        val expectedResultsFile =
+          "National Insurance number,First name,Last name,Date of birth,2017 to 2018 residency status,2018 to 2019 residency status" +
+            "LE241131B,Jim,Jimson,1990-02-21,otherUKResident,scotResident" +
+            "LE241131B,GARY,BRAVO,1990-02-21,otherUKResident,scotResident" +
+            "LE241131B,SIMON,DAWSON,1990-02-21,otherUKResident,scotResident" +
+            "LE241131B,MICHEAL,SLATER,1990-02-21,otherUKResident,scotResident"
 
-
-        val upscanCallbackData = UpscanCallbackData(reference = fileId, downloadUrl = Some("url"), fileStatus = "READY", uploadDetails = None, failureDetails = None)
-        val cacheItem = CacheItem("sessionValue", Json.toJson(Map("user1234" -> Json.toJson(upscanCallbackData))).as[JsObject], Instant.now, Instant.now)
+        val upscanCallbackData = UpscanCallbackData(
+          reference = fileId,
+          downloadUrl = Some("url"),
+          fileStatus = "READY",
+          uploadDetails = None,
+          failureDetails = None
+        )
+        val cacheItem          = CacheItem(
+          "sessionValue",
+          Json.toJson(Map("user1234" -> Json.toJson(upscanCallbackData))).as[JsObject],
+          Instant.now,
+          Instant.now
+        )
 
         when(mockSessionCache.updateFileSession(any(), any(), any(), any()))
           .thenReturn(Future.successful(cacheItem))
 
-        when(mockDesConnector.getResidencyStatus(any[IndividualDetails], any(), any(), any())).thenReturn(
-          Future.successful(Left(ResidencyStatus("otherUKResident", Some("scotResident")))))
+        when(mockDesConnector.getResidencyStatus(any[IndividualDetails], any(), any(), any()))
+          .thenReturn(Future.successful(Left(ResidencyStatus("otherUKResident", Some("scotResident")))))
 
         when(mockResidencyYearResolver.isBetweenJanAndApril).thenReturn(true)
 
         SUT.processFile("user1234", upscanCallbackData, V2_0)
 
-
         Thread.sleep(5000)
 
-        val res = await(repository.fetchFile(fileId, userId))
+        val res    = await(repository.fetchFile(fileId, userId))
         var result = new String("")
         await(res.get.data.runWith(getAll.mapMaterializedValue {
           _.map { bytes =>
-            result =
-              result.concat(new String(bytes))
+            result = result.concat(new String(bytes))
           }
         }))
         result.replaceAll("(\\r|\\n)", "") shouldBe expectedResultsFile.mkString
@@ -810,8 +975,14 @@ class FileProcessingServiceSpec extends AnyWordSpecLike
     "return status of error" when {
       "there is a problem manipulating the file" in {
 
-        val callbackData: UpscanCallbackData = UpscanCallbackData(reference = "reference", downloadUrl = Some("url"), fileStatus = "FAILED", uploadDetails = None, failureDetails = None)
-        val inputFileData = Try(Iterator("\"LE241131B,Jim,Jimson,1990-02-21\""))
+        val callbackData: UpscanCallbackData = UpscanCallbackData(
+          reference = "reference",
+          downloadUrl = Some("url"),
+          fileStatus = "FAILED",
+          uploadDetails = None,
+          failureDetails = None
+        )
+        val inputFileData                    = Try(Iterator("\"LE241131B,Jim,Jimson,1990-02-21\""))
 
         SUT.manipulateFile(inputFileData, "user1234", callbackData, V2_0)
 
@@ -823,4 +994,5 @@ class FileProcessingServiceSpec extends AnyWordSpecLike
       }
     }
   }
+
 }
