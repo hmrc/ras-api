@@ -157,26 +157,37 @@ class DesConnector @Inject() (
             "Cannot provide a residency status for this pension scheme member."
           )
         )
-      case UpstreamErrorResponse(_, 429, _, _) =>
+      case UpstreamErrorResponse(_, 403, _, _) =>
+        logger.error(
+          s"Cannot provide a residency status for this pension scheme member for userId ($userId)."
+        )
+        Right(
+          ResidencyStatusFailure(
+            error_MatchingFailed,
+            "Cannot provide a residency status for this pension scheme member."
+          )
+        )
+
+      case UpstreamErrorResponse(_, 429, _, _)  =>
         logger.error(
           s"[DesConnector][getResidencyStatus] Request could not be sent 429 (Too Many Requests) was sent " +
             s"from the HoD. userId ($userId)."
         )
         Right(ResidencyStatusFailure(error_TooManyRequests, "Too Many Requests."))
-      case _: RequestTimeoutException          =>
+      case _: RequestTimeoutException           =>
         logger.error(s"[DesConnector][getResidencyStatus] Request has timed out. userId ($userId).")
         Right(ResidencyStatusFailure(error_DoNotReProcess, "Internal server error."))
-      case _5xx: UpstreamErrorResponse         =>
-        if (_5xx.statusCode == 503) {
+      case errorResponse: UpstreamErrorResponse =>
+        if (errorResponse.statusCode == 503) {
           logger.error(s"[DesConnector][getResidencyStatus] Service unavailable. userId ($userId).")
           Right(ResidencyStatusFailure(error_ServiceUnavailable, "Service unavailable"))
         } else {
           logger.error(
-            s"[DesConnector][getResidencyStatus] ${_5xx.statusCode} was returned from DES. userId ($userId)."
+            s"[DesConnector][getResidencyStatus] ${errorResponse.statusCode} was returned from DES. userId ($userId)."
           )
           Right(ResidencyStatusFailure(error_InternalServerError, "Internal server error."))
         }
-      case th: Throwable                       =>
+      case th: Throwable                        =>
         logger.error(
           s"[DesConnector][getResidencyStatus] Caught error occurred when calling the HoD. userId ($userId).Exception message: ${th.getMessage}."
         )
