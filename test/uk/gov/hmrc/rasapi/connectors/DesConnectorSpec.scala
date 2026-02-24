@@ -397,7 +397,24 @@ class DesConnectorSpec
 
       verify(mockHttpClient, times(1)).post(any())(any())
     }
+    "handle forbidden response from des" in {
 
+      val errorResponse = ResidencyStatusFailure(
+        appContext.matchingFailedStatus,
+        "Cannot provide a residency status for this pension scheme member."
+      )
+
+      val individualDetails =
+        IndividualDetails("AB123456C", "JOHN", "Lewis", LocalDate.parse("1990-02-21", formatter))
+
+      when(mockRequestBuilder.execute(any[HttpReads[HttpResponse]], any()))
+        .thenReturn(Future.failed(UpstreamErrorResponse("STATUS_UNAVAILABLE", 403, 403)))
+
+      val result = await(TestDesConnector.getResidencyStatus(individualDetails, userId, V2_0))
+      println(result)
+      result.isLeft                  shouldBe false
+      result.getOrElse("Get Failed") shouldBe errorResponse
+    }
     "handle success response but the person is deceased from des" in {
       val successResponse = ResidencyStatusSuccess(
         nino = "AB123456C",

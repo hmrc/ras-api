@@ -26,11 +26,49 @@ paths:
             schema:
               allOf:
               - $ref: '#/components/schemas/residencyStatusRequest'
-            example:
-              nino: BB123456B
-              firstName: John
-              lastName: Smith
-              dateOfBirth: 1975-05-25
+            examples:
+              example-1:
+                description: Individual with current and next year as Scotland resident.
+                value:
+                  nino: CC123456
+                  firstName: Joe
+                  lastName: Bloggs
+                  dateOfBirth: 1982-02-17
+              example-2:
+                description: Individual with current and next year as Wales resident.
+                value:
+                  nino: AA246255
+                  firstName: Jack
+                  lastName: Oscar
+                  dateOfBirth: 1962-07-07
+              example-3:
+                description: Individual with current year as Scotland and next year as rest of the UK resident.
+                value:
+                  nino: LR325154
+                  firstName: Jane
+                  lastName: Doe
+                  dateOfBirth: 1969-06-09
+              example-4:
+                description: Individual with current year as rest of the UK and next year as Wales resident.
+                value:
+                  nino: SG325450
+                  firstName: John
+                  lastName: Johny
+                  dateOfBirth: 1950-10-20
+              deceased-member-check:
+                description: Residency status check for a deceased member
+                value:
+                  nino: CC432567
+                  firstName: Austin
+                  lastName: Powers
+                  dateOfBirth: 1965-01-01
+              unregistered-nino:
+                description: Member with an unregistered nino number
+                value:
+                  nino: CB432564
+                  firstName: Jake
+                  lastName: John
+                  dateOfBirth: 1965-02-01
         required: true
       responses:
         '200':
@@ -40,9 +78,27 @@ paths:
               schema:
                 allOf:
                 - $ref: '#/components/schemas/residencyStatusResponse'
-              example:
-                currentYearResidencyStatus: otherUKResident
-                nextYearForecastResidencyStatus: scotResident
+              examples:
+                example-1:
+                  description: Individual with current and next year as Scotland resident.
+                  value:
+                    currentYearResidencyStatus: scotResident
+                    nextYearForecastResidencyStatus: scotResident
+                example-2:
+                  description: Individual with current and next year as Wales resident.
+                  value:
+                    currentYearResidencyStatus: welshResident
+                    nextYearForecastResidencyStatus: welshResident
+                example-3:
+                  description: Individual with current year as Scotland and next year as rest of the UK resident.
+                  value:
+                    currentYearResidencyStatus: scotResident
+                    nextYearForecastResidencyStatus: otherUKResident
+                example-4:
+                  description: Individual with current year as rest of the UK and next year as Wales resident.
+                  value:
+                    currentYearResidencyStatus: otherUKResident
+                    nextYearForecastResidencyStatus: welshResident
         '400':
           description: Bad Request
           content:
@@ -61,9 +117,17 @@ paths:
                 allOf:
                 - $ref: '#/components/schemas/errorResponse'
                 - description: The pension scheme member's details do not match with HMRC's records.
-              example:
-                code: STATUS_UNAVAILABLE
-                message: Cannot provide a residency status for this pension scheme member.
+              examples:
+                deceased-member-check:
+                  description: Residency status check for a deceased member
+                  value:
+                    code: STATUS_UNAVAILABLE
+                    message: Cannot provide a residency status for this pension scheme member.
+                unregistered-nino:
+                  description: Member with an unregistered nino number
+                  value:
+                    code: STATUS_UNAVAILABLE
+                    message: Cannot provide a residency status for this pension scheme member.
       deprecated: false
       security:
         - user-restricted:
