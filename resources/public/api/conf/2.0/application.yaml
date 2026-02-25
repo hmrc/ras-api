@@ -208,6 +208,7 @@ components:
       title: Relief at source residency status response
       required:
         - currentYearResidencyStatus
+        - nextYearForecastResidencyStatus
       type: object
       properties:
         currentYearResidencyStatus:
