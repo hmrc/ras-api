@@ -3,10 +3,10 @@ info:
   title: Residency status for relief at source
   version: '2.0'
 servers:
-- url: https://test-api.service.hmrc.gov.uk
-  description: Sandbox
-- url: https://api.service.hmrc.gov.uk
-  description: Production
+  - url: https://test-api.service.hmrc.gov.uk
+    description: Sandbox
+  - url: https://api.service.hmrc.gov.uk
+    description: Production
 paths:
   /individuals/relief-at-source/residency-status:
     post:
@@ -25,30 +25,30 @@ paths:
           application/json:
             schema:
               allOf:
-              - $ref: '#/components/schemas/residencyStatusRequest'
+                - $ref: '#/components/schemas/residencyStatusRequest'
             examples:
-              example-1:
+              scotland-curr-year-scotland-next-year:
                 description: Individual with current and next year as Scotland resident.
                 value:
                   nino: CC123456
                   firstName: Joe
                   lastName: Bloggs
                   dateOfBirth: 1982-02-17
-              example-2:
+              wales-curr-year-wales-next-year:
                 description: Individual with current and next year as Wales resident.
                 value:
                   nino: AA246255
                   firstName: Jack
                   lastName: Oscar
                   dateOfBirth: 1962-07-07
-              example-3:
+              scotland-curr-year-uk-next-year:
                 description: Individual with current year as Scotland and next year as rest of the UK resident.
                 value:
                   nino: LR325154
                   firstName: Jane
                   lastName: Doe
                   dateOfBirth: 1969-06-09
-              example-4:
+              uk-curr-year-wales-next-year:
                 description: Individual with current year as rest of the UK and next year as Wales resident.
                 value:
                   nino: SG325450
@@ -77,24 +77,24 @@ paths:
             application/json:
               schema:
                 allOf:
-                - $ref: '#/components/schemas/residencyStatusResponse'
+                  - $ref: '#/components/schemas/residencyStatusResponse'
               examples:
-                example-1:
+                scotland-curr-year-scotland-next-year:
                   description: Individual with current and next year as Scotland resident.
                   value:
                     currentYearResidencyStatus: scotResident
                     nextYearForecastResidencyStatus: scotResident
-                example-2:
+                wales-curr-year-wales-next-year:
                   description: Individual with current and next year as Wales resident.
                   value:
                     currentYearResidencyStatus: welshResident
                     nextYearForecastResidencyStatus: welshResident
-                example-3:
+                scotland-curr-year-uk-next-year:
                   description: Individual with current year as Scotland and next year as rest of the UK resident.
                   value:
                     currentYearResidencyStatus: scotResident
                     nextYearForecastResidencyStatus: otherUKResident
-                example-4:
+                uk-curr-year-wales-next-year:
                   description: Individual with current year as rest of the UK and next year as Wales resident.
                   value:
                     currentYearResidencyStatus: otherUKResident
@@ -105,7 +105,7 @@ paths:
             application/json:
               schema:
                 allOf:
-                - $ref: '#/components/schemas/errorResponse'
+                  - $ref: '#/components/schemas/errorResponse'
               example:
                 code: BAD_REQUEST
                 message: Bad Request
@@ -115,8 +115,8 @@ paths:
             application/json:
               schema:
                 allOf:
-                - $ref: '#/components/schemas/errorResponse'
-                - description: The pension scheme member's details do not match with HMRC's records.
+                  - $ref: '#/components/schemas/errorResponse403'
+                  - description: The pension scheme member's details do not match with HMRC's records.
               examples:
                 deceased-member-check:
                   description: Residency status check for a deceased member
@@ -178,10 +178,10 @@ components:
     residencyStatusRequest:
       title: Residency status request
       required:
-      - nino
-      - firstName
-      - lastName
-      - dateOfBirth
+        - nino
+        - firstName
+        - lastName
+        - dateOfBirth
       type: object
       properties:
         nino:
@@ -207,7 +207,8 @@ components:
     residencyStatusResponse:
       title: Relief at source residency status response
       required:
-      - currentYearResidencyStatus
+        - currentYearResidencyStatus
+        - nextYearForecastResidencyStatus
       type: object
       properties:
         currentYearResidencyStatus:
@@ -217,24 +218,39 @@ components:
     UKResidencyStatusType:
       title: UK residency status type
       enum:
-      - scotResident
-      - welshResident
-      - otherUKResident
+        - scotResident
+        - welshResident
+        - otherUKResident
       type: string
     error-codeType:
       title: Error code type
       enum:
-      - BAD_REQUEST
-      - STATUS_UNAVAILABLE
+        - BAD_REQUEST
+      type: string
+    error-codeType-403:
+      title: Error code type
+      enum:
+        - STATUS_UNAVAILABLE
       type: string
     errorResponse:
       title: Error response
       required:
-      - code
-      - message
+        - code
+        - message
       type: object
       properties:
         code:
           $ref: '#/components/schemas/error-codeType'
+        message:
+          type: string
+    errorResponse403:
+      title: Error response
+      required:
+        - code
+        - message
+      type: object
+      properties:
+        code:
+          $ref: '#/components/schemas/error-codeType-403'
         message:
           type: string
