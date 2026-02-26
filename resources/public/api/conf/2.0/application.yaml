@@ -63,7 +63,7 @@ paths:
                   lastName: Johny
                   dateOfBirth: 1950-10-20
               unregistered-nino-1:
-                description: Residency status check for a deceased member
+                description: Member with an unregistered nino number
                 value:
                   nino: CC432567
                   firstName: Austin
@@ -131,7 +131,7 @@ paths:
                   - description: The pension scheme member's details do not match with HMRC's records.
               examples:
                 unregistered-nino-1:
-                  description: Residency status check for a deceased member
+                  description: Member with an unregistered nino number
                   value:
                     code: STATUS_UNAVAILABLE
                     message: Cannot provide a residency status for this pension scheme member.
