@@ -34,6 +34,13 @@ paths:
                   firstName: Joe
                   lastName: Bloggs
                   dateOfBirth: 1982-02-17
+              uk-curr-year-scotland-next-year:
+                description: Individual with current year as rest of the UK and next year as Scotland resident.
+                value:
+                  nino: BB123456B
+                  firstName: John
+                  lastName: Smith
+                  dateOfBirth: 1975-05-25
               wales-curr-year-wales-next-year:
                 description: Individual with current and next year as Wales resident.
                 value:
@@ -55,14 +62,14 @@ paths:
                   firstName: John
                   lastName: Johny
                   dateOfBirth: 1950-10-20
-              deceased-member-check:
+              unregistered-nino-1:
                 description: Residency status check for a deceased member
                 value:
                   nino: CC432567
                   firstName: Austin
                   lastName: Powers
                   dateOfBirth: 1965-01-01
-              unregistered-nino:
+              unregistered-nino-2:
                 description: Member with an unregistered nino number
                 value:
                   nino: CB432564
@@ -83,6 +90,11 @@ paths:
                   description: Individual with current and next year as Scotland resident.
                   value:
                     currentYearResidencyStatus: scotResident
+                    nextYearForecastResidencyStatus: scotResident
+                uk-curr-year-scotland-next-year:
+                  description: Individual with current year as rest of the UK and next year as Scotland resident.
+                  value:
+                    currentYearResidencyStatus: otherUKResident
                     nextYearForecastResidencyStatus: scotResident
                 wales-curr-year-wales-next-year:
                   description: Individual with current and next year as Wales resident.
@@ -118,12 +130,12 @@ paths:
                   - $ref: '#/components/schemas/errorResponse403'
                   - description: The pension scheme member's details do not match with HMRC's records.
               examples:
-                deceased-member-check:
+                unregistered-nino-1:
                   description: Residency status check for a deceased member
                   value:
                     code: STATUS_UNAVAILABLE
                     message: Cannot provide a residency status for this pension scheme member.
-                unregistered-nino:
+                unregistered-nino-2:
                   description: Member with an unregistered nino number
                   value:
                     code: STATUS_UNAVAILABLE
@@ -185,7 +197,7 @@ components:
       type: object
       properties:
         nino:
-          pattern: ^((?!(BG|GB|KN|NK|NT|TN|ZZ)|(D|F|I|Q|U|V)[A-Z]|[A-Z](D|F|I|O|Q|U|V))[A-Z]{2})[0-9]{6}[A-D]$
+          pattern: ^((?!(BG|GB|KN|NK|NT|TN|ZZ)|(D|F|I|Q|U|V)[A-Z]|[A-Z](D|F|I|O|Q|U|V))[A-Z]{2})[0-9]{6}[A-D]?$
           type: string
           description: The pension scheme member’s National Insurance number.
           example: BB123456B
@@ -208,7 +220,6 @@ components:
       title: Relief at source residency status response
       required:
         - currentYearResidencyStatus
-        - nextYearForecastResidencyStatus
       type: object
       properties:
         currentYearResidencyStatus:
