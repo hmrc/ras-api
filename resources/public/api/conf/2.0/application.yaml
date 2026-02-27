@@ -30,7 +30,7 @@ paths:
               scotland-curr-year-scotland-next-year:
                 description: Individual with current and next year as Scotland resident.
                 value:
-                  nino: CC123456
+                  nino: CC123456C
                   firstName: Joe
                   lastName: Bloggs
                   dateOfBirth: 1982-02-17
@@ -44,35 +44,35 @@ paths:
               wales-curr-year-wales-next-year:
                 description: Individual with current and next year as Wales resident.
                 value:
-                  nino: AA246255
+                  nino: AA246255A
                   firstName: Jack
                   lastName: Oscar
                   dateOfBirth: 1962-07-07
               scotland-curr-year-uk-next-year:
                 description: Individual with current year as Scotland and next year as rest of the UK resident.
                 value:
-                  nino: LR325154
+                  nino: LR325154B
                   firstName: Jane
                   lastName: Doe
                   dateOfBirth: 1969-06-09
               uk-curr-year-wales-next-year:
                 description: Individual with current year as rest of the UK and next year as Wales resident.
                 value:
-                  nino: SG325450
+                  nino: SG325450C
                   firstName: John
                   lastName: Johny
                   dateOfBirth: 1950-10-20
               unregistered-nino-1:
                 description: Member with an unregistered nino number
                 value:
-                  nino: CC432567
+                  nino: CC432567B
                   firstName: Austin
                   lastName: Powers
                   dateOfBirth: 1965-01-01
               unregistered-nino-2:
                 description: Member with an unregistered nino number
                 value:
-                  nino: CB432564
+                  nino: CB432564B
                   firstName: Jake
                   lastName: John
                   dateOfBirth: 1965-02-01

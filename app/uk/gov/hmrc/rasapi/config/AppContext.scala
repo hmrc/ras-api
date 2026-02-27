@@ -41,6 +41,8 @@ class AppContext @Inject() (val servicesConfig: ServicesConfig) {
   lazy val serviceUnavailableStatus: String           = servicesConfig.getString("status.service-unavailable")
   lazy val doNotReProcessStatus: String               = servicesConfig.getString("status.do-not-re-process")
   lazy val fileProcessingMatchingFailedStatus: String = servicesConfig.getString("status.matching-failed.csv")
+  lazy val apiv1Status: String                        = servicesConfig.getString("api.versions.v1_0.status")
+  lazy val apiv2Status: String                        = servicesConfig.getString("api.versions.v2_0.status")
 
   lazy val fileProcessingInternalServerErrorStatus: String =
     servicesConfig.getString("status.internal-server-error.csv")

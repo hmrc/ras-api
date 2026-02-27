@@ -1,4 +1,4 @@
-@(context : String, status : String, endpointsEnabled : Boolean, version2Enabled : Boolean)
+@(context : String, v1Status : String, v2Status : String, endpointsEnabled : Boolean, version2Enabled : Boolean)
 {
   "api": {
     "name": "Relief At Source",
@@ -7,12 +7,12 @@
     "versions": [
       {
         "version": "1.0",
-        "status": "@status",
+        "status": "@v1Status",
         "endpointsEnabled": @endpointsEnabled
       },
       {
         "version": "2.0",
-        "status": "@status",
+        "status": "@v2Status",
         "endpointsEnabled": @version2Enabled
       }
     ]

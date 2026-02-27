@@ -39,7 +39,8 @@ class Documentation @Inject() (
     Ok(
       txt.definition(
         appContext.apiContext,
-        appContext.apiStatus,
+        appContext.apiv1Status,
+        appContext.apiv2Status,
         appContext.endpointsEnabled,
         appContext.apiV2_0Enabled
       )
