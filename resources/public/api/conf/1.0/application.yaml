@@ -64,7 +64,7 @@ paths:
               example:
                 code: STATUS_UNAVAILABLE
                 message: Cannot provide a residency status for this pension scheme member.
-      deprecated: false
+      deprecated: true
       security:
         - user-restricted:
             - read:ras
