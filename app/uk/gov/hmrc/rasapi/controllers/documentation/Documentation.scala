@@ -17,9 +17,8 @@
 package uk.gov.hmrc.rasapi.controllers.documentation
 
 import controllers.Assets
-import play.api.http.HttpErrorHandler
 import play.api.mvc.{Action, AnyContent, ControllerComponents}
-import uk.gov.hmrc.api.controllers.DocumentationController
+import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
 import uk.gov.hmrc.rasapi.config.AppContext
 import uk.gov.hmrc.rasapi.views.txt
 
@@ -28,14 +27,13 @@ import javax.inject.Inject
 class Documentation @Inject() (
   appContext: AppContext,
   cc: ControllerComponents,
-  httpErrorHandler: HttpErrorHandler,
   assets: Assets
-) extends DocumentationController(cc, assets, httpErrorHandler) {
+) extends BackendController(cc) {
 
-  override def documentation(version: String, endpointName: String): Action[AnyContent] =
+  def documentation(version: String, endpointName: String): Action[AnyContent] =
     assets.at(s"/public/api/documentation/$version", s"${endpointName.replaceAll(" ", "-")}.xml")
 
-  override def definition(): Action[AnyContent] = Action {
+  def definition(): Action[AnyContent] = Action {
     Ok(
       txt.definition(
         appContext.apiContext,

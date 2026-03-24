@@ -21,21 +21,19 @@ import play.api.Logging
 import play.api.libs.json.Json._
 import play.api.libs.json._
 import play.api.mvc._
-import uk.gov.hmrc.api.controllers.{
-  ErrorAcceptHeaderInvalid, ErrorInternalServerError => ErrorInternalServerErrorHmrc,
-  ErrorResponse => ErrorResponseHmrc, HeaderValidator
-}
+import play.api.libs.json.Json
 import uk.gov.hmrc.auth.core.AuthProvider.GovernmentGateway
 import uk.gov.hmrc.auth.core._
 import uk.gov.hmrc.auth.core.retrieve.v2.Retrievals._
 import uk.gov.hmrc.http.{BadRequestException, HeaderCarrier}
 import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
+import uk.gov.hmrc.play.http.HeaderCarrierConverter
 import uk.gov.hmrc.rasapi.config.AppContext
 import uk.gov.hmrc.rasapi.connectors.DesConnector
 import uk.gov.hmrc.rasapi.controllers.{
-  BadRequestResponse, ErrorBadRequestResponse, ErrorServiceUnavailable, IndividualNotFound, InvalidCredentials,
-  PP_ENROLMENT, PSA_ENROLMENT, PSA_PODS_ENROLMENT, PSP_ENROLMENT, TooManyRequestsResponse, Unauthorised,
-  errorResponseWithErrorsWrites, errorResponseWrites, getEnrolmentIdentifier
+  ApiErrorResponse, BadRequestResponse, ErrorBadRequestResponse, ErrorServiceUnavailable, IndividualNotFound,
+  InvalidCredentials, PP_ENROLMENT, PSA_ENROLMENT, PSA_PODS_ENROLMENT, PSP_ENROLMENT, SimpleHeaderValidator,
+  TooManyRequestsResponse, Unauthorised, errorResponseWithErrorsWrites, errorResponseWrites, getEnrolmentIdentifier
 }
 import uk.gov.hmrc.rasapi.helpers.ResidencyYearResolver
 import uk.gov.hmrc.rasapi.metrics.Metrics
@@ -57,8 +55,8 @@ class LookupController @Inject() (
   val errorConverter: ErrorConverter,
   cc: ControllerComponents,
   implicit val ec: ExecutionContext,
-  parser: BodyParsers.Default
-) extends BackendController(cc) with HeaderValidator with AuthorisedFunctions with Logging {
+  bodyParser: BodyParsers.Default
+) extends BackendController(cc) with SimpleHeaderValidator with AuthorisedFunctions with Logging {
 
   def getCurrentDate: LocalDate                             = LocalDate.now()
   lazy val allowDefaultRUK: Boolean                         = appContext.allowDefaultRUK
@@ -67,33 +65,33 @@ class LookupController @Inject() (
   lazy val STATUS_TOO_MANY_REQUESTS: String                 = appContext.tooManyRequestsStatus
   lazy val STATUS_SERVICE_UNAVAILABLE: String               = appContext.serviceUnavailableStatus
   lazy val apiV2_0Enabled: Boolean                          = appContext.apiV2_0Enabled
-  override def parser: BodyParser[AnyContent]               = parser
-  override protected def executionContext: ExecutionContext = ec
+  def parser: BodyParser[AnyContent]                        = bodyParser
+  override protected val executionContext: ExecutionContext = ec
 
-  override val validateVersion: String => Boolean = (version: String) =>
+  override def validateVersion(version: String): Boolean =
     version == "1.0" || (apiV2_0Enabled && version == "2.0")
+
+  private val acceptHeaderValidationRules: Seq[String] =
+    Seq("application/vnd.hmrc.1.0+json", "application/vnd.hmrc.2.0+json")
 
   implicit class VersionUtil(request: Request[_]) {
 
-    def getVersion: ApiVersion = {
+    def getVersion: ApiVersion =
       request.headers
         .get(ACCEPT)
-        .flatMap(accept =>
-          matchHeader(accept)
-            .map(_.group("version"))
-            .collect {
-              case "1.0" => V1_0
-              case "2.0" => V2_0
-            }
-        )
-        .getOrElse(throw new BadRequestException(ErrorResponseHmrc.writes.writes(ErrorAcceptHeaderInvalid).toString()))
-      // the exception in the else should never be thrown since it wouldn't pass validation otherwise
-    }
+        .flatMap {
+          case accept if accept.contains("application/vnd.hmrc.1.0+json") => Some(V1_0)
+          case accept if accept.contains("application/vnd.hmrc.2.0+json") => Some(V2_0)
+          case _                                                          => None
+        }
+        .getOrElse(throw new BadRequestException(Json.toJson(ApiErrorResponse.acceptHeaderInvalid).toString()))
 
   }
 
   def getResidencyStatus: Action[AnyContent] = validateAccept(acceptHeaderValidationRules).async { implicit request =>
-    val apiMetrics = metrics.responseTimer.time
+    implicit val hc: HeaderCarrier = HeaderCarrierConverter.fromRequestAndSession(request, request.session)
+    val apiMetrics                 = metrics.responseTimer.time
+
     authorised(
       AuthProviders(GovernmentGateway) and (Enrolment(PSA_ENROLMENT) or Enrolment(PP_ENROLMENT) or Enrolment(
         PSA_PODS_ENROLMENT
@@ -168,7 +166,7 @@ class LookupController @Inject() (
                   ServiceUnavailable(errorResponseWrites.writes(ErrorServiceUnavailable))
                 case _                          =>
                   auditResponse(
-                    failureReason = Some(ErrorInternalServerErrorHmrc.errorCode),
+                    failureReason = Some(ApiErrorResponse.internalServerError.code),
                     nino = Some(individualDetails.nino),
                     residencyStatus = None,
                     userId = id
@@ -178,11 +176,11 @@ class LookupController @Inject() (
                       s"${matchingFailed.code} for userId ($id)."
                   )
                   metrics.registry.counter(INTERNAL_SERVER_ERROR.toString)
-                  InternalServerError(ErrorResponseHmrc.writes.writes(ErrorInternalServerErrorHmrc))
+                  InternalServerError(Json.toJson(ApiErrorResponse.internalServerError))
               }
           } recover { case th: Throwable =>
             auditResponse(
-              failureReason = Some(ErrorInternalServerErrorHmrc.errorCode),
+              failureReason = Some(ApiErrorResponse.internalServerError.code),
               nino = None,
               residencyStatus = None,
               userId = id
@@ -193,7 +191,7 @@ class LookupController @Inject() (
               th
             )
             metrics.registry.counter(INTERNAL_SERVER_ERROR.toString)
-            InternalServerError(ErrorResponseHmrc.writes.writes(ErrorInternalServerErrorHmrc))
+            InternalServerError(Json.toJson(ApiErrorResponse.internalServerError))
           },
         errors => {
           logger.warn(
@@ -216,7 +214,7 @@ class LookupController @Inject() (
         Future.successful(Unauthorized(errorResponseWrites.writes(InvalidCredentials)))
       case ex                        =>
         logger.error(s"[LookupController][getResidencyStatus] Exception ${ex.getMessage} was thrown from auth", ex)
-        Future.successful(InternalServerError(ErrorResponseHmrc.writes.writes(ErrorInternalServerErrorHmrc)))
+        Future.successful(InternalServerError(Json.toJson(ApiErrorResponse.internalServerError)))
     }
   }
 
@@ -246,7 +244,7 @@ class LookupController @Inject() (
                   s"[LookupController][withValidJson] An error occurred in Json payload validation for userId ($userId) ${ex.getMessage}",
                   ex
                 )
-                Future.successful(InternalServerError(ErrorResponseHmrc.writes.writes(ErrorInternalServerErrorHmrc)))
+                Future.successful(InternalServerError(Json.toJson(ApiErrorResponse.internalServerError)))
             }
           case Success(JsError(errors)) =>
             logger.warn(s"[LookupController][withValidJson] Json error in the request body")
@@ -256,7 +254,7 @@ class LookupController @Inject() (
               s"[LookupController][withValidJson] An error occurred due to ${e.getMessage} returning " +
                 s"internal server error for userId ($userId)."
             )
-            Future.successful(InternalServerError(ErrorResponseHmrc.writes.writes(ErrorInternalServerErrorHmrc)))
+            Future.successful(InternalServerError(Json.toJson(ApiErrorResponse.internalServerError)))
         }
       case None       => Future.successful(BadRequest(errorResponseWrites.writes(BadRequestResponse)))
     }

@@ -21,7 +21,7 @@ import play.api.libs.json.{JsValue, Json, Writes}
 import play.api.mvc.Results.{BadRequest, InternalServerError, NotFound, Unauthorized}
 import play.api.mvc.{RequestHeader, Result}
 import play.api.{Configuration, Logging}
-import uk.gov.hmrc.api.controllers.{ErrorInternalServerError, ErrorResponse => ErrorResponseHmrcApi}
+import uk.gov.hmrc.rasapi.controllers.ApiErrorResponse
 import uk.gov.hmrc.play.audit.http.connector.AuditConnector
 import uk.gov.hmrc.play.bootstrap.backend.http.JsonErrorHandler
 import uk.gov.hmrc.play.bootstrap.config.HttpAuditEvent
@@ -60,7 +60,7 @@ class RasErrorHandler @Inject() (
     super.onServerError(request, ex) map (res =>
       res.header.status match {
         case UNAUTHORIZED => Unauthorized(errorResponseWrites.writes(Unauthorised))
-        case _            => InternalServerError(ErrorResponseHmrcApi.writes.writes(ErrorInternalServerError))
+        case _            => InternalServerError(Json.toJson(ApiErrorResponse.internalServerError))
       }
     )
   }
