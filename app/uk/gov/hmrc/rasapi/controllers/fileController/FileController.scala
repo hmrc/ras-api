@@ -22,9 +22,6 @@ import org.bson.types.ObjectId
 import play.api.Logging
 import play.api.http.HttpEntity
 import play.api.mvc._
-import uk.gov.hmrc.api.controllers.{
-  ErrorInternalServerError => ErrorInternalServerErrorHmrc, ErrorResponse => ErrorResponseHmrc
-}
 import uk.gov.hmrc.auth.core.AuthProvider.GovernmentGateway
 import uk.gov.hmrc.auth.core._
 import uk.gov.hmrc.auth.core.retrieve.v2.Retrievals.authorisedEnrolments
@@ -33,7 +30,9 @@ import uk.gov.hmrc.rasapi.controllers.{
   ErrorNotFound, InvalidCredentials, PP_ENROLMENT, PSA_ENROLMENT, PSA_PODS_ENROLMENT, PSP_ENROLMENT, Unauthorised,
   errorResponseWrites, getEnrolmentIdentifier
 }
+import play.api.libs.json.Json
 import uk.gov.hmrc.rasapi.metrics.Metrics
+import uk.gov.hmrc.rasapi.models.ApiErrorResponse
 import uk.gov.hmrc.rasapi.repository.{FileData, RasChunksRepository, RasFilesRepository}
 import uk.gov.hmrc.rasapi.services.AuditService
 
@@ -175,10 +174,8 @@ class FileController @Inject() (
       Future.successful(Unauthorized(errorResponseWrites.writes(InvalidCredentials)))
     case ex                        =>
       logger.error(s"[FileController][handleAuthFailure] Exception ${ex.getMessage} was thrown from auth", ex)
-      Future.successful(InternalServerError(ErrorResponseHmrc.writes.writes(ErrorInternalServerErrorHmrc)))
+      Future.successful(InternalServerError(ApiErrorResponse.internalServerError.toJson))
   }
-
-  // $COVERAGE-OFF$Trivial and never going to be called by a test that uses it's own object implementation
 
   def getFile(name: String, userId: String): Future[Option[FileData]] = fileRepo.fetchFile(name, userId)
 

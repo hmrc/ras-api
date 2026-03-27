@@ -10,8 +10,7 @@ object AppDependencies {
     ws,
     "uk.gov.hmrc"       %% "bootstrap-backend-play-30" % bootstrapVersion,
     "uk.gov.hmrc.mongo" %% "hmrc-mongo-play-30"        % hmrcMongoVersion,
-    "uk.gov.hmrc"       %% "domain-play-30"            % "11.0.0",
-    "uk.gov.hmrc"       %% "play-hmrc-api-play-30"     % "8.0.0"
+    "uk.gov.hmrc"       %% "domain-play-30"            % "11.0.0"
   )
 
   private val test: Seq[ModuleID] = Seq(

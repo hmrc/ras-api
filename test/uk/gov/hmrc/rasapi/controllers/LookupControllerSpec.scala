@@ -32,8 +32,8 @@ import play.api.libs.json.{JsPath, Json, Writes}
 import play.api.mvc.{BodyParsers, ControllerComponents}
 import play.api.test.Helpers._
 import play.api.test.{FakeRequest, Helpers}
+import play.api.test.Helpers.stubControllerComponents
 import play.mvc.Http.HeaderNames
-import uk.gov.hmrc.api.controllers.{ErrorAcceptHeaderInvalid, ErrorResponse => ErrorResponseHmrc}
 import uk.gov.hmrc.auth.core._
 import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.rasapi.config.AppContext
@@ -67,8 +67,8 @@ class LookupControllerSpec
   val mockMetrics: Metrics                             = app.injector.instanceOf[Metrics]
   val appContext: AppContext                           = app.injector.instanceOf[AppContext]
   val errorConverer: ErrorConverter                    = app.injector.instanceOf[ErrorConverter]
-  val mockCC: ControllerComponents                     = mock[ControllerComponents]
-  val mockParser: BodyParsers.Default                  = mock[BodyParsers.Default]
+  val mockCC: ControllerComponents                     = stubControllerComponents()
+  val mockParser: BodyParsers.Default                  = app.injector.instanceOf[BodyParsers.Default]
 
   val expectedNino: Nino = uk.gov.hmrc.rasapi.models.Nino("LE241131B")
 
@@ -481,7 +481,7 @@ class LookupControllerSpec
             )
 
           status(result)        shouldBe NOT_ACCEPTABLE
-          contentAsJson(result) shouldBe ErrorResponseHmrc.writes.writes(ErrorAcceptHeaderInvalid)
+          contentAsJson(result) shouldBe Json.toJson(ApiErrorResponse.acceptHeaderInvalid)
         }
       }
 
