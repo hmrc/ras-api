@@ -27,7 +27,7 @@ import uk.gov.hmrc.http.{BadRequestException, HeaderCarrier}
 import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
 import uk.gov.hmrc.rasapi.config.AppContext
 import uk.gov.hmrc.rasapi.connectors.DesConnector
-import uk.gov.hmrc.rasapi.controllers.{BadRequestResponse, ErrorBadRequestResponse, ErrorServiceUnavailable, IndividualNotFound, InvalidCredentials, PP_ENROLMENT, PSA_ENROLMENT, PSA_PODS_ENROLMENT, PSP_ENROLMENT, SimpleHeaderValidator, TooManyRequestsResponse, Unauthorised, errorResponseWithErrorsWrites, errorResponseWrites, getEnrolmentIdentifier}
+import uk.gov.hmrc.rasapi.controllers._
 import uk.gov.hmrc.rasapi.helpers.ResidencyYearResolver
 import uk.gov.hmrc.rasapi.metrics.Metrics
 import uk.gov.hmrc.rasapi.models._
@@ -88,7 +88,7 @@ class LookupController @Inject() (
 
   def getResidencyStatus: Action[AnyContent] = validateAccept(acceptHeaderValidationRules).async { implicit request =>
 //    implicit val hc: HeaderCarrier = HeaderCarrierConverter.fromRequestAndSession(request, request.session)
-    val apiMetrics                 = metrics.responseTimer.time
+    val apiMetrics = metrics.responseTimer.time
 
     authorised(
       AuthProviders(GovernmentGateway) and (Enrolment(PSA_ENROLMENT) or Enrolment(PP_ENROLMENT) or Enrolment(
