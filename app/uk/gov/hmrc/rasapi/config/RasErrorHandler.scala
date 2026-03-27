@@ -21,11 +21,11 @@ import play.api.libs.json.{JsValue, Json, Writes}
 import play.api.mvc.Results.{BadRequest, InternalServerError, NotFound, Unauthorized}
 import play.api.mvc.{RequestHeader, Result}
 import play.api.{Configuration, Logging}
-import uk.gov.hmrc.rasapi.controllers.ApiErrorResponse
 import uk.gov.hmrc.play.audit.http.connector.AuditConnector
 import uk.gov.hmrc.play.bootstrap.backend.http.JsonErrorHandler
 import uk.gov.hmrc.play.bootstrap.config.HttpAuditEvent
 import uk.gov.hmrc.rasapi.controllers.{BadRequestResponse, ErrorNotFound, ErrorResponse, Unauthorised}
+import uk.gov.hmrc.rasapi.models.ApiErrorResponse
 
 import javax.inject.Inject
 import scala.concurrent.{ExecutionContext, Future}

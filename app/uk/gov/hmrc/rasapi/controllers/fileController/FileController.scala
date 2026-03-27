@@ -31,8 +31,8 @@ import uk.gov.hmrc.rasapi.controllers.{
   errorResponseWrites, getEnrolmentIdentifier
 }
 import play.api.libs.json.Json
-import uk.gov.hmrc.rasapi.controllers.ApiErrorResponse
 import uk.gov.hmrc.rasapi.metrics.Metrics
+import uk.gov.hmrc.rasapi.models.ApiErrorResponse
 import uk.gov.hmrc.rasapi.repository.{FileData, RasChunksRepository, RasFilesRepository}
 import uk.gov.hmrc.rasapi.services.AuditService
 

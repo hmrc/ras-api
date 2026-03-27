@@ -31,7 +31,7 @@ import uk.gov.hmrc.play.http.HeaderCarrierConverter
 import uk.gov.hmrc.rasapi.config.AppContext
 import uk.gov.hmrc.rasapi.connectors.DesConnector
 import uk.gov.hmrc.rasapi.controllers.{
-  ApiErrorResponse, BadRequestResponse, ErrorBadRequestResponse, ErrorServiceUnavailable, IndividualNotFound,
+  BadRequestResponse, ErrorBadRequestResponse, ErrorServiceUnavailable, IndividualNotFound,
   InvalidCredentials, PP_ENROLMENT, PSA_ENROLMENT, PSA_PODS_ENROLMENT, PSP_ENROLMENT, SimpleHeaderValidator,
   TooManyRequestsResponse, Unauthorised, errorResponseWithErrorsWrites, errorResponseWrites, getEnrolmentIdentifier
 }
