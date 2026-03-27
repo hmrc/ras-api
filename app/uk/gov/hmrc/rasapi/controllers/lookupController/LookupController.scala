@@ -87,7 +87,7 @@ class LookupController @Inject() (
   }
 
   def getResidencyStatus: Action[AnyContent] = validateAccept(acceptHeaderValidationRules).async { implicit request =>
-//    implicit val hc: HeaderCarrier = HeaderCarrierConverter.fromRequestAndSession(request, request.session)
+
     val apiMetrics = metrics.responseTimer.time
 
     authorised(
