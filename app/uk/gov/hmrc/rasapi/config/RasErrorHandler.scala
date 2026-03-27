@@ -60,7 +60,7 @@ class RasErrorHandler @Inject() (
     super.onServerError(request, ex) map (res =>
       res.header.status match {
         case UNAUTHORIZED => Unauthorized(errorResponseWrites.writes(Unauthorised))
-        case _            => InternalServerError(Json.toJson(ApiErrorResponse.internalServerError))
+        case _            => InternalServerError(ApiErrorResponse.internalServerError.toJson)
       }
     )
   }

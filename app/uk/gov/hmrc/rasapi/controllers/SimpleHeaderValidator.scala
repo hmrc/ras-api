@@ -16,51 +16,40 @@
 
 package uk.gov.hmrc.rasapi.controllers
 
-import play.api.libs.json.{Json, OWrites}
+import play.api.http.HeaderNames
 import play.api.mvc._
 
 import scala.concurrent.{ExecutionContext, Future}
-
-final case class ApiErrorResponse(code: String, message: String)
-
-object ApiErrorResponse {
-  implicit val writes: OWrites[ApiErrorResponse] = Json.writes[ApiErrorResponse]
-
-  val internalServerError: ApiErrorResponse =
-    ApiErrorResponse("INTERNAL_SERVER_ERROR", "Internal server error")
-
-  val acceptHeaderInvalid: ApiErrorResponse =
-    ApiErrorResponse("ACCEPT_HEADER_INVALID", "The accept header is missing or invalid")
-}
 
 trait SimpleHeaderValidator { self: BaseController =>
 
   protected def executionContext: ExecutionContext
 
-  def validateVersion(version: String): Boolean = true
+  def validateVersion(version: String): Boolean
 
-  private val AcceptHeaderVersionRegex = "application/vnd\\.hmrc\\.(\\d+\\.\\d+)\\+json".r
+  private val acceptHeaderVersionRegex = "application/vnd\\.hmrc\\.(\\d+\\.\\d+)\\+json".r
 
   protected def matchesAcceptHeader(accepted: Seq[String])(request: RequestHeader): Boolean =
     request.headers
-      .get("Accept")
+      .get(HeaderNames.ACCEPT)
       .exists { header =>
         accepted.exists(header.contains) &&
-          AcceptHeaderVersionRegex
-            .findFirstMatchIn(header)
-            .exists(m => validateVersion(m.group(1)))
+        acceptHeaderVersionRegex
+          .findFirstMatchIn(header)
+          .exists(m => validateVersion(m.group(1)))
       }
 
   protected def validateAccept(accepted: Seq[String]): ActionBuilder[Request, AnyContent] =
     new ActionBuilderImpl(controllerComponents.parsers.default)(executionContext) {
       override def invokeBlock[A](
-                                   request: Request[A],
-                                   block: Request[A] => Future[Result]
-                                 ): Future[Result] =
+        request: Request[A],
+        block: Request[A] => Future[Result]
+      ): Future[Result] =
         if (matchesAcceptHeader(accepted)(request)) {
           block(request)
         } else {
-          Future.successful(NotAcceptable(Json.toJson(ApiErrorResponse.acceptHeaderInvalid)))
+          Future.successful(NotAcceptable(ApiErrorResponse.acceptHeaderInvalid.toJson))
         }
     }
+
 }

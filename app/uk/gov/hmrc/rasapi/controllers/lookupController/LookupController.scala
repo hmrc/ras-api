@@ -84,7 +84,11 @@ class LookupController @Inject() (
           case accept if accept.contains("application/vnd.hmrc.2.0+json") => Some(V2_0)
           case _                                                          => None
         }
-        .getOrElse(throw new BadRequestException(Json.toJson(ApiErrorResponse.acceptHeaderInvalid).toString()))
+        .getOrElse {
+          val providedAcceptHeader = request.headers.get(ACCEPT).getOrElse("<missing>")
+          logger.warn(s"[LookupController][getVersion] Invalid Accept header: $providedAcceptHeader")
+          throw new BadRequestException(ApiErrorResponse.acceptHeaderInvalid.toJson.toString())
+        }
 
   }
 
@@ -176,7 +180,7 @@ class LookupController @Inject() (
                       s"${matchingFailed.code} for userId ($id)."
                   )
                   metrics.registry.counter(INTERNAL_SERVER_ERROR.toString)
-                  InternalServerError(Json.toJson(ApiErrorResponse.internalServerError))
+                  InternalServerError(ApiErrorResponse.internalServerError.toJson)
               }
           } recover { case th: Throwable =>
             auditResponse(
@@ -191,7 +195,7 @@ class LookupController @Inject() (
               th
             )
             metrics.registry.counter(INTERNAL_SERVER_ERROR.toString)
-            InternalServerError(Json.toJson(ApiErrorResponse.internalServerError))
+            InternalServerError(ApiErrorResponse.internalServerError.toJson)
           },
         errors => {
           logger.warn(
@@ -214,7 +218,7 @@ class LookupController @Inject() (
         Future.successful(Unauthorized(errorResponseWrites.writes(InvalidCredentials)))
       case ex                        =>
         logger.error(s"[LookupController][getResidencyStatus] Exception ${ex.getMessage} was thrown from auth", ex)
-        Future.successful(InternalServerError(Json.toJson(ApiErrorResponse.internalServerError)))
+        Future.successful(InternalServerError(ApiErrorResponse.internalServerError.toJson))
     }
   }
 
@@ -244,7 +248,7 @@ class LookupController @Inject() (
                   s"[LookupController][withValidJson] An error occurred in Json payload validation for userId ($userId) ${ex.getMessage}",
                   ex
                 )
-                Future.successful(InternalServerError(Json.toJson(ApiErrorResponse.internalServerError)))
+                Future.successful(InternalServerError(ApiErrorResponse.internalServerError.toJson))
             }
           case Success(JsError(errors)) =>
             logger.warn(s"[LookupController][withValidJson] Json error in the request body")
@@ -254,7 +258,7 @@ class LookupController @Inject() (
               s"[LookupController][withValidJson] An error occurred due to ${e.getMessage} returning " +
                 s"internal server error for userId ($userId)."
             )
-            Future.successful(InternalServerError(Json.toJson(ApiErrorResponse.internalServerError)))
+            Future.successful(InternalServerError(ApiErrorResponse.internalServerError.toJson))
         }
       case None       => Future.successful(BadRequest(errorResponseWrites.writes(BadRequestResponse)))
     }

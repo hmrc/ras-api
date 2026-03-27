@@ -174,10 +174,8 @@ class FileController @Inject() (
       Future.successful(Unauthorized(errorResponseWrites.writes(InvalidCredentials)))
     case ex                        =>
       logger.error(s"[FileController][handleAuthFailure] Exception ${ex.getMessage} was thrown from auth", ex)
-      Future.successful(InternalServerError(Json.toJson(ApiErrorResponse.internalServerError)))
+      Future.successful(InternalServerError(ApiErrorResponse.internalServerError.toJson))
   }
-
-  // $COVERAGE-OFF$Trivial and never going to be called by a test that uses it's own object implementation
 
   def getFile(name: String, userId: String): Future[Option[FileData]] = fileRepo.fetchFile(name, userId)
 
