@@ -16,31 +16,25 @@
 
 package uk.gov.hmrc.rasapi.controllers.lookupController
 
-import java.time.LocalDate
 import play.api.Logging
 import play.api.libs.json.Json._
 import play.api.libs.json._
 import play.api.mvc._
-import play.api.libs.json.Json
 import uk.gov.hmrc.auth.core.AuthProvider.GovernmentGateway
 import uk.gov.hmrc.auth.core._
 import uk.gov.hmrc.auth.core.retrieve.v2.Retrievals._
 import uk.gov.hmrc.http.{BadRequestException, HeaderCarrier}
 import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
-import uk.gov.hmrc.play.http.HeaderCarrierConverter
 import uk.gov.hmrc.rasapi.config.AppContext
 import uk.gov.hmrc.rasapi.connectors.DesConnector
-import uk.gov.hmrc.rasapi.controllers.{
-  BadRequestResponse, ErrorBadRequestResponse, ErrorServiceUnavailable, IndividualNotFound,
-  InvalidCredentials, PP_ENROLMENT, PSA_ENROLMENT, PSA_PODS_ENROLMENT, PSP_ENROLMENT, SimpleHeaderValidator,
-  TooManyRequestsResponse, Unauthorised, errorResponseWithErrorsWrites, errorResponseWrites, getEnrolmentIdentifier
-}
+import uk.gov.hmrc.rasapi.controllers.{BadRequestResponse, ErrorBadRequestResponse, ErrorServiceUnavailable, IndividualNotFound, InvalidCredentials, PP_ENROLMENT, PSA_ENROLMENT, PSA_PODS_ENROLMENT, PSP_ENROLMENT, SimpleHeaderValidator, TooManyRequestsResponse, Unauthorised, errorResponseWithErrorsWrites, errorResponseWrites, getEnrolmentIdentifier}
 import uk.gov.hmrc.rasapi.helpers.ResidencyYearResolver
 import uk.gov.hmrc.rasapi.metrics.Metrics
 import uk.gov.hmrc.rasapi.models._
 import uk.gov.hmrc.rasapi.services.AuditService
 import uk.gov.hmrc.rasapi.utils.ErrorConverter
 
+import java.time.LocalDate
 import javax.inject.Inject
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.{Failure, Success, Try}
@@ -93,7 +87,7 @@ class LookupController @Inject() (
   }
 
   def getResidencyStatus: Action[AnyContent] = validateAccept(acceptHeaderValidationRules).async { implicit request =>
-    implicit val hc: HeaderCarrier = HeaderCarrierConverter.fromRequestAndSession(request, request.session)
+//    implicit val hc: HeaderCarrier = HeaderCarrierConverter.fromRequestAndSession(request, request.session)
     val apiMetrics                 = metrics.responseTimer.time
 
     authorised(
