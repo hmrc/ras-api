@@ -16,7 +16,7 @@
 
 package uk.gov.hmrc.rasapi.services
 
-import org.mockito.Mockito._
+import org.mockito.Mockito.*
 import org.scalatest.OptionValues
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpec
@@ -43,10 +43,14 @@ class RasFilesSessionServiceSpec
     with OptionValues
     with PlayMongoRepositorySupport[CacheItem] {
 
-  val appContext: AppContext   = app.injector.instanceOf[AppContext]
-  override lazy val repository = new RasFilesSessionRepository(mongoComponent, appContext, new CurrentTimestampSupport)
+  val appContext: AppContext                = app.injector.instanceOf[AppContext]
 
-  val SUT: RasFilesSessionService = new RasFilesSessionService(repository)(ExecutionContext.global)
+  val repository: RasFilesSessionRepository =
+    new RasFilesSessionRepository(mongoComponent, appContext, new CurrentTimestampSupport)(using
+      ExecutionContext.global
+    )
+
+  val SUT: RasFilesSessionService = new RasFilesSessionService(repository)(using ExecutionContext.global)
 
   "createFileSession" should {
     "create new session and return true" in {

@@ -33,11 +33,11 @@ import scala.concurrent.{ExecutionContext, Future}
 class RasErrorHandler @Inject() (
   configuration: Configuration,
   auditConnector: AuditConnector,
-  httpAuditEvent: HttpAuditEvent,
-  implicit val ec: ExecutionContext
-) extends JsonErrorHandler(auditConnector, httpAuditEvent, configuration) with Logging {
+  httpAuditEvent: HttpAuditEvent
+)(using ec: ExecutionContext)
+    extends JsonErrorHandler(auditConnector, httpAuditEvent, configuration) with Logging {
 
-  implicit val errorResponseWrites: Writes[ErrorResponse] = new Writes[ErrorResponse] {
+  given errorResponseWrites: Writes[ErrorResponse] = new Writes[ErrorResponse] {
     def writes(e: ErrorResponse): JsValue = Json.obj("code" -> e.errorCode, "message" -> e.message)
   }
 

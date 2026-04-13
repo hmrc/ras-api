@@ -16,8 +16,7 @@
 
 package uk.gov.hmrc.rasapi.connectors
 
-import java.time.LocalDate
-import org.mockito.ArgumentMatchers._
+import org.mockito.ArgumentMatchers.*
 import org.mockito.Mockito.{reset, times, verify, when}
 import org.scalatest.BeforeAndAfter
 import org.scalatest.matchers.should.Matchers
@@ -26,27 +25,28 @@ import org.scalatestplus.mockito.MockitoSugar
 import org.scalatestplus.play.guice.GuiceOneAppPerSuite
 import play.api.libs.json.{JsObject, JsValue, Json, OFormat}
 import play.api.test.Helpers.{await, defaultAwaitTimeout}
-import uk.gov.hmrc.http._
+import uk.gov.hmrc.http.*
 import uk.gov.hmrc.http.client.{HttpClientV2, RequestBuilder}
 import uk.gov.hmrc.play.bootstrap.config.ServicesConfig
 import uk.gov.hmrc.play.bootstrap.http.HttpClientV2Provider
 import uk.gov.hmrc.rasapi.config.AppContext
-import uk.gov.hmrc.rasapi.models._
+import uk.gov.hmrc.rasapi.models.*
 import uk.gov.hmrc.rasapi.services.AuditService
 
+import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import scala.concurrent.{ExecutionContext, Future}
 
 class DesConnectorSpec
     extends AnyWordSpecLike with Matchers with GuiceOneAppPerSuite with BeforeAndAfter with MockitoSugar {
 
-  implicit val hc: HeaderCarrier = HeaderCarrier()
+  given hc: HeaderCarrier = HeaderCarrier()
 
-  val mockHttp: HttpClientV2Provider                   = mock[HttpClientV2Provider]
-  val mockHttpClient: HttpClientV2                     = mock[HttpClientV2]
-  val mockRequestBuilder                               = mock[RequestBuilder]
-  val mockAuditService: AuditService                   = mock[AuditService]
-  implicit val format: OFormat[ResidencyStatusSuccess] = ResidencyStatusFormats.successFormats
+  val mockHttp: HttpClientV2Provider            = mock[HttpClientV2Provider]
+  val mockHttpClient: HttpClientV2              = mock[HttpClientV2]
+  val mockRequestBuilder                        = mock[RequestBuilder]
+  val mockAuditService: AuditService            = mock[AuditService]
+  given format: OFormat[ResidencyStatusSuccess] = ResidencyStatusFormats.successFormats
 
   val servicesConfig         = app.injector.instanceOf[ServicesConfig]
   val appContext: AppContext = app.injector.instanceOf[AppContext]
@@ -62,7 +62,7 @@ class DesConnectorSpec
 
   val uuid = "123e4567-e89b-42d3-a456-556642440000"
 
-  object TestDesConnector extends DesConnector(mockHttp, mockAuditService, appContext, ExecutionContext.global) {
+  object TestDesConnector extends DesConnector(mockHttp, mockAuditService, appContext)(using ExecutionContext.global) {
     override lazy val desBaseUrl                     = "http://localhost:9669"
     override val auditService: AuditService          = mockAuditService
     override lazy val allowNoNextYearStatus: Boolean = true
@@ -273,7 +273,7 @@ class DesConnectorSpec
 
         implicit val formatF = ResidencyStatusFormats.failureFormats
 
-        object TestDesConnector extends DesConnector(mockHttp, mockAuditService, appContext, ExecutionContext.global) {
+        object TestDesConnector extends DesConnector(mockHttp, mockAuditService, appContext)(using ExecutionContext.global) {
           override lazy val desBaseUrl                     = "http://localhost:9669"
           override val auditService: AuditService          = mockAuditService
           override lazy val allowNoNextYearStatus: Boolean = true
@@ -319,7 +319,7 @@ class DesConnectorSpec
 
         implicit val formatF = ResidencyStatusFormats.failureFormats
 
-        object TestDesConnector extends DesConnector(mockHttp, mockAuditService, appContext, ExecutionContext.global) {
+        object TestDesConnector extends DesConnector(mockHttp, mockAuditService, appContext)(using ExecutionContext.global) {
           override lazy val desBaseUrl                     = "http://localhost:9669"
           override val auditService: AuditService          = mockAuditService
           override lazy val allowNoNextYearStatus: Boolean = true
@@ -349,7 +349,7 @@ class DesConnectorSpec
       }
 
     "handle successful response when 200 is returned from des and only CY is present and no next year status toggle is turned off" in {
-      object TestDesConnector extends DesConnector(mockHttp, mockAuditService, appContext, ExecutionContext.global) {
+      object TestDesConnector extends DesConnector(mockHttp, mockAuditService, appContext)(using ExecutionContext.global) {
         override lazy val desBaseUrl                     = "http://localhost:9669"
         override val auditService: AuditService          = mockAuditService
         override lazy val allowNoNextYearStatus: Boolean = false

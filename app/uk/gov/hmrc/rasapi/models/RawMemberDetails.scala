@@ -16,31 +16,36 @@
 
 package uk.gov.hmrc.rasapi.models
 
+import play.api.libs.functional.syntax.*
+import play.api.libs.json.*
+
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
-import play.api.libs.functional.syntax._
-import play.api.libs.json._
 
 case class RawMemberDetails(nino: String = "", firstName: String = "", lastName: String = "", dateOfBirth: String = "")
 
 object RawMemberDetails {
-  implicit val formats: OFormat[RawMemberDetails] = Json.format[RawMemberDetails]
+  given formats: OFormat[RawMemberDetails] = Json.format[RawMemberDetails]
 }
 
 case class IndividualDetails(nino: NINO, firstName: Name, lastName: Name, dateOfBirth: LocalDate)
 
 object IndividualDetails {
 
-  implicit val individualDetailsReads: Reads[IndividualDetails] = individualDetailsReadsWith(JsonReads.isoDate)
+  given individualDetailsReads: Reads[IndividualDetails] = individualDetailsReadsWith(JsonReads.isoDate)
 
-  implicit val individualDetailsBulkReads: Reads[IndividualDetails] = individualDetailsReadsWith(JsonReads.bulkDate)
+  given individualDetailsBulkReads: Reads[IndividualDetails] = individualDetailsReadsWith(JsonReads.bulkDate)
 
-  implicit val individualDetailssWrites: Writes[IndividualDetails] = (
+  given individualDetailssWrites: Writes[IndividualDetails] = (
     (JsPath \ "nino").write[String] and
       (JsPath \ "firstName").write[String] and
       (JsPath \ "lastName").write[String] and
-      (JsPath \ "dob").write[String].contramap[LocalDate](_.format(DateTimeFormatter.ofPattern("yyyy-MM-dd")))
-  )(unlift(IndividualDetails.unapply))
+      (JsPath \ "dob")
+        .write[String]
+        .contramap[LocalDate](_.format(DateTimeFormatter.ofPattern("yyyy-MM-dd")))
+  ) { d =>
+    (d.nino, d.firstName, d.lastName, d.dateOfBirth)
+  }
 
   private def individualDetailsReadsWith(dateTimeReads: Reads[LocalDate]): Reads[IndividualDetails] =
     ((JsPath \ "nino").read[NINO](JsonReads.nino).map(_.padTo(9, " ").mkString.toUpperCase) and

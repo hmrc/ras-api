@@ -33,7 +33,7 @@ import uk.gov.hmrc.rasapi.repository.RasFilesRepository
 
 import java.io.File
 import scala.concurrent.ExecutionContext.Implicits.global
-import scala.concurrent.duration._
+import scala.concurrent.duration.*
 import scala.io.{BufferedSource, Source}
 
 class FileProcessingApiISpec

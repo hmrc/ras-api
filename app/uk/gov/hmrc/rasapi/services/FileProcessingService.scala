@@ -16,7 +16,6 @@
 
 package uk.gov.hmrc.rasapi.services
 
-import java.time.LocalDate
 import play.api.Logging
 import play.api.mvc.{AnyContent, Request}
 import uk.gov.hmrc.http.HeaderCarrier
@@ -28,6 +27,7 @@ import uk.gov.hmrc.rasapi.models.{ApiVersion, ResultsFileMetaData, UpscanCallbac
 import uk.gov.hmrc.rasapi.repository.RasFilesRepository
 
 import java.nio.file.Path
+import java.time.LocalDate
 import javax.inject.Inject
 import scala.concurrent.ExecutionContext
 import scala.util.{Failure, Success, Try}
@@ -40,9 +40,9 @@ class FileProcessingService @Inject() (
   val sessionCacheService: RasFilesSessionService,
   val fileRepo: RasFilesRepository,
   val appContext: AppContext,
-  val metrics: Metrics,
-  implicit val ec: ExecutionContext
-) extends RasFileReader with RasFileWriter with ResultsGenerator with Logging {
+  val metrics: Metrics
+)(using ec: ExecutionContext)
+    extends RasFileReader with RasFileWriter with ResultsGenerator with Logging {
 
   def getCurrentDate: LocalDate = LocalDate.now()
 
@@ -60,7 +60,7 @@ class FileProcessingService @Inject() (
   val fileSave: String      = "File-Save"
   val STATUS_FAILED: String = "FAILED"
 
-  def processFile(userId: String, callbackData: UpscanCallbackData, apiVersion: ApiVersion)(implicit
+  def processFile(userId: String, callbackData: UpscanCallbackData, apiVersion: ApiVersion)(using
     hc: HeaderCarrier,
     request: Request[AnyContent]
   ): Boolean = {
@@ -90,7 +90,7 @@ class FileProcessingService @Inject() (
     userId: String,
     callbackData: UpscanCallbackData,
     apiVersion: ApiVersion
-  )(implicit hc: HeaderCarrier, request: Request[AnyContent]): Unit = {
+  )(using hc: HeaderCarrier, request: Request[AnyContent]): Unit = {
     val fileResultsMetrics = metrics.register(fileResults).time
     val writer             = createFileWriter(callbackData.reference, userId)
 

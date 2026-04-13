@@ -20,7 +20,7 @@ import org.apache.pekko.NotUsed
 import org.apache.pekko.stream.scaladsl.Source
 import org.mongodb.scala.bson.{Document, ObjectId}
 import org.mongodb.scala.gridfs.{GridFSBucket, GridFSUploadOptions}
-import org.mongodb.scala.Observable
+import org.mongodb.scala.{Observable, documentToUntypedDocument}
 import play.api.Logger
 import uk.gov.hmrc.mongo.MongoComponent
 import uk.gov.hmrc.mongo.play.json.PlayMongoRepository
@@ -35,7 +35,7 @@ import scala.concurrent.{ExecutionContext, Future}
 case class FileData(length: Long = 0, data: Source[Array[Byte], NotUsed] = Source.empty)
 
 @Singleton
-class RasFilesRepository @Inject() (val mongoComponent: MongoComponent, val appContext: AppContext)(implicit
+class RasFilesRepository @Inject() (val mongoComponent: MongoComponent, val appContext: AppContext)(using
   val ec: ExecutionContext
 ) extends PlayMongoRepository[Chunks](
       mongoComponent = mongoComponent,
@@ -47,7 +47,7 @@ class RasFilesRepository @Inject() (val mongoComponent: MongoComponent, val appC
     with GridFsTTLIndexing {
 
   override lazy val requiresTtlIndex: Boolean = false // custom index logic from GridFsTTLIndexing
-  override lazy val expireAfterSeconds: Int   = appContext.resultsExpriyTime
+  override val expireAfterSeconds: Int        = appContext.resultsExpriyTime
   override val log: Logger                    = Logger(getClass)
   private val contentType                     = "text/csv"
   private val bucketName: String              = "resultsFiles"

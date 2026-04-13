@@ -17,8 +17,8 @@
 package uk.gov.hmrc.rasapi.services
 
 import org.mockito.ArgumentCaptor
-import org.mockito.ArgumentMatchers._
-import org.mockito.Mockito._
+import org.mockito.ArgumentMatchers.*
+import org.mockito.Mockito.*
 import org.scalatest.BeforeAndAfter
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpecLike
@@ -35,16 +35,15 @@ import scala.concurrent.ExecutionContext
 class AuditServiceSpec
     extends AnyWordSpecLike with Matchers with MockitoSugar with GuiceOneAppPerSuite with BeforeAndAfter {
 
-  implicit val hc: HeaderCarrier         = HeaderCarrier()
+  given hc: HeaderCarrier                = HeaderCarrier()
   val mockAuditConnector: AuditConnector = mock[AuditConnector]
   val mockAppContext: AppContext         = app.injector.instanceOf[AppContext]
 
   val SUT = new AuditService(
     mockAuditConnector,
     app.injector.instanceOf[Configuration],
-    mockAppContext,
-    ExecutionContext.global
-  )
+    mockAppContext
+  )(using ExecutionContext.global)
 
   before {
     reset(mockAuditConnector)

@@ -16,17 +16,17 @@
 
 package uk.gov.hmrc.rasapi.services
 
-import java.time.Instant
 import play.api.Logging
 import uk.gov.hmrc.mongo.cache.{CacheItem, DataKey}
 import uk.gov.hmrc.rasapi.models.{FileMetadata, FileSession, ResultsFileMetaData, UpscanCallbackData}
 import uk.gov.hmrc.rasapi.repository.RasFilesSessionRepository
 
+import java.time.Instant
 import javax.inject.{Inject, Singleton}
 import scala.concurrent.{ExecutionContext, Future}
 
 @Singleton
-class RasFilesSessionService @Inject() (filesSessionRepository: RasFilesSessionRepository)(implicit
+class RasFilesSessionService @Inject() (filesSessionRepository: RasFilesSessionRepository)(using
   ec: ExecutionContext
 ) extends Logging {
 

@@ -17,20 +17,20 @@
 package uk.gov.hmrc.rasapi.controllers.lookupController
 
 import play.api.Logging
-import play.api.libs.json.Json._
-import play.api.libs.json._
-import play.api.mvc._
+import play.api.libs.json.*
+import play.api.libs.json.Json.*
+import play.api.mvc.*
+import uk.gov.hmrc.auth.core.*
 import uk.gov.hmrc.auth.core.AuthProvider.GovernmentGateway
-import uk.gov.hmrc.auth.core._
-import uk.gov.hmrc.auth.core.retrieve.v2.Retrievals._
+import uk.gov.hmrc.auth.core.retrieve.v2.Retrievals.*
 import uk.gov.hmrc.http.{BadRequestException, HeaderCarrier}
 import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
 import uk.gov.hmrc.rasapi.config.AppContext
 import uk.gov.hmrc.rasapi.connectors.DesConnector
-import uk.gov.hmrc.rasapi.controllers._
+import uk.gov.hmrc.rasapi.controllers.*
 import uk.gov.hmrc.rasapi.helpers.ResidencyYearResolver
 import uk.gov.hmrc.rasapi.metrics.Metrics
-import uk.gov.hmrc.rasapi.models._
+import uk.gov.hmrc.rasapi.models.*
 import uk.gov.hmrc.rasapi.services.AuditService
 import uk.gov.hmrc.rasapi.utils.ErrorConverter
 
@@ -48,9 +48,9 @@ class LookupController @Inject() (
   val appContext: AppContext,
   val errorConverter: ErrorConverter,
   cc: ControllerComponents,
-  implicit val ec: ExecutionContext,
   bodyParser: BodyParsers.Default
-) extends BackendController(cc) with SimpleHeaderValidator with AuthorisedFunctions with Logging {
+)(using ec: ExecutionContext)
+    extends BackendController(cc) with SimpleHeaderValidator with AuthorisedFunctions with Logging {
 
   def getCurrentDate: LocalDate                             = LocalDate.now()
   lazy val allowDefaultRUK: Boolean                         = appContext.allowDefaultRUK
@@ -87,7 +87,6 @@ class LookupController @Inject() (
   }
 
   def getResidencyStatus: Action[AnyContent] = validateAccept(acceptHeaderValidationRules).async { implicit request =>
-
     val apiMetrics = metrics.responseTimer.time
 
     authorised(
@@ -228,7 +227,7 @@ class LookupController @Inject() (
     userId: String,
     onSuccess: IndividualDetails => Future[Result],
     invalidCallback: scala.collection.Seq[(JsPath, scala.collection.Seq[JsonValidationError])] => Future[Result]
-  )(implicit request: Request[AnyContent]): Future[Result] =
+  )(using request: Request[AnyContent]): Future[Result] =
 
     request.body.asJson match {
       case Some(json) =>
@@ -271,7 +270,7 @@ class LookupController @Inject() (
     nino: Option[String],
     residencyStatus: Option[ResidencyStatus],
     userId: String
-  )(implicit request: Request[AnyContent], hc: HeaderCarrier): Unit = {
+  )(using request: Request[AnyContent], hc: HeaderCarrier): Unit = {
 
     val ninoMap: Map[String, String]           = nino.map(nino => Map("nino" -> nino)).getOrElse(Map())
     val nextYearStatusMap: Map[String, String] = if (residencyStatus.nonEmpty) {

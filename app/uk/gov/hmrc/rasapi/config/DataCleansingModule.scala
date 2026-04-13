@@ -24,7 +24,7 @@ class DataCleansingModule extends Module {
 
   lazy val bindServices: Seq[Binding[_]] = Seq(bind[DataCleansingService].toSelf.eagerly())
 
-  override def bindings(environment: Environment, configuration: Configuration): Seq[Binding[_]] =
+  override def bindings(environment: Environment, configuration: Configuration): Seq[Binding[?]] =
     bindServices
 
 }

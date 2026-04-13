@@ -25,7 +25,7 @@ import play.api.Configuration
 import play.api.libs.json.{JsValue, Json, Writes}
 import play.api.mvc.RequestHeader
 import play.api.test.FakeRequest
-import play.api.test.Helpers._
+import play.api.test.Helpers.*
 import uk.gov.hmrc.auth.core.AuthorisationException
 import uk.gov.hmrc.play.audit.http.connector.AuditConnector
 import uk.gov.hmrc.play.bootstrap.config.HttpAuditEvent
@@ -36,16 +36,16 @@ import scala.concurrent.ExecutionContext
 class RasErrorHandlerSpec
     extends AnyWordSpecLike with Matchers with MockitoSugar with GuiceOneAppPerTest with BeforeAndAfter {
 
-  implicit val ec: ExecutionContext = scala.concurrent.ExecutionContext.Implicits.global
+  given ec: ExecutionContext = scala.concurrent.ExecutionContext.Implicits.global
 
   lazy val mockConfiguration: Configuration   = app.injector.instanceOf[Configuration]
   lazy val mockAuditConnector: AuditConnector = mock[AuditConnector]
   lazy val mockHttpAuditEvent: HttpAuditEvent = mock[HttpAuditEvent]
 
-  lazy val errorHandler               = new RasErrorHandler(mockConfiguration, mockAuditConnector, mockHttpAuditEvent, ec)
+  lazy val errorHandler               = new RasErrorHandler(mockConfiguration, mockAuditConnector, mockHttpAuditEvent)
   lazy val fakeRequest: RequestHeader = FakeRequest("GET", "/some-url")
 
-  implicit val errorResponseWrites: Writes[ErrorResponse] = new Writes[ErrorResponse] {
+  given errorResponseWrites: Writes[ErrorResponse] = new Writes[ErrorResponse] {
     def writes(e: ErrorResponse): JsValue = Json.obj("code" -> e.errorCode, "message" -> e.message)
   }
 

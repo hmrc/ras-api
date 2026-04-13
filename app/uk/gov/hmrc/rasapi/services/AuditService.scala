@@ -18,7 +18,7 @@ package uk.gov.hmrc.rasapi.services
 
 import play.api.Configuration
 import uk.gov.hmrc.http.HeaderCarrier
-import uk.gov.hmrc.play.audit.AuditExtensions._
+import uk.gov.hmrc.play.audit.AuditExtensions.*
 import uk.gov.hmrc.play.audit.http.connector.{AuditConnector, AuditResult}
 import uk.gov.hmrc.play.audit.model.DataEvent
 import uk.gov.hmrc.rasapi.config.AppContext
@@ -29,11 +29,10 @@ import scala.concurrent.{ExecutionContext, Future}
 class AuditService @Inject() (
   val connector: AuditConnector,
   val appNameConfiguration: Configuration,
-  appContext: AppContext,
-  implicit val ec: ExecutionContext
-) {
+  appContext: AppContext
+)(using ec: ExecutionContext) {
 
-  def audit(auditType: String, path: String, auditData: Map[String, String])(implicit
+  def audit(auditType: String, path: String, auditData: Map[String, String])(using
     hc: HeaderCarrier
   ): Future[AuditResult] = {
     val event = DataEvent(

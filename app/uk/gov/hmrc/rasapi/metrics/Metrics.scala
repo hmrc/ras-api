@@ -17,6 +17,7 @@
 package uk.gov.hmrc.rasapi.metrics
 
 import com.codahale.metrics.{MetricRegistry, Timer}
+
 import javax.inject.Inject
 
 class Metrics @Inject() (val registry: MetricRegistry) {

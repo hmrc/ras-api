@@ -18,8 +18,8 @@ package uk.gov.hmrc.rasapi.connectors
 
 import org.apache.pekko.stream.scaladsl.Source
 import org.apache.pekko.util.ByteString
-import org.mockito.ArgumentMatchers._
-import org.mockito.Mockito._
+import org.mockito.ArgumentMatchers.*
+import org.mockito.Mockito.*
 import org.mockito.invocation.InvocationOnMock
 import org.mockito.stubbing.Answer
 import org.scalatest.matchers.should.Matchers
@@ -33,12 +33,13 @@ import uk.gov.hmrc.rasapi.config.{AppContext, WSHttp}
 import uk.gov.hmrc.rasapi.models.FileMetadata
 
 import java.io.{BufferedReader, InputStreamReader}
+import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.{ExecutionContext, Future}
 import scala.language.postfixOps
 
 class UpscanConnectorSpec extends AnyWordSpecLike with Matchers with GuiceOneAppPerSuite with MockitoSugar {
 
-  implicit val hc: HeaderCarrier = HeaderCarrier()
+  given hc: HeaderCarrier = HeaderCarrier()
 
   val mockWsHttp: WSHttp         = mock[WSHttp]
   val appContext: AppContext     = app.injector.instanceOf[AppContext]
@@ -58,7 +59,7 @@ class UpscanConnectorSpec extends AnyWordSpecLike with Matchers with GuiceOneApp
     wsResponseMock
   }
 
-  object TestConnector extends UpscanConnector(mockWsHttp, appContext, ExecutionContext.global)
+  object TestConnector extends UpscanConnector(mockWsHttp, appContext)
 
   val reference: String          = "0b215e97-11d4-4006-91db-c067e74fc653"
   val fileId: String             = "file-id-1"

@@ -19,8 +19,8 @@ package uk.gov.hmrc.rasapi.controllers.fileSession
 import play.api.Logging
 import play.api.libs.json.{JsError, JsSuccess, Json}
 import play.api.mvc.{Action, AnyContent, ControllerComponents, Result}
+import uk.gov.hmrc.auth.core.*
 import uk.gov.hmrc.auth.core.AuthProvider.GovernmentGateway
-import uk.gov.hmrc.auth.core._
 import uk.gov.hmrc.auth.core.retrieve.v2.Retrievals.authorisedEnrolments
 import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
@@ -35,7 +35,7 @@ class FileSessionController @Inject() (
   val filesSessionService: RasFilesSessionService,
   val authConnector: AuthConnector,
   cc: ControllerComponents
-)(implicit val ec: ExecutionContext)
+)(using ec: ExecutionContext)
     extends BackendController(cc) with AuthorisedFunctions with Logging {
 
   def createFileSession(): Action[AnyContent] = Action.async { implicit request =>
@@ -116,7 +116,7 @@ class FileSessionController @Inject() (
     }
   }
 
-  def isAuthorised()(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Either[Result, String]] =
+  def isAuthorised()(using hc: HeaderCarrier, ec: ExecutionContext): Future[Either[Result, String]] =
     authorised(
       AuthProviders(GovernmentGateway) and (Enrolment("HMRC-PSA-ORG") or Enrolment("HMRC-PP-ORG") or Enrolment(
         "HMRC-PODS-ORG"

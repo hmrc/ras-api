@@ -16,9 +16,9 @@
 
 package uk.gov.hmrc.rasapi.repositories
 
-import org.apache.pekko.stream.scaladsl.Sink
-import org.apache.pekko.stream.Materializer
 import org.apache.pekko.actor.ActorSystem
+import org.apache.pekko.stream.Materializer
+import org.apache.pekko.stream.scaladsl.Sink
 import org.scalatest.concurrent.PatienceConfiguration.{Interval, Timeout}
 import org.scalatest.concurrent.{Eventually, ScalaFutures}
 import org.scalatestplus.play.PlaySpec
@@ -29,7 +29,7 @@ import uk.gov.hmrc.rasapi.repository.{FileData, RasChunksRepository, RasFilesRep
 import java.io.File
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
-import scala.concurrent.duration._
+import scala.concurrent.duration.*
 import scala.io.{BufferedSource, Source}
 
 class RasFileRepositoryISpec

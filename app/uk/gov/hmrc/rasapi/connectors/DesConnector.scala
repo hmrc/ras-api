@@ -18,10 +18,11 @@ package uk.gov.hmrc.rasapi.connectors
 
 import play.api.Logging
 import play.api.libs.json.{JsObject, Json}
-import uk.gov.hmrc.http.{HeaderCarrier, _}
+import play.api.libs.ws.writeableOf_JsValue
+import uk.gov.hmrc.http.{HeaderCarrier, *}
 import uk.gov.hmrc.play.bootstrap.http.HttpClientV2Provider
 import uk.gov.hmrc.rasapi.config.AppContext
-import uk.gov.hmrc.rasapi.models._
+import uk.gov.hmrc.rasapi.models.*
 import uk.gov.hmrc.rasapi.services.AuditService
 
 import java.util.UUID.randomUUID
@@ -32,9 +33,9 @@ import scala.util.{Failure, Success, Try}
 class DesConnector @Inject() (
   httpPost: HttpClientV2Provider,
   val auditService: AuditService,
-  val appContext: AppContext,
-  implicit val ec: ExecutionContext
-) extends Logging {
+  val appContext: AppContext
+)(using ec: ExecutionContext)
+    extends Logging {
 
   val uk       = "Uk"
   val scot     = "Scottish"
@@ -72,7 +73,7 @@ class DesConnector @Inject() (
     isBulkRequest: Boolean = false
   ): Future[Either[ResidencyStatus, ResidencyStatusFailure]] = {
 
-    implicit val rasHeaders: HeaderCarrier = HeaderCarrier()
+    given rasHeaders: HeaderCarrier = HeaderCarrier()
 
     val uri = s"$desBaseUrl/individuals/residency-status/"
 
@@ -95,7 +96,7 @@ class DesConnector @Inject() (
         )
       }
 
-      sendResidencyStatusRequest(uri, member, userId, desHeaders, apiVersion)(rasHeaders) flatMap {
+      sendResidencyStatusRequest(uri, member, userId, desHeaders, apiVersion) flatMap {
         case Left(result)                                                                              => Future.successful(Left(result))
         case Right(result) if retryCount < retryLimit && isCodeRetryable(result.code, isBulkRequest)   =>
           Thread.sleep(retryDelay) // Delay before sending to HoD to try to avoid transactions per second(tps) clash
@@ -130,7 +131,7 @@ class DesConnector @Inject() (
     userId: String,
     desHeaders: Seq[(String, String)],
     apiVersion: ApiVersion
-  )(implicit rasHeaders: HeaderCarrier): Future[Either[ResidencyStatus, ResidencyStatusFailure]] = {
+  )(using rasHeaders: HeaderCarrier): Future[Either[ResidencyStatus, ResidencyStatusFailure]] = {
 
     val payload = Json.toJson(
       Json
@@ -140,7 +141,7 @@ class DesConnector @Inject() (
     val result  = httpPost
       .get()
       .post(url"$uri")
-      .setHeader(desHeaders: _*)
+      .setHeader(desHeaders*)
       .withBody(payload)
       .execute[HttpResponse]
     result.map(response => resolveResponse(response, userId, member.nino, apiVersion)).recover {
@@ -205,7 +206,7 @@ class DesConnector @Inject() (
     }
   }
 
-  private def resolveResponse(httpResponse: HttpResponse, userId: String, nino: NINO, apiVersion: ApiVersion)(implicit
+  private def resolveResponse(httpResponse: HttpResponse, userId: String, nino: NINO, apiVersion: ApiVersion)(using
     hc: HeaderCarrier
   ): Either[ResidencyStatus, ResidencyStatusFailure] =
 

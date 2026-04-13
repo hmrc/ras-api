@@ -16,12 +16,11 @@
 
 package uk.gov.hmrc.rasapi.services
 
-import org.apache.pekko.stream.Materializer
 import org.apache.pekko.actor.ActorSystem
-import java.time.{Instant, LocalDate}
+import org.apache.pekko.stream.Materializer
 import org.mockito.ArgumentCaptor
-import org.mockito.ArgumentMatchers.{eq => Meq, _}
-import org.mockito.Mockito._
+import org.mockito.ArgumentMatchers.{eq as Meq, *}
+import org.mockito.Mockito.*
 import org.scalatest.BeforeAndAfter
 import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.matchers.should.Matchers
@@ -39,7 +38,7 @@ import uk.gov.hmrc.rasapi.config.AppContext
 import uk.gov.hmrc.rasapi.connectors.{DesConnector, UpscanConnector}
 import uk.gov.hmrc.rasapi.helpers.ResidencyYearResolver
 import uk.gov.hmrc.rasapi.metrics.Metrics
-import uk.gov.hmrc.rasapi.models._
+import uk.gov.hmrc.rasapi.models.*
 import uk.gov.hmrc.rasapi.repositories.RepositoriesHelper.getAll
 import uk.gov.hmrc.rasapi.repositories.TestFileWriter
 import uk.gov.hmrc.rasapi.repository.RasFilesRepository
@@ -48,6 +47,7 @@ import java.io.{ByteArrayInputStream, FileInputStream}
 import java.nio.charset.StandardCharsets
 import java.nio.file.{Files, Path}
 import java.time.format.DateTimeFormatter
+import java.time.{Instant, LocalDate}
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.Try
@@ -61,10 +61,10 @@ class FileProcessingServiceSpec
     with BeforeAndAfter
     with DefaultPlayMongoRepositorySupport[Chunks] {
 
-  implicit val hc: HeaderCarrier                            = HeaderCarrier()
-  implicit val fakeReq: FakeRequest[AnyContentAsEmpty.type] = FakeRequest("POST", "/residency-status")
-  implicit lazy val system: ActorSystem                     = ActorSystem()
-  implicit val materializers: Materializer                  = Materializer(system)
+  given hc: HeaderCarrier                            = HeaderCarrier()
+  given fakeReq: FakeRequest[AnyContentAsEmpty.type] = FakeRequest("POST", "/residency-status")
+  given system: ActorSystem                          = ActorSystem()
+  given materializers: Materializer                  = Materializer(system)
 
   val mockUpscanConnector: UpscanConnector = mock[UpscanConnector]
 
@@ -81,7 +81,10 @@ class FileProcessingServiceSpec
   val STATUS_SERVICE_UNAVAILABLE: String                   = "SERVICE_UNAVAILABLE"
   val STATUS_FILE_PROCESSING_MATCHING_FAILED: String       = "cannot_provide_status"
   val STATUS_FILE_PROCESSING_INTERNAL_SERVER_ERROR: String = "problem-getting-status"
-  override lazy val repository                             = new RasFilesRepository(mongoComponent, appContext)
+
+  val repository: RasFilesRepository                       = new RasFilesRepository(mongoComponent, appContext)(using
+    ExecutionContext.global
+  )
 
   val SUT: FileProcessingService = new FileProcessingService(
     mockUpscanConnector,
@@ -91,9 +94,8 @@ class FileProcessingServiceSpec
     mockSessionCache,
     repository,
     appContext,
-    metrics,
-    ExecutionContext.global
-  ) {
+    metrics
+  )(using ExecutionContext.global) {
     override def getCurrentDate: LocalDate = LocalDate.parse("2018-06-04", DateTimeFormatter.ofPattern("yyyy-MM-dd"))
 
     override val allowDefaultRUK: Boolean = false
@@ -144,9 +146,8 @@ class FileProcessingServiceSpec
           mockSessionCache,
           repository,
           appContext,
-          metrics,
-          ExecutionContext.global
-        ) {
+          metrics
+        )(using ExecutionContext.global) {
           override def getCurrentDate: LocalDate =
             LocalDate.parse("2018-02-04", DateTimeFormatter.ofPattern("yyyy-MM-dd"))
 
@@ -224,7 +225,7 @@ class FileProcessingServiceSpec
               "requestSource"    -> "FE_BULK"
             )
           )
-        )(any())
+        )(using any())
       }
 
       "there is a successful result returned when a request is made on 4th Feb 2019" in {
@@ -239,9 +240,8 @@ class FileProcessingServiceSpec
           mockSessionCache,
           repository,
           appContext,
-          metrics,
-          ExecutionContext.global
-        ) {
+          metrics
+        )(using ExecutionContext.global) {
           override def getCurrentDate: LocalDate =
             LocalDate.parse("2019-02-04", DateTimeFormatter.ofPattern("yyyy-MM-dd"))
 
@@ -318,7 +318,7 @@ class FileProcessingServiceSpec
               "requestSource"    -> "FE_BULK"
             )
           )
-        )(any())
+        )(using any())
       }
 
       "there is a successful result returned when a request is made on 4th June 2018" in {
@@ -333,9 +333,8 @@ class FileProcessingServiceSpec
           mockSessionCache,
           repository,
           appContext,
-          metrics,
-          ExecutionContext.global
-        ) {
+          metrics
+        )(using ExecutionContext.global) {
           override def getCurrentDate: LocalDate =
             LocalDate.parse("2018-06-04", DateTimeFormatter.ofPattern("yyyy-MM-dd"))
 
@@ -411,7 +410,7 @@ class FileProcessingServiceSpec
               "requestSource"    -> "FE_BULK"
             )
           )
-        )(any())
+        )(using any())
       }
 
       "there is a matching failed result" in {
@@ -426,9 +425,8 @@ class FileProcessingServiceSpec
           mockSessionCache,
           repository,
           appContext,
-          metrics,
-          ExecutionContext.global
-        ) {
+          metrics
+        )(using ExecutionContext.global) {
           override def getCurrentDate: LocalDate =
             LocalDate.parse("2018-02-04", DateTimeFormatter.ofPattern("yyyy-MM-dd"))
 
@@ -507,7 +505,7 @@ class FileProcessingServiceSpec
               "requestSource"    -> "FE_BULK"
             )
           )
-        )(any())
+        )(using any())
       }
 
       "there is a deceased result" in {
@@ -522,9 +520,8 @@ class FileProcessingServiceSpec
           mockSessionCache,
           repository,
           appContext,
-          metrics,
-          ExecutionContext.global
-        ) {
+          metrics
+        )(using ExecutionContext.global) {
           override def getCurrentDate: LocalDate =
             LocalDate.parse("2018-02-04", DateTimeFormatter.ofPattern("yyyy-MM-dd"))
 
@@ -601,7 +598,7 @@ class FileProcessingServiceSpec
               "requestSource"    -> "FE_BULK"
             )
           )
-        )(any())
+        )(using any())
       }
 
       "there is a SERVICE_UNAVAILABLE result" in {
@@ -615,9 +612,8 @@ class FileProcessingServiceSpec
           mockSessionCache,
           repository,
           appContext,
-          metrics,
-          ExecutionContext.global
-        ) {
+          metrics
+        )(using ExecutionContext.global) {
           override def getCurrentDate: LocalDate =
             LocalDate.parse("2018-02-04", DateTimeFormatter.ofPattern("yyyy-MM-dd"))
 
@@ -698,7 +694,7 @@ class FileProcessingServiceSpec
               "requestSource"    -> "FE_BULK"
             )
           )
-        )(any())
+        )(using any())
       }
     }
   }

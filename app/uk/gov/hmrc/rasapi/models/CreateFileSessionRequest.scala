@@ -16,8 +16,8 @@
 
 package uk.gov.hmrc.rasapi.models
 
-import play.api.libs.json._
-import play.api.libs.functional.syntax._
+import play.api.libs.functional.syntax.*
+import play.api.libs.json.*
 
 case class CreateFileSessionRequest(userId: String, reference: String)
 

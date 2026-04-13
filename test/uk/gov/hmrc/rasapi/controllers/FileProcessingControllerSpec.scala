@@ -16,8 +16,8 @@
 
 package uk.gov.hmrc.rasapi.controllers
 
-import org.mockito.ArgumentMatchers.{any, eq => Meq}
-import org.mockito.Mockito._
+import org.mockito.ArgumentMatchers.{any, eq as Meq}
+import org.mockito.Mockito.*
 import org.scalatest.BeforeAndAfter
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpecLike
@@ -70,7 +70,7 @@ class FileProcessingControllerSpec
   val mockCC: ControllerComponents                     = app.injector.instanceOf[ControllerComponents]
 
   val SUT =
-    new FileProcessingController(mockSessionCacheService, mockFileProcessingService, mockCC, ExecutionContext.global)
+    new FileProcessingController(mockSessionCacheService, mockFileProcessingService, mockCC)(using ExecutionContext.global)
 
   before {
     reset(mockFileProcessingService)
@@ -86,11 +86,14 @@ class FileProcessingControllerSpec
   "statusCallback" should {
     "return Ok and interact with FileProcessingService and SessionCacheService" when {
       "an 'READY' status is given and processFile is successful" in {
-        when(mockFileProcessingService.processFile(any(), any(), any())(any(), any())).thenReturn(true)
+        when(mockFileProcessingService.processFile(any(), any(), any())(using any(), any())).thenReturn(true)
         val result =
           SUT.statusCallback(userId, version = "2.0").apply(fakeRequest.withJsonBody(Json.toJson(upscanCallbackData)))
 
-        verify(mockFileProcessingService).processFile(Meq(userId), Meq(upscanCallbackData), Meq(V2_0))(any(), any())
+        verify(mockFileProcessingService).processFile(Meq(userId), Meq(upscanCallbackData), Meq(V2_0))(using
+          any(),
+          any()
+        )
         verify(mockSessionCacheService).updateFileSession(Meq(userId), Meq(upscanCallbackData), Meq(None), Meq(None))
 
         status(result) shouldBe OK

@@ -16,13 +16,13 @@
 
 package uk.gov.hmrc.rasapi.repository
 
-import org.mongodb.scala.MongoDatabase
+import org.mongodb.scala.*
 import org.mongodb.scala.bson.{BsonInt32, BsonInt64, Document}
 import org.mongodb.scala.model.IndexOptions
 import play.api.Logger
 
-import scala.concurrent.{ExecutionContext, Future}
 import scala.concurrent.duration.SECONDS
+import scala.concurrent.{ExecutionContext, Future}
 
 trait GridFsTTLIndexing {
 
@@ -68,12 +68,12 @@ trait GridFsTTLIndexing {
         key = Document(UploadDate -> 1),
         options = IndexOptions()
           .name(indexName)
-          .expireAfter(expireAfterSeconds, SECONDS)
+          .expireAfter(expireAfterSeconds.toLong, SECONDS)
       )
       .toFuture()
   }
 
-  def checkAndEnsureTTL(mdb: MongoDatabase, collectionName: String)(implicit ec: ExecutionContext): Future[Boolean] =
+  def checkAndEnsureTTL(mdb: MongoDatabase, collectionName: String)(using ec: ExecutionContext): Future[Boolean] =
     listAllIndexes(mdb, collectionName).flatMap { indexes =>
       for {
         _         <- if (indexes.exists(index => index.containsValue(LastUpdatedIndex))) {

@@ -28,7 +28,7 @@ class DataCleansingService @Inject() (
   appContext: AppContext,
   chunksRepo: RasChunksRepository,
   fileRepo: RasFilesRepository
-)(implicit val ec: ExecutionContext)
+)(using ec: ExecutionContext)
     extends Logging {
 
   def removeOrphanedChunks(): Future[Seq[ObjectId]] = if (appContext.removeChunksDataExerciseEnabled) {

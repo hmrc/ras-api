@@ -17,7 +17,7 @@
 package uk.gov.hmrc.rasapi.repositories
 
 import org.mockito.Mockito.when
-import org.mongodb.scala.Document
+import org.mongodb.scala.{Document, ObservableFuture}
 import org.mongodb.scala.bson.{BsonInt32, BsonInt64, BsonString}
 import org.scalatest.BeforeAndAfter
 import org.scalatest.matchers.should.Matchers
@@ -30,8 +30,6 @@ import uk.gov.hmrc.rasapi.models.Chunks
 import uk.gov.hmrc.rasapi.repositories.RepositoriesHelper.createFile
 import uk.gov.hmrc.rasapi.repository.RasFilesRepository
 
-import scala.concurrent.ExecutionContext.Implicits.global
-
 class GridFsTTLIndexingSpec
     extends AnyWordSpecLike
     with Matchers
@@ -42,10 +40,13 @@ class GridFsTTLIndexingSpec
   val mockAppContext: AppContext = mock[AppContext]
   when(mockAppContext.resultsExpriyTime).thenReturn(3600)
 
-  override lazy val repository   = new RasFilesRepository(mongoComponent, mockAppContext)
-  lazy val LastUpdatedIndex      = "lastUpdatedIndex"
-  lazy val OptExpireAfterSeconds = "expireAfterSeconds"
-  lazy val UploadDate            = "uploadDate"
+  val repository: RasFilesRepository = new RasFilesRepository(mongoComponent, mockAppContext)(using
+    scala.concurrent.ExecutionContext.global
+  )
+
+  lazy val LastUpdatedIndex          = "lastUpdatedIndex"
+  lazy val OptExpireAfterSeconds     = "expireAfterSeconds"
+  lazy val UploadDate                = "uploadDate"
 
   "GridFsTTLIndexing" should {
     "Add the lastUpdatedIndex with TTL option to a collection" in {
