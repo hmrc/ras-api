@@ -44,9 +44,9 @@ class GridFsTTLIndexingSpec
     scala.concurrent.ExecutionContext.global
   )
 
-  lazy val LastUpdatedIndex          = "lastUpdatedIndex"
-  lazy val OptExpireAfterSeconds     = "expireAfterSeconds"
-  lazy val UploadDate                = "uploadDate"
+  lazy val LastUpdatedIndex      = "lastUpdatedIndex"
+  lazy val OptExpireAfterSeconds = "expireAfterSeconds"
+  lazy val UploadDate            = "uploadDate"
 
   "GridFsTTLIndexing" should {
     "Add the lastUpdatedIndex with TTL option to a collection" in {

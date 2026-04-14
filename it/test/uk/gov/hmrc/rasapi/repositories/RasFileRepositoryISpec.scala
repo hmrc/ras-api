@@ -45,7 +45,7 @@ class RasFileRepositoryISpec
     lazy val rasChunksRepository: RasChunksRepository = app.injector.instanceOf[RasChunksRepository]
     val largeFile: File                               = new File("it/test/resources/testFiles/bulk.csv")
     implicit lazy val system: ActorSystem             = ActorSystem()
-    implicit val materializers: Materializer          = Materializer(system)
+    given materializers: Materializer                 = Materializer(system)
 
     val dropAll: Unit = {
       await(rasFileRepository.gridFSG.drop().head())

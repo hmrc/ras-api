@@ -70,7 +70,9 @@ class FileProcessingControllerSpec
   val mockCC: ControllerComponents                     = app.injector.instanceOf[ControllerComponents]
 
   val SUT =
-    new FileProcessingController(mockSessionCacheService, mockFileProcessingService, mockCC)(using ExecutionContext.global)
+    new FileProcessingController(mockSessionCacheService, mockFileProcessingService, mockCC)(using
+      ExecutionContext.global
+    )
 
   before {
     reset(mockFileProcessingService)

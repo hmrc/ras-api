@@ -25,7 +25,7 @@ import java.time.Instant
 case class FileMetadata(id: String, name: Option[String], created: Option[String])
 
 object FileMetadata {
-  implicit val format: OFormat[FileMetadata] = Json.format[FileMetadata]
+  given format: OFormat[FileMetadata] = Json.format[FileMetadata]
 }
 
 case class UploadDetails(uploadTimestamp: Instant, checksum: String, fileMimeType: String, fileName: String, size: Int)
@@ -33,11 +33,11 @@ case class UploadDetails(uploadTimestamp: Instant, checksum: String, fileMimeTyp
 case class FailureDetails(failureReason: String, message: String)
 
 object FailureDetails {
-  implicit val formats: OFormat[FailureDetails] = Json.format[FailureDetails]
+  given formats: OFormat[FailureDetails] = Json.format[FailureDetails]
 }
 
 object UploadDetails {
-  implicit val formats: OFormat[UploadDetails] = Json.format[UploadDetails]
+  given formats: OFormat[UploadDetails] = Json.format[UploadDetails]
 }
 
 case class UpscanCallbackData(
@@ -60,20 +60,20 @@ case class UpscanCallbackData(
 }
 
 object UpscanCallbackData {
-  implicit val formats: OFormat[UpscanCallbackData] = Json.format[UpscanCallbackData]
+  given formats: OFormat[UpscanCallbackData] = Json.format[UpscanCallbackData]
 }
 
 case class ResultsFileMetaData(id: String, filename: String, uploadDate: Long, chunkSize: Int, length: Long)
 
 object ResultsFileMetaData {
-  implicit val formats: OFormat[ResultsFileMetaData] = Json.format[ResultsFileMetaData]
+  given formats: OFormat[ResultsFileMetaData] = Json.format[ResultsFileMetaData]
 }
 
 case class Chunks(_id: ObjectId, files_id: ObjectId)
 
 object Chunks {
-  implicit val objectIdformats: Format[ObjectId] = MongoFormats.objectIdFormat
-  implicit val format: OFormat[Chunks]           = Json.format[Chunks]
+  given objectIdformats: Format[ObjectId] = MongoFormats.objectIdFormat
+  given format: OFormat[Chunks]           = Json.format[Chunks]
 }
 
 case class FileSession(
@@ -85,5 +85,5 @@ case class FileSession(
 )
 
 object FileSession {
-  implicit val format: OFormat[FileSession] = Json.format[FileSession]
+  given format: OFormat[FileSession] = Json.format[FileSession]
 }

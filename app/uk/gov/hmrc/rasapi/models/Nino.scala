@@ -21,5 +21,5 @@ import play.api.libs.json.{Json, OFormat}
 case class Nino(nino: String)
 
 object Nino {
-  implicit val format: OFormat[Nino] = Json.format[Nino]
+  given format: OFormat[Nino] = Json.format[Nino]
 }

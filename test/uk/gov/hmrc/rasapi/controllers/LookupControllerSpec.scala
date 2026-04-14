@@ -129,7 +129,7 @@ class LookupControllerSpec
         errorConverer,
         mockCC,
         mockParser
-      )(using any()) {
+      ) {
 
     override def getCurrentDate: LocalDate = LocalDate.of(2018, 7, 6)
 
@@ -152,7 +152,7 @@ class LookupControllerSpec
         errorConverer,
         mockCC,
         mockParser
-      )(using any()) {
+      ) {
     override def getCurrentDate: LocalDate = LocalDate.of(2018, 2, 15)
 
     override lazy val allowDefaultRUK: Boolean           = true

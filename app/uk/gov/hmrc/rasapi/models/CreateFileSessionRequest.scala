@@ -26,11 +26,11 @@ object CreateFileSessionRequest {
   def nonEmptyString(fieldName: String): Reads[String] =
     Reads.StringReads.filter(JsonValidationError(s"$fieldName cannot be empty"))(_.nonEmpty)
 
-  implicit val reads: Reads[CreateFileSessionRequest] = (
+  given reads: Reads[CreateFileSessionRequest] = (
     (__ \ "userId").read[String](nonEmptyString("userId")) and
       (__ \ "reference").read[String](nonEmptyString("reference"))
   )(CreateFileSessionRequest.apply _)
 
-  implicit val writes: OWrites[CreateFileSessionRequest] = Json.writes[CreateFileSessionRequest]
-  implicit val format: OFormat[CreateFileSessionRequest] = OFormat(reads, writes)
+  given writes: OWrites[CreateFileSessionRequest] = Json.writes[CreateFileSessionRequest]
+  given format: OFormat[CreateFileSessionRequest] = OFormat(reads, writes)
 }

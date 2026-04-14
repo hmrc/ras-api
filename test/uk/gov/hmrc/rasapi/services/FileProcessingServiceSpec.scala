@@ -82,7 +82,7 @@ class FileProcessingServiceSpec
   val STATUS_FILE_PROCESSING_MATCHING_FAILED: String       = "cannot_provide_status"
   val STATUS_FILE_PROCESSING_INTERNAL_SERVER_ERROR: String = "problem-getting-status"
 
-  val repository: RasFilesRepository                       = new RasFilesRepository(mongoComponent, appContext)(using
+  val repository: RasFilesRepository = new RasFilesRepository(mongoComponent, appContext)(using
     ExecutionContext.global
   )
 

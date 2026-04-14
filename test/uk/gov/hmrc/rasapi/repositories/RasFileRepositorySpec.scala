@@ -55,7 +55,7 @@ class RasFileRepositorySpec
     scala.concurrent.ExecutionContext.global
   )
 
-  val userId: String                 = "A1234567"
+  val userId: String = "A1234567"
 
   "RasFileRepository" should {
     "saveFile should successfully save a file in storage" in {

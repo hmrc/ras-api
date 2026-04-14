@@ -64,7 +64,7 @@ case class TooManyRequestsResponse(tooManyRequestsStatus: String)
     )
 
 object TooManyRequestsResponse {
-  implicit val writes: Writes[TooManyRequestsResponse] = Json.writes[TooManyRequestsResponse]
+  given writes: Writes[TooManyRequestsResponse] = Json.writes[TooManyRequestsResponse]
 }
 
 case object ErrorServiceUnavailable

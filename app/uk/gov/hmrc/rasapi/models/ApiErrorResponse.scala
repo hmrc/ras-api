@@ -23,7 +23,7 @@ final case class ApiErrorResponse(code: String, message: String) {
 }
 
 object ApiErrorResponse {
-  implicit val writes: OWrites[ApiErrorResponse] = Json.writes[ApiErrorResponse]
+  given writes: OWrites[ApiErrorResponse] = Json.writes[ApiErrorResponse]
 
   val internalServerError: ApiErrorResponse =
     ApiErrorResponse("INTERNAL_SERVER_ERROR", "Internal server error")

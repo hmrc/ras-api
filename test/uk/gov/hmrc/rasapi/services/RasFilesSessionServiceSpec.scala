@@ -43,7 +43,7 @@ class RasFilesSessionServiceSpec
     with OptionValues
     with PlayMongoRepositorySupport[CacheItem] {
 
-  val appContext: AppContext                = app.injector.instanceOf[AppContext]
+  val appContext: AppContext = app.injector.instanceOf[AppContext]
 
   val repository: RasFilesSessionRepository =
     new RasFilesSessionRepository(mongoComponent, appContext, new CurrentTimestampSupport)(using

@@ -84,7 +84,7 @@ class RasFilesRepository @Inject() (val mongoComponent: MongoComponent, val appC
       }
   }
 
-  def fetchFile(_fileName: String, userId: String)(implicit ec: ExecutionContext): Future[Option[FileData]] = {
+  def fetchFile(_fileName: String, userId: String)(using ec: ExecutionContext): Future[Option[FileData]] = {
     log.info(s"[RasFilesRepository][fetchFile] Attempting to fetch file ${_fileName} for userId ($userId).")
     gridFSG
       .find(Document("filename" -> _fileName))

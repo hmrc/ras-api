@@ -46,8 +46,8 @@ class RasChunksRepositorySpec
     scala.concurrent.ExecutionContext.global
   )
 
-  val chunksRepository               = new RasChunksRepository(mongoComponent)
-  val userId: String                 = "A1234567"
+  val chunksRepository = new RasChunksRepository(mongoComponent)
+  val userId: String   = "A1234567"
 
   "RasChunksRepository" should {
 

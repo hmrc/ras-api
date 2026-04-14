@@ -55,7 +55,7 @@ class FileProcessingApiISpec
   lazy val ws: WSClient                          = app.injector.instanceOf[WSClient]
   lazy val client1: HttpClientV2                 = app.injector.instanceOf[HttpClientV2]
   private val uri                                = s"http://localhost:$port/ras-api/file/getFile/reference-1"
-  implicit val hc: HeaderCarrier                 = HeaderCarrier()
+  given hc: HeaderCarrier                        = HeaderCarrier()
 
   class Setup(filename: String) {
     val largeFile: File = new File("it/test/resources/testFiles/bulk.csv")
