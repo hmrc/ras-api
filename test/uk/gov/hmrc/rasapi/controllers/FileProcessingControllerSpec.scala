@@ -19,19 +19,20 @@ package uk.gov.hmrc.rasapi.controllers
 import org.mockito.ArgumentMatchers.{any, eq as Meq}
 import org.mockito.Mockito.*
 import org.scalatest.BeforeAndAfter
+import org.scalatest.matchers.must.Matchers.mustBe
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpecLike
 import org.scalatestplus.mockito.MockitoSugar
 import org.scalatestplus.play.guice.GuiceOneAppPerSuite
 import play.api.Application
-import play.api.http.Status.OK
+import play.api.http.Status.{BAD_REQUEST, OK}
 import play.api.inject.guice.GuiceApplicationBuilder
 import play.api.libs.json.Json
 import play.api.mvc.ControllerComponents
 import play.api.test.FakeRequest
 import play.api.test.Helpers.{defaultAwaitTimeout, status}
 import uk.gov.hmrc.rasapi.controllers.fileProcessing.FileProcessingController
-import uk.gov.hmrc.rasapi.models.{ResultsFileMetaData, UploadDetails, UpscanCallbackData, V2_0}
+import uk.gov.hmrc.rasapi.models.*
 import uk.gov.hmrc.rasapi.services.{FileProcessingService, RasFilesSessionService}
 
 import java.time.Instant
@@ -86,6 +87,7 @@ class FileProcessingControllerSpec
   lazy val fakeRequest = FakeRequest()
 
   "statusCallback" should {
+
     "return Ok and interact with FileProcessingService and SessionCacheService" when {
       "an 'READY' status is given and processFile is successful" in {
         when(mockFileProcessingService.processFile(any(), any(), any())(using any(), any())).thenReturn(true)
@@ -100,6 +102,33 @@ class FileProcessingControllerSpec
 
         status(result) shouldBe OK
       }
+
+      "an 'READY' status is given and processFile is successful for version 1" in {
+        when(mockFileProcessingService.processFile(any(), any(), any())(using any(), any())).thenReturn(true)
+        val result =
+          SUT.statusCallback(userId, version = "1.0").apply(fakeRequest.withJsonBody(Json.toJson(upscanCallbackData)))
+
+        verify(mockFileProcessingService).processFile(Meq(userId), Meq(upscanCallbackData), Meq(V1_0))(using
+          any(),
+          any()
+        )
+        verify(mockSessionCacheService).updateFileSession(Meq(userId), Meq(upscanCallbackData), Meq(None), Meq(None))
+
+        status(result) shouldBe OK
+      }
+
+      "processFile will fail when given version 3 and throws BadRequest" in {
+        when(mockFileProcessingService.processFile(any(), any(), any())(using any(), any()))
+          .thenReturn(true)
+
+        val result =
+          SUT
+            .statusCallback(userId, version = "3.0")
+            .apply(fakeRequest.withJsonBody(Json.toJson(upscanCallbackData)))
+
+        status(result) mustBe BAD_REQUEST
+      }
+
     }
 
     "return Ok and not interact with FileProcessingService" when {
@@ -117,6 +146,18 @@ class FileProcessingControllerSpec
           Meq(None),
           Meq(None)
         )
+
+        status(result) shouldBe OK
+      }
+
+      "an 'UNKNOWN' status is given" in {
+        val fileStatus = "UNKNOWN"
+
+        val result = SUT
+          .statusCallback(userId, version = "2.0")
+          .apply(fakeRequest.withJsonBody(Json.toJson(upscanCallbackData.copy(fileStatus = fileStatus))))
+
+        verifyNoInteractions(mockFileProcessingService)
 
         status(result) shouldBe OK
       }

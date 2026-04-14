@@ -17,8 +17,8 @@
 package uk.gov.hmrc.rasapi.repositories
 
 import org.mockito.Mockito.when
-import org.mongodb.scala.{Document, ObservableFuture}
 import org.mongodb.scala.bson.{BsonInt32, BsonInt64, BsonString}
+import org.mongodb.scala.{Document, ObservableFuture}
 import org.scalatest.BeforeAndAfter
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpecLike
