@@ -79,7 +79,7 @@ class FileProcessingApiISpec
       val headers                    = Map("Authorization" -> "Bearer123")
       authMocks
       val testSource: BufferedSource = Source.fromFile("it/test/resources/testFiles/bulk.csv")
-      val response                   = await(client1.get(url"$uri").setHeader(headers.toSeq: _*).execute)
+      val response                   = await(client1.get(url"$uri").setHeader(headers.toSeq*).execute)
       response.status                 mustBe OK
       response.body                   mustBe testSource.getLines().toList.mkString("\n")
       response.header("Content-Type") mustBe Some("application/csv")

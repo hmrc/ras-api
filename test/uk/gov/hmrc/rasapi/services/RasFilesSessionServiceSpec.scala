@@ -16,13 +16,15 @@
 
 package uk.gov.hmrc.rasapi.services
 
+import org.mockito.ArgumentMatchers.any
 import org.mockito.Mockito.*
 import org.scalatest.OptionValues
+import org.scalatest.matchers.must.Matchers.mustBe
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpec
 import org.scalatestplus.mockito.MockitoSugar
 import org.scalatestplus.play.guice.GuiceOneAppPerSuite
-import play.api.libs.json.{JsObject, JsValue, Json}
+import play.api.libs.json.{JsObject, JsValue, Json, Writes}
 import play.api.test.Helpers.{await, defaultAwaitTimeout}
 import uk.gov.hmrc.mongo.CurrentTimestampSupport
 import uk.gov.hmrc.mongo.cache.{CacheItem, DataKey}
@@ -58,6 +60,21 @@ class RasFilesSessionServiceSpec
 
       result shouldBe true
     }
+
+    "return false when repository fails" in {
+      val sessionCacheRepositoryMock  = mock[RasFilesSessionRepository]
+      val SUT: RasFilesSessionService = new RasFilesSessionService(sessionCacheRepositoryMock)(using
+        ExecutionContext.global
+      )
+      when(
+        sessionCacheRepositoryMock.put[FileSession](any)(any(), any())(any)
+      ).thenReturn(Future.failed(new Exception("failed")))
+
+      val result = await(SUT.createFileSession("A1234533", "reference"))
+
+      result mustBe false
+    }
+
   }
 
   "fetchFileSession" should {
@@ -66,6 +83,19 @@ class RasFilesSessionServiceSpec
 
       result shouldBe defined
     }
+
+    "return None when exception occured during get file" in {
+      val sessionCacheRepositoryMock  = mock[RasFilesSessionRepository]
+      val SUT: RasFilesSessionService = new RasFilesSessionService(sessionCacheRepositoryMock)(using
+        ExecutionContext.global
+      )
+      when(sessionCacheRepositoryMock.get[FileSession]("A1234533")(DataKey("fileSession")))
+        .thenReturn(Future.failed(new Exception("failed")))
+      val result                      = await(SUT.fetchFileSession("A1234533"))
+
+      result shouldBe None
+    }
+
   }
 
   "removeFileSession" should {
@@ -73,6 +103,18 @@ class RasFilesSessionServiceSpec
       val result = await(SUT.removeFileSession("A1234533"))
 
       result shouldBe true
+    }
+
+    "return false when exception occured while remove file" in {
+      val sessionCacheRepositoryMock  = mock[RasFilesSessionRepository]
+      val SUT: RasFilesSessionService = new RasFilesSessionService(sessionCacheRepositoryMock)(using
+        ExecutionContext.global
+      )
+      when(sessionCacheRepositoryMock.deleteEntity("userId"))
+        .thenReturn(Future.failed(new Exception("failed")))
+      val result                      = await(SUT.removeFileSession("userId"))
+
+      result shouldBe false
     }
   }
 
