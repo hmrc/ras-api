@@ -128,6 +128,30 @@ class FileControllerSpec
       }
     }
 
+    "get Exception when getfile is failed" when {
+      val fileController = new FileController(
+        mockRasFileRepository,
+        mockRasChunksRepository,
+        mockMetrics,
+        mockAuditService,
+        mockAuthConnector,
+        mockCC
+      ) {
+        override def getFile(name: String, userId: String): Future[Option[FileData]] =
+          Future(throw new Exception("Failed"))
+      }
+
+      "the file is not available" in {
+        when(mockAuthConnector.authorise[Enrolments](any(), any())(any(), any())).thenReturn(successfulRetrieval)
+
+        val result = await(
+          fileController.serveFile("testFile.csv").apply(FakeRequest(Helpers.GET, "/ras-api/file/getFile/:testFile"))
+        )
+
+        result.header.status shouldBe Status.INTERNAL_SERVER_ERROR
+      }
+    }
+
     "return status 401 (Unauthorised)" when {
       "a valid lookup request has been submitted with no PSA or PP enrolments" in {
 
@@ -167,6 +191,35 @@ class FileControllerSpec
           auditType = Meq("FileDeletion"),
           path = any(),
           auditData = Meq(Map("userIdentifier" -> "A123456", "fileName" -> fileName, "chunkDeletionSuccess" -> "true"))
+        )(using any())
+      }
+
+      "already saved fileName is provided but unable to remove chunks" in {
+        val fileController = new FileController(
+          mockRasFileRepository,
+          mockRasChunksRepository,
+          mockMetrics,
+          mockAuditService,
+          mockAuthConnector,
+          mockCC
+        ) {
+          override def getFile(name: String, userId: String): Future[Option[FileData]] = Future(Some(fileData))
+        }
+
+        when(mockAuthConnector.authorise[Enrolments](any(), any())(any(), any())).thenReturn(successfulRetrieval)
+        when(mockRasChunksRepository.removeChunk(any())).thenReturn(Future.successful(false))
+        val fileName = "5b4628e02f00002501139c8c"
+        val userId   = "A123456"
+        val result   = await(
+          fileController
+            .remove(fileName, userId)
+            .apply(FakeRequest(Helpers.DELETE, s"/ras-api/file/remove/:$fileName/:$userId"))
+        )
+        result.header.status shouldBe Status.OK
+        verify(mockAuditService).audit(
+          auditType = Meq("FileDeletion"),
+          path = any(),
+          auditData = Meq(Map("userIdentifier" -> "A123456", "fileName" -> fileName, "chunkDeletionSuccess" -> "false"))
         )(using any())
       }
 
