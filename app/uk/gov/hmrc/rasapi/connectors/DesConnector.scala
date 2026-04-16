@@ -18,17 +18,17 @@ package uk.gov.hmrc.rasapi.connectors
 
 import play.api.Logging
 import play.api.libs.json.{JsObject, Json}
-import play.api.libs.ws.writeableOf_JsValue
 import uk.gov.hmrc.http.{HeaderCarrier, *}
 import uk.gov.hmrc.play.bootstrap.http.HttpClientV2Provider
 import uk.gov.hmrc.rasapi.config.AppContext
 import uk.gov.hmrc.rasapi.models.*
 import uk.gov.hmrc.rasapi.services.AuditService
-
+import play.api.libs.ws.JsonBodyWritables.writeableOf_JsValue
 import java.util.UUID.randomUUID
 import javax.inject.Inject
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.{Failure, Success, Try}
+import uk.gov.hmrc.http.HttpReads.Implicits.*
 
 class DesConnector @Inject() (
   httpPost: HttpClientV2Provider,

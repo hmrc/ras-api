@@ -196,7 +196,7 @@ class FileProcessingServiceSpec
 
         when(mockResidencyYearResolver.isBetweenJanAndApril).thenReturn(true)
 
-        val test = SUT.processFile("user1234", callbackData, V2_0)
+        SUT.processFile("user1234", callbackData, V2_0)
 
         Thread.sleep(5000)
 

@@ -30,7 +30,7 @@ import scala.concurrent.{Await, Future}
 import scala.util.{Failure, Success, Try}
 
 trait ResultsGenerator {
-  val comma = ","
+  private val comma = ","
 
   val desConnector: DesConnector
   val residencyYearResolver: ResidencyYearResolver
@@ -98,7 +98,7 @@ trait ResultsGenerator {
       case Success(JsSuccess(details, _)) => Left(details)
       case Success(JsError(errors))       =>
         Right(errors.map(err => s"${err._1.toString.substring(1)}-${err._2.head.message}"))
-      case Failure(e)                     => Right(Seq("INVALID RECORD"))
+      case Failure(_)                     => Right(Seq("INVALID RECORD"))
     }
   }
 

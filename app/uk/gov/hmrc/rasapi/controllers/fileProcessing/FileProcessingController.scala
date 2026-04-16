@@ -34,8 +34,8 @@ class FileProcessingController @Inject() (
 )(using ec: ExecutionContext)
     extends BackendController(cc) with Logging {
 
-  val STATUS_READY: String  = "READY"
-  val STATUS_FAILED: String = "FAILED"
+  private val STATUS_READY: String  = "READY"
+  private val STATUS_FAILED: String = "FAILED"
 
   def statusCallback(userId: String, version: String): Action[AnyContent] = Action.async { implicit request =>
     val optVersion = version match {
