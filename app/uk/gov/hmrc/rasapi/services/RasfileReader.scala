@@ -20,21 +20,19 @@ import org.apache.pekko.actor.ActorSystem
 import play.api.Logging
 import uk.gov.hmrc.rasapi.connectors.UpscanConnector
 
-import java.io._
+import java.io.*
 import java.nio.file.{Files, Path}
 import scala.concurrent.{ExecutionContext, Future}
 import scala.io.{Codec, Source}
 import scala.util.Try
 
-trait RasFileReader extends Logging {
-  implicit val system: ActorSystem = ActorSystem()
-  implicit val ec: ExecutionContext
+trait RasFileReader(using ec: ExecutionContext, system: ActorSystem = ActorSystem()) extends Logging {
 
   val fileUploadConnector: UpscanConnector
 
   def readFile(downloadUrl: String, reference: String, userId: String): Future[Iterator[String]] = {
 
-    implicit val codec: Codec = Codec.ISO8859
+    given codec: Codec = Codec.ISO8859
 
     fileUploadConnector.getUpscanFile(downloadUrl, reference, userId).map {
 

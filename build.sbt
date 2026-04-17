@@ -3,7 +3,7 @@ import uk.gov.hmrc.DefaultBuildSettings.itSettings
 
 import scala.collection.Seq
 
-ThisBuild / scalaVersion := "2.13.18"
+ThisBuild / scalaVersion := "3.3.7"
 ThisBuild / majorVersion := 1
 
 lazy val microservice = Project("ras-api", file("."))

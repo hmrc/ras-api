@@ -20,7 +20,7 @@ import org.apache.pekko.actor.ActorSystem
 import org.apache.pekko.stream.Materializer
 import org.apache.pekko.stream.scaladsl.Source
 import org.bson.types.ObjectId
-import org.mockito.ArgumentMatchers.{any, eq => Meq}
+import org.mockito.ArgumentMatchers.{any, eq as Meq}
 import org.mockito.Mockito.{reset, verify, when}
 import org.scalatest.BeforeAndAfter
 import org.scalatest.matchers.should.Matchers
@@ -34,13 +34,14 @@ import play.api.inject.guice.GuiceApplicationBuilder
 import play.api.mvc.ControllerComponents
 import play.api.test.Helpers.{await, defaultAwaitTimeout, status}
 import play.api.test.{FakeRequest, Helpers}
-import uk.gov.hmrc.auth.core._
+import uk.gov.hmrc.auth.core.*
 import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.rasapi.controllers.fileController.FileController
 import uk.gov.hmrc.rasapi.metrics.Metrics
 import uk.gov.hmrc.rasapi.repository.{FileData, RasChunksRepository, RasFilesRepository}
 import uk.gov.hmrc.rasapi.services.AuditService
 
+import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.{Failure, Try}
 
@@ -52,7 +53,7 @@ class FileControllerSpec
     with BeforeAndAfter
     with TestEnrolments {
 
-  implicit val hc: HeaderCarrier = HeaderCarrier()
+  given hc: HeaderCarrier = HeaderCarrier()
 
   val successfulRetrieval: Future[Enrolments]      = Future.successful(enrolments)
   val mockAuthConnector: AuthConnector             = mock[AuthConnector]
@@ -70,8 +71,7 @@ class FileControllerSpec
     mockMetrics,
     mockAuditService,
     mockAuthConnector,
-    mockCC,
-    ExecutionContext.global
+    mockCC
   ) {
     override def getFile(name: String, userId: String): Future[Option[FileData]] = Future(Some(fileData))
     override def deleteFile(name: String, userId: String): Future[Boolean]       = Future(true)
@@ -81,8 +81,8 @@ class FileControllerSpec
     GuiceApplicationBuilder()
       .build()
 
-  implicit val actorSystem: ActorSystem   = ActorSystem()
-  implicit val materializer: Materializer = app.materializer
+  given actorSystem: ActorSystem   = ActorSystem()
+  given materializer: Materializer = app.materializer
 
   when(mockRasFileRepository.removeFile(any(), any())).thenReturn(Future.successful(true))
 
@@ -113,8 +113,7 @@ class FileControllerSpec
         mockMetrics,
         mockAuditService,
         mockAuthConnector,
-        mockCC,
-        ExecutionContext.global
+        mockCC
       ) {
         override def getFile(name: String, userId: String): Future[Option[FileData]] = Future(None)
       }
@@ -126,6 +125,30 @@ class FileControllerSpec
           fileController.serveFile("testFile.csv").apply(FakeRequest(Helpers.GET, "/ras-api/file/getFile/:testFile"))
         )
         result.header.status shouldBe Status.NOT_FOUND
+      }
+    }
+
+    "get Exception when getfile is failed" when {
+      val fileController = new FileController(
+        mockRasFileRepository,
+        mockRasChunksRepository,
+        mockMetrics,
+        mockAuditService,
+        mockAuthConnector,
+        mockCC
+      ) {
+        override def getFile(name: String, userId: String): Future[Option[FileData]] =
+          Future(throw new Exception("Failed"))
+      }
+
+      "the file is not available" in {
+        when(mockAuthConnector.authorise[Enrolments](any(), any())(any(), any())).thenReturn(successfulRetrieval)
+
+        val result = await(
+          fileController.serveFile("testFile.csv").apply(FakeRequest(Helpers.GET, "/ras-api/file/getFile/:testFile"))
+        )
+
+        result.header.status shouldBe Status.INTERNAL_SERVER_ERROR
       }
     }
 
@@ -149,8 +172,7 @@ class FileControllerSpec
           mockMetrics,
           mockAuditService,
           mockAuthConnector,
-          mockCC,
-          ExecutionContext.global
+          mockCC
         ) {
           override def getFile(name: String, userId: String): Future[Option[FileData]] = Future(Some(fileData))
         }
@@ -169,7 +191,36 @@ class FileControllerSpec
           auditType = Meq("FileDeletion"),
           path = any(),
           auditData = Meq(Map("userIdentifier" -> "A123456", "fileName" -> fileName, "chunkDeletionSuccess" -> "true"))
-        )(any())
+        )(using any())
+      }
+
+      "already saved fileName is provided but unable to remove chunks" in {
+        val fileController = new FileController(
+          mockRasFileRepository,
+          mockRasChunksRepository,
+          mockMetrics,
+          mockAuditService,
+          mockAuthConnector,
+          mockCC
+        ) {
+          override def getFile(name: String, userId: String): Future[Option[FileData]] = Future(Some(fileData))
+        }
+
+        when(mockAuthConnector.authorise[Enrolments](any(), any())(any(), any())).thenReturn(successfulRetrieval)
+        when(mockRasChunksRepository.removeChunk(any())).thenReturn(Future.successful(false))
+        val fileName = "5b4628e02f00002501139c8c"
+        val userId   = "A123456"
+        val result   = await(
+          fileController
+            .remove(fileName, userId)
+            .apply(FakeRequest(Helpers.DELETE, s"/ras-api/file/remove/:$fileName/:$userId"))
+        )
+        result.header.status shouldBe Status.OK
+        verify(mockAuditService).audit(
+          auditType = Meq("FileDeletion"),
+          path = any(),
+          auditData = Meq(Map("userIdentifier" -> "A123456", "fileName" -> fileName, "chunkDeletionSuccess" -> "false"))
+        )(using any())
       }
 
       "chunks deletion fails as id cannot be converted to a ObjectId" in {
@@ -179,8 +230,7 @@ class FileControllerSpec
           mockMetrics,
           mockAuditService,
           mockAuthConnector,
-          mockCC,
-          ExecutionContext.global
+          mockCC
         ) {
           override def getFile(name: String, userId: String): Future[Option[FileData]] = Future(Some(fileData))
 
@@ -207,7 +257,7 @@ class FileControllerSpec
               "reason"               -> "fileName could not be converted to ObjectId"
             )
           )
-        )(any())
+        )(using any())
       }
 
       "chunks deletion fails" in {
@@ -218,8 +268,7 @@ class FileControllerSpec
           mockMetrics,
           mockAuditService,
           mockAuthConnector,
-          mockCC,
-          ExecutionContext.global
+          mockCC
         ) {
           override def getFile(name: String, userId: String): Future[Option[FileData]] = Future(Some(fileData))
         }
@@ -244,8 +293,7 @@ class FileControllerSpec
           mockMetrics,
           mockAuditService,
           mockAuthConnector,
-          mockCC,
-          ExecutionContext.global
+          mockCC
         )
 
         when(mockAuthConnector.authorise[Enrolments](any(), any())(any(), any())).thenReturn(successfulRetrieval)

@@ -16,10 +16,11 @@
 
 package uk.gov.hmrc.rasapi
 
+import org.mongodb.scala.gridfs.GridFSFile
+import play.api.libs.json.*
+
 import java.time.LocalDate
 import java.time.format.{DateTimeFormatter, ResolverStyle}
-import org.mongodb.scala.gridfs.GridFSFile
-import play.api.libs.json._
 
 package object models {
 
@@ -29,7 +30,7 @@ package object models {
 
   object JsonReads {
 
-    import Extensions._
+    import Extensions.*
 
     private val invalidDataType       = "INVALID_DATA_TYPE"
     private val invalidFormat         = "INVALID_FORMAT"

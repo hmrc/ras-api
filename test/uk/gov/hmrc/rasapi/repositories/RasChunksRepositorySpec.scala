@@ -42,9 +42,12 @@ class RasChunksRepositorySpec
   val mockAppContext: AppContext = mock[AppContext]
   when(mockAppContext.resultsExpriyTime).thenReturn(3600)
 
-  override lazy val repository = new RasFilesRepository(mongoComponent, mockAppContext)
-  val chunksRepository         = new RasChunksRepository(mongoComponent)
-  val userId: String           = "A1234567"
+  val repository: RasFilesRepository = new RasFilesRepository(mongoComponent, mockAppContext)(using
+    scala.concurrent.ExecutionContext.global
+  )
+
+  val chunksRepository = new RasChunksRepository(mongoComponent)
+  val userId: String   = "A1234567"
 
   "RasChunksRepository" should {
 

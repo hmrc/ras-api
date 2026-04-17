@@ -16,7 +16,7 @@
 
 package uk.gov.hmrc.rasapi.controllers
 
-import play.api.http.Status._
+import play.api.http.Status.*
 import play.api.libs.json.{Json, Writes}
 
 sealed abstract class ErrorResponse(val httpStatusCode: Int, val errorCode: String, val message: String)
@@ -64,7 +64,7 @@ case class TooManyRequestsResponse(tooManyRequestsStatus: String)
     )
 
 object TooManyRequestsResponse {
-  implicit val writes: Writes[TooManyRequestsResponse] = Json.writes[TooManyRequestsResponse]
+  given writes: Writes[TooManyRequestsResponse] = Json.writes[TooManyRequestsResponse]
 }
 
 case object ErrorServiceUnavailable

@@ -16,7 +16,6 @@
 
 package uk.gov.hmrc.rasapi.controllers
 
-import java.time.Instant
 import org.mockito.ArgumentMatchers.any
 import org.mockito.Mockito.when
 import org.scalatest.concurrent.ScalaFutures.convertScalaFuture
@@ -33,6 +32,7 @@ import uk.gov.hmrc.rasapi.controllers.fileSession.FileSessionController
 import uk.gov.hmrc.rasapi.models.{CreateFileSessionRequest, FileSession}
 import uk.gov.hmrc.rasapi.services.RasFilesSessionService
 
+import java.time.Instant
 import java.util.UUID
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -44,7 +44,7 @@ class FileSessionControllerSpec extends AnyWordSpecLike with TestEnrolments with
   val mockFilesSessionService: RasFilesSessionService = mock[RasFilesSessionService]
   val mockCC: ControllerComponents                    = app.injector.instanceOf[ControllerComponents]
 
-  val fileSessionController = new FileSessionController(mockFilesSessionService, mockAuthConnector, mockCC)(
+  val fileSessionController = new FileSessionController(mockFilesSessionService, mockAuthConnector, mockCC)(using
     ExecutionContext.global
   )
 

@@ -28,7 +28,7 @@ class RasFilesSessionRepository @Inject() (
   mongoComponent: MongoComponent,
   appContext: AppContext,
   timestampSupport: TimestampSupport
-)(implicit ec: ExecutionContext)
+)(using ec: ExecutionContext)
     extends MongoCacheRepository(
       mongoComponent = mongoComponent,
       collectionName = "fileSessions",

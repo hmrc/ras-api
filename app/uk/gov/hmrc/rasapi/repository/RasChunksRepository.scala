@@ -26,7 +26,7 @@ import javax.inject.{Inject, Singleton}
 import scala.concurrent.{ExecutionContext, Future}
 
 @Singleton
-class RasChunksRepository @Inject() (val mongoComponent: MongoComponent)(implicit val ec: ExecutionContext)
+class RasChunksRepository @Inject() (val mongoComponent: MongoComponent)(using ec: ExecutionContext)
     extends PlayMongoRepository[Chunks](
       mongoComponent = mongoComponent,
       collectionName = "resultsFiles.chunks",

@@ -21,16 +21,13 @@ import org.apache.pekko.util.ByteString
 import org.bson.types.ObjectId
 import play.api.Logging
 import play.api.http.HttpEntity
-import play.api.mvc._
+import play.api.mvc.*
+import uk.gov.hmrc.auth.core.*
 import uk.gov.hmrc.auth.core.AuthProvider.GovernmentGateway
-import uk.gov.hmrc.auth.core._
 import uk.gov.hmrc.auth.core.retrieve.v2.Retrievals.authorisedEnrolments
 import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
-import uk.gov.hmrc.rasapi.controllers.{
-  ErrorNotFound, InvalidCredentials, PP_ENROLMENT, PSA_ENROLMENT, PSA_PODS_ENROLMENT, PSP_ENROLMENT, Unauthorised,
-  errorResponseWrites, getEnrolmentIdentifier
-}
-import play.api.libs.json.Json
+import uk.gov.hmrc.rasapi.controllers.*
+import uk.gov.hmrc.rasapi.controllers.errorResponseWrites
 import uk.gov.hmrc.rasapi.metrics.Metrics
 import uk.gov.hmrc.rasapi.models.ApiErrorResponse
 import uk.gov.hmrc.rasapi.repository.{FileData, RasChunksRepository, RasFilesRepository}
@@ -46,9 +43,9 @@ class FileController @Inject() (
   metrics: Metrics,
   val auditService: AuditService,
   val authConnector: AuthConnector,
-  cc: ControllerComponents,
-  implicit val ec: ExecutionContext
-) extends BackendController(cc) with AuthorisedFunctions with Logging {
+  cc: ControllerComponents
+)(using ec: ExecutionContext)
+    extends BackendController(cc) with AuthorisedFunctions with Logging {
 
   val fileRemove: String           = "File-Remove"
   val fileServe: String            = "File-Read"

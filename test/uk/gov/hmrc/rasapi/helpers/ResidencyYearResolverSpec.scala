@@ -16,12 +16,13 @@
 
 package uk.gov.hmrc.rasapi.helpers
 
-import java.time.LocalDate
 import org.scalatest.BeforeAndAfter
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpecLike
 import org.scalatestplus.mockito.MockitoSugar
 import org.scalatestplus.play.guice.GuiceOneAppPerTest
+
+import java.time.LocalDate
 
 class ResidencyYearResolverSpec
     extends AnyWordSpecLike with Matchers with MockitoSugar with GuiceOneAppPerTest with BeforeAndAfter {

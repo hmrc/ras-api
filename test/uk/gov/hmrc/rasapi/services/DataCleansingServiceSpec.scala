@@ -16,7 +16,7 @@
 
 package uk.gov.hmrc.rasapi.services
 
-import org.mongodb.scala.{Document, MongoCollection}
+import org.mongodb.scala.{Document, MongoCollection, SingleObservableFuture}
 import org.scalatest.BeforeAndAfterEach
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpecLike
@@ -37,8 +37,8 @@ class DataCleansingServiceSpec
     with BeforeAndAfterEach
     with Logging {
 
-  lazy val dataCleansingService: DataCleansingService      = app.injector.instanceOf[DataCleansingService]
-  implicit lazy val rasFilesRepository: RasFilesRepository = app.injector.instanceOf[RasFilesRepository]
+  lazy val dataCleansingService: DataCleansingService = app.injector.instanceOf[DataCleansingService]
+  given rasFilesRepository: RasFilesRepository        = app.injector.instanceOf[RasFilesRepository]
 
   implicit override lazy val app: Application = new GuiceApplicationBuilder()
     .configure("remove-chunks-data-exercise.enabled" -> true)

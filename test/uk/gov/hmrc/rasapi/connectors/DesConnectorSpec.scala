@@ -16,8 +16,7 @@
 
 package uk.gov.hmrc.rasapi.connectors
 
-import java.time.LocalDate
-import org.mockito.ArgumentMatchers._
+import org.mockito.ArgumentMatchers.*
 import org.mockito.Mockito.{reset, times, verify, when}
 import org.scalatest.BeforeAndAfter
 import org.scalatest.matchers.should.Matchers
@@ -26,27 +25,28 @@ import org.scalatestplus.mockito.MockitoSugar
 import org.scalatestplus.play.guice.GuiceOneAppPerSuite
 import play.api.libs.json.{JsObject, JsValue, Json, OFormat}
 import play.api.test.Helpers.{await, defaultAwaitTimeout}
-import uk.gov.hmrc.http._
+import uk.gov.hmrc.http.*
 import uk.gov.hmrc.http.client.{HttpClientV2, RequestBuilder}
 import uk.gov.hmrc.play.bootstrap.config.ServicesConfig
 import uk.gov.hmrc.play.bootstrap.http.HttpClientV2Provider
 import uk.gov.hmrc.rasapi.config.AppContext
-import uk.gov.hmrc.rasapi.models._
+import uk.gov.hmrc.rasapi.models.*
 import uk.gov.hmrc.rasapi.services.AuditService
 
+import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import scala.concurrent.{ExecutionContext, Future}
 
 class DesConnectorSpec
     extends AnyWordSpecLike with Matchers with GuiceOneAppPerSuite with BeforeAndAfter with MockitoSugar {
 
-  implicit val hc: HeaderCarrier = HeaderCarrier()
+  given hc: HeaderCarrier = HeaderCarrier()
 
-  val mockHttp: HttpClientV2Provider                   = mock[HttpClientV2Provider]
-  val mockHttpClient: HttpClientV2                     = mock[HttpClientV2]
-  val mockRequestBuilder                               = mock[RequestBuilder]
-  val mockAuditService: AuditService                   = mock[AuditService]
-  implicit val format: OFormat[ResidencyStatusSuccess] = ResidencyStatusFormats.successFormats
+  val mockHttp: HttpClientV2Provider            = mock[HttpClientV2Provider]
+  val mockHttpClient: HttpClientV2              = mock[HttpClientV2]
+  val mockRequestBuilder                        = mock[RequestBuilder]
+  val mockAuditService: AuditService            = mock[AuditService]
+  given format: OFormat[ResidencyStatusSuccess] = ResidencyStatusFormats.successFormats
 
   val servicesConfig         = app.injector.instanceOf[ServicesConfig]
   val appContext: AppContext = app.injector.instanceOf[AppContext]
@@ -62,9 +62,9 @@ class DesConnectorSpec
 
   val uuid = "123e4567-e89b-42d3-a456-556642440000"
 
-  object TestDesConnector extends DesConnector(mockHttp, mockAuditService, appContext, ExecutionContext.global) {
+  object TestDesConnector extends DesConnector(mockHttp, mockAuditService, appContext)(using ExecutionContext.global) {
     override lazy val desBaseUrl                     = "http://localhost:9669"
-    override val auditService: AuditService          = mockAuditService
+//    override val auditService: AuditService          = mockAuditService
     override lazy val allowNoNextYearStatus: Boolean = true
     override lazy val retryLimit: Int                = 3
     override lazy val retryDelay: Int                = 500
@@ -271,11 +271,12 @@ class DesConnectorSpec
     "handle unsuccessful response for bulk request when 429 is returned from des the first time around and CY and " +
       "CYPlusOne is present and bulk retry is true but retry enabled is false" in {
 
-        implicit val formatF = ResidencyStatusFormats.failureFormats
+        given formatF: OFormat[ResidencyStatusFailure] = ResidencyStatusFormats.failureFormats
 
-        object TestDesConnector extends DesConnector(mockHttp, mockAuditService, appContext, ExecutionContext.global) {
+        object TestDesConnector
+            extends DesConnector(mockHttp, mockAuditService, appContext)(using ExecutionContext.global) {
           override lazy val desBaseUrl                     = "http://localhost:9669"
-          override val auditService: AuditService          = mockAuditService
+//          override val auditService: AuditService          = mockAuditService
           override lazy val allowNoNextYearStatus: Boolean = true
           override lazy val retryLimit: Int                = 3
           override lazy val retryDelay: Int                = 500
@@ -317,11 +318,12 @@ class DesConnectorSpec
     "handle unsuccessful response for bulk request when 429 is returned from des the first time around and CY and " +
       "CYPlusOne is present and bulk retry is false and retry enabled is false" in {
 
-        implicit val formatF = ResidencyStatusFormats.failureFormats
+        given formatF: OFormat[ResidencyStatusFailure] = ResidencyStatusFormats.failureFormats
 
-        object TestDesConnector extends DesConnector(mockHttp, mockAuditService, appContext, ExecutionContext.global) {
+        object TestDesConnector
+            extends DesConnector(mockHttp, mockAuditService, appContext)(using ExecutionContext.global) {
           override lazy val desBaseUrl                     = "http://localhost:9669"
-          override val auditService: AuditService          = mockAuditService
+//          override val auditService: AuditService          = mockAuditService
           override lazy val allowNoNextYearStatus: Boolean = true
           override lazy val retryLimit: Int                = 3
           override lazy val retryDelay: Int                = 500
@@ -349,9 +351,10 @@ class DesConnectorSpec
       }
 
     "handle successful response when 200 is returned from des and only CY is present and no next year status toggle is turned off" in {
-      object TestDesConnector extends DesConnector(mockHttp, mockAuditService, appContext, ExecutionContext.global) {
+      object TestDesConnector
+          extends DesConnector(mockHttp, mockAuditService, appContext)(using ExecutionContext.global) {
         override lazy val desBaseUrl                     = "http://localhost:9669"
-        override val auditService: AuditService          = mockAuditService
+//        override val auditService: AuditService          = mockAuditService
         override lazy val allowNoNextYearStatus: Boolean = false
         override lazy val retryLimit: Int                = 3
         override lazy val retryDelay: Int                = 500
@@ -380,8 +383,8 @@ class DesConnectorSpec
     }
 
     "handle failure response (no match) from des" in {
-      implicit val formatF = ResidencyStatusFormats.failureFormats
-      val errorResponse    = ResidencyStatusFailure(
+      given formatF: OFormat[ResidencyStatusFailure] = ResidencyStatusFormats.failureFormats
+      val errorResponse                              = ResidencyStatusFailure(
         "STATUS_UNAVAILABLE",
         "Cannot provide a residency status for this pension scheme member."
       )
@@ -442,8 +445,8 @@ class DesConnectorSpec
     }
 
     "handle unexpected responses as 500 from des" in {
-      implicit val formatF = ResidencyStatusFormats.failureFormats
-      val errorResponse    = ResidencyStatusFailure("INTERNAL_SERVER_ERROR", "Internal server error.")
+      given formatF: OFormat[ResidencyStatusFailure] = ResidencyStatusFormats.failureFormats
+      val errorResponse                              = ResidencyStatusFailure("INTERNAL_SERVER_ERROR", "Internal server error.")
 
       val individualDetails = IndividualDetails("AB123456C", "JOHN", "Lewis", LocalDate.parse("1990-02-21", formatter))
 
@@ -475,9 +478,9 @@ class DesConnectorSpec
     }
 
     "handle bad request from des" in {
-      implicit val formatF      = ResidencyStatusFormats.failureFormats
-      val expectedErrorResponse = ResidencyStatusFailure("INTERNAL_SERVER_ERROR", "Internal server error.")
-      val errorResponse         = ResidencyStatusFailure("DO_NOT_RE_PROCESS", "Internal server error.")
+      given formatF: OFormat[ResidencyStatusFailure] = ResidencyStatusFormats.failureFormats
+      val expectedErrorResponse                      = ResidencyStatusFailure("INTERNAL_SERVER_ERROR", "Internal server error.")
+      val errorResponse                              = ResidencyStatusFailure("DO_NOT_RE_PROCESS", "Internal server error.")
 
       val individualDetails = IndividualDetails("AB123456C", "JOHN", "Lewis", LocalDate.parse("1990-02-21", formatter))
 
@@ -495,9 +498,9 @@ class DesConnectorSpec
     "Handle requests" when {
       "it cannot be processed the first time round" in {
 
-        implicit val formatF = ResidencyStatusFormats.failureFormats
-        val errorResponse    = ResidencyStatusFailure("INTERNAL_SERVER_ERROR", "Internal server error.")
-        val successResponse  = ResidencyStatusSuccess(
+        given formatF: OFormat[ResidencyStatusFailure] = ResidencyStatusFormats.failureFormats
+        val errorResponse                              = ResidencyStatusFailure("INTERNAL_SERVER_ERROR", "Internal server error.")
+        val successResponse                            = ResidencyStatusSuccess(
           nino = "AB123456C",
           deathDate = Some(""),
           deathDateStatus = Some(""),
@@ -524,7 +527,7 @@ class DesConnectorSpec
 
       "429 (Too Many Requests) has been returned 3 times" in {
 
-        implicit val formatF = ResidencyStatusFormats.failureFormats
+        given formatF: OFormat[ResidencyStatusFailure] = ResidencyStatusFormats.failureFormats
 
         val errorResponse = ResidencyStatusFailure("TOO_MANY_REQUESTS", "Too many requests received")
 

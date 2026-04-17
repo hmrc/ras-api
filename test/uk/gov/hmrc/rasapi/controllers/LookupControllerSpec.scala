@@ -16,10 +16,9 @@
 
 package uk.gov.hmrc.rasapi.controllers
 
-import java.time.LocalDate
 import org.mockito.ArgumentMatchers
-import org.mockito.ArgumentMatchers.{eq => Meq, _}
-import org.mockito.Mockito._
+import org.mockito.ArgumentMatchers.{eq as Meq, *}
+import org.mockito.Mockito.*
 import org.scalatest.BeforeAndAfter
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpecLike
@@ -27,25 +26,26 @@ import org.scalatestplus.mockito.MockitoSugar
 import org.scalatestplus.play.guice.GuiceOneAppPerSuite
 import play.api.Application
 import play.api.inject.guice.GuiceApplicationBuilder
-import play.api.libs.functional.syntax.{unlift, _}
+import play.api.libs.functional.syntax.{unlift, *}
 import play.api.libs.json.{JsPath, Json, Writes}
 import play.api.mvc.{BodyParsers, ControllerComponents}
-import play.api.test.Helpers._
+import play.api.test.Helpers.*
 import play.api.test.{FakeRequest, Helpers}
-import play.api.test.Helpers.stubControllerComponents
 import play.mvc.Http.HeaderNames
-import uk.gov.hmrc.auth.core._
+import uk.gov.hmrc.auth.core.*
 import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.rasapi.config.AppContext
 import uk.gov.hmrc.rasapi.connectors.DesConnector
 import uk.gov.hmrc.rasapi.controllers.lookupController.LookupController
 import uk.gov.hmrc.rasapi.helpers.ResidencyYearResolver
 import uk.gov.hmrc.rasapi.metrics.Metrics
-import uk.gov.hmrc.rasapi.models.{Nino, _}
+import uk.gov.hmrc.rasapi.models.{Nino, *}
 import uk.gov.hmrc.rasapi.services.AuditService
 import uk.gov.hmrc.rasapi.utils.ErrorConverter
 
+import java.time.LocalDate
 import java.time.format.DateTimeFormatter
+import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.{ExecutionContext, Future}
 
 class LookupControllerSpec
@@ -55,7 +55,7 @@ class LookupControllerSpec
     .configure("api-v2_0.enabled" -> "true")
     .build()
 
-  implicit val hc: HeaderCarrier = HeaderCarrier()
+  given hc: HeaderCarrier = HeaderCarrier()
 
   val acceptHeader: (String, String)   = (HeaderNames.ACCEPT, "application/vnd.hmrc.2.0+json")
   val acceptHeaderV1: (String, String) = (HeaderNames.ACCEPT, "application/vnd.hmrc.1.0+json")
@@ -109,12 +109,14 @@ class LookupControllerSpec
   val STATUS_TOO_MANY_REQUESTS: String     = "TOO_MANY_REQUESTS"
   val STATUS_SERVICE_UNAVAILABLE: String   = "SERVICE_UNAVAILABLE"
 
-  implicit val individualDetailssWrites: Writes[IndividualDetails] = (
+  given individualDetailssWrites: Writes[IndividualDetails] = (
     (JsPath \ "nino").write[String] and
       (JsPath \ "firstName").write[String] and
       (JsPath \ "lastName").write[String] and
       (JsPath \ "dateOfBirth").write[String].contramap[LocalDate](_.format(DateTimeFormatter.ofPattern("yyyy-MM-dd")))
-  )(unlift(IndividualDetails.unapply))
+  ) { d =>
+    (d.nino, d.firstName, d.lastName, d.dateOfBirth)
+  }
 
   object TestLookupController
       extends LookupController(
@@ -126,7 +128,6 @@ class LookupControllerSpec
         appContext,
         errorConverer,
         mockCC,
-        ExecutionContext.global,
         mockParser
       ) {
 
@@ -150,7 +151,6 @@ class LookupControllerSpec
         appContext,
         errorConverer,
         mockCC,
-        ExecutionContext.global,
         mockParser
       ) {
     override def getCurrentDate: LocalDate = LocalDate.of(2018, 2, 15)
@@ -173,7 +173,6 @@ class LookupControllerSpec
         appContext,
         errorConverer,
         mockCC,
-        ExecutionContext.global,
         mockParser
       ) {
     override def getCurrentDate: LocalDate = LocalDate.of(2019, 2, 15)
@@ -196,7 +195,6 @@ class LookupControllerSpec
         appContext,
         errorConverer,
         mockCC,
-        ExecutionContext.global,
         mockParser
       ) {
     override def getCurrentDate: LocalDate = LocalDate.of(2019, 1, 1)
@@ -231,8 +229,7 @@ class LookupControllerSpec
           .thenReturn(Future.successful(Left(residencyStatus)))
 
         await(
-          TestLookupControllerFeb18
-            .getResidencyStatus()
+          TestLookupControllerFeb18.getResidencyStatus
             .apply(
               FakeRequest(Helpers.GET, s"/residency-status")
                 .withHeaders(acceptHeader)
@@ -253,7 +250,7 @@ class LookupControllerSpec
               "requestSource"    -> "API"
             )
           )
-        )(any())
+        )(using any())
       }
 
       "a valid request has been submitted and the date is between january and april 2019" in {
@@ -268,8 +265,7 @@ class LookupControllerSpec
           .thenReturn(Future.successful(Left(residencyStatus)))
 
         await(
-          TestLookupControllerFeb19
-            .getResidencyStatus()
+          TestLookupControllerFeb19.getResidencyStatus
             .apply(
               FakeRequest(Helpers.GET, s"/residency-status")
                 .withHeaders(acceptHeader)
@@ -290,7 +286,7 @@ class LookupControllerSpec
               "requestSource"    -> "API"
             )
           )
-        )(any())
+        )(using any())
       }
 
       "a valid request has been submitted and the date is between april and december" in {
@@ -305,8 +301,7 @@ class LookupControllerSpec
           .thenReturn(Future.successful(Left(residencyStatus)))
 
         await(
-          TestLookupController
-            .getResidencyStatus()
+          TestLookupController.getResidencyStatus
             .apply(
               FakeRequest(Helpers.GET, s"/residency-status")
                 .withHeaders(acceptHeader)
@@ -326,7 +321,7 @@ class LookupControllerSpec
               "requestSource"    -> "API"
             )
           )
-        )(any())
+        )(using any())
       }
 
       "a valid request has been submitted and the date is between april and december and the individual is deceased" in {
@@ -338,8 +333,7 @@ class LookupControllerSpec
           .thenReturn(Future.successful(Right(ResidencyStatusFailure(STATUS_DECEASED, "Individual is deceased"))))
 
         await(
-          TestLookupController
-            .getResidencyStatus()
+          TestLookupController.getResidencyStatus
             .apply(
               FakeRequest(Helpers.GET, s"/residency-status")
                 .withHeaders(acceptHeader)
@@ -359,7 +353,7 @@ class LookupControllerSpec
               "requestSource"    -> "API"
             )
           )
-        )(any())
+        )(using any())
       }
     }
 
@@ -375,8 +369,7 @@ class LookupControllerSpec
           .thenReturn(Future.successful(Right(residencyStatusFailure)))
 
         await(
-          TestLookupController
-            .getResidencyStatus()
+          TestLookupController.getResidencyStatus
             .apply(
               FakeRequest(Helpers.GET, s"/residency-status")
                 .withHeaders(acceptHeader)
@@ -396,7 +389,7 @@ class LookupControllerSpec
               "requestSource"    -> "API"
             )
           )
-        )(any())
+        )(using any())
       }
 
       "a problem has occurred in the Head of Duty (HoD) system" in {
@@ -409,8 +402,7 @@ class LookupControllerSpec
           .thenReturn(Future.successful(Right(residencyStatusFailure)))
 
         await(
-          TestLookupController
-            .getResidencyStatus()
+          TestLookupController.getResidencyStatus
             .apply(
               FakeRequest(Helpers.GET, s"/residency-status")
                 .withHeaders(acceptHeader)
@@ -430,7 +422,7 @@ class LookupControllerSpec
               "requestSource"    -> "API"
             )
           )
-        )(any())
+        )(using any())
       }
     }
   }
@@ -457,8 +449,7 @@ class LookupControllerSpec
           when(mockDesConnector.getResidencyStatus(any(), any(), ArgumentMatchers.eq(V1_0), any()))
             .thenReturn(Future.successful(Left(residencyStatus)))
 
-          val result = TestLookupControllerVersion1
-            .getResidencyStatus()
+          val result = TestLookupControllerVersion1.getResidencyStatus
             .apply(
               FakeRequest(Helpers.GET, "/")
                 .withHeaders(acceptHeaderV1)
@@ -472,8 +463,7 @@ class LookupControllerSpec
 
       "a version 2.0 request payload is given" should {
         "return status 406 with invalid accept header json" in {
-          val result = TestLookupControllerVersion1
-            .getResidencyStatus()
+          val result = TestLookupControllerVersion1.getResidencyStatus
             .apply(
               FakeRequest(Helpers.GET, "/")
                 .withHeaders(acceptHeader)
@@ -507,8 +497,7 @@ class LookupControllerSpec
           when(mockDesConnector.getResidencyStatus(any(), any(), any(), any()))
             .thenReturn(Future.successful(Left(residencyStatus)))
 
-          val result = TestLookupControllerFeb18
-            .getResidencyStatus()
+          val result = TestLookupControllerFeb18.getResidencyStatus
             .apply(
               FakeRequest(Helpers.GET, "/")
                 .withHeaders(acceptHeader)
@@ -537,8 +526,7 @@ class LookupControllerSpec
           when(mockDesConnector.getResidencyStatus(any(), any(), ArgumentMatchers.eq(V1_0), any()))
             .thenReturn(Future.successful(Left(residencyStatus)))
 
-          val result = TestLookupControllerFeb18
-            .getResidencyStatus()
+          val result = TestLookupControllerFeb18.getResidencyStatus
             .apply(
               FakeRequest(Helpers.GET, "/")
                 .withHeaders(acceptHeaderV1)
@@ -566,8 +554,7 @@ class LookupControllerSpec
           when(mockDesConnector.getResidencyStatus(any(), any(), ArgumentMatchers.eq(V2_0), any()))
             .thenReturn(Future.successful(Left(residencyStatus)))
 
-          val result = TestLookupControllerFeb18
-            .getResidencyStatus()
+          val result = TestLookupControllerFeb18.getResidencyStatus
             .apply(
               FakeRequest(Helpers.GET, "/")
                 .withHeaders(acceptHeader)
@@ -596,8 +583,7 @@ class LookupControllerSpec
           when(mockDesConnector.getResidencyStatus(any(), any(), any(), any()))
             .thenReturn(Future.successful(Left(residencyStatus)))
 
-          val result = TestLookupControllerFeb19
-            .getResidencyStatus()
+          val result = TestLookupControllerFeb19.getResidencyStatus
             .apply(
               FakeRequest(Helpers.GET, "/")
                 .withHeaders(acceptHeader)
@@ -626,8 +612,7 @@ class LookupControllerSpec
           when(mockDesConnector.getResidencyStatus(any(), any(), any(), any()))
             .thenReturn(Future.successful(Left(residencyStatus)))
 
-          val result = TestLookupController
-            .getResidencyStatus()
+          val result = TestLookupController.getResidencyStatus
             .apply(
               FakeRequest(Helpers.GET, "/")
                 .withHeaders(acceptHeader)
@@ -655,8 +640,7 @@ class LookupControllerSpec
           when(mockDesConnector.getResidencyStatus(any(), any(), any(), any()))
             .thenReturn(Future.successful(Left(residencyStatus)))
 
-          val result = TestLookupController
-            .getResidencyStatus()
+          val result = TestLookupController.getResidencyStatus
             .apply(
               FakeRequest(Helpers.GET, "/")
                 .withHeaders(acceptHeader)
@@ -684,8 +668,7 @@ class LookupControllerSpec
           when(mockDesConnector.getResidencyStatus(any(), any(), any(), any()))
             .thenReturn(Future.successful(Left(residencyStatus)))
 
-          val result = TestLookupController
-            .getResidencyStatus()
+          val result = TestLookupController.getResidencyStatus
             .apply(
               FakeRequest(Helpers.GET, "/")
                 .withHeaders(acceptHeader)
@@ -736,8 +719,7 @@ class LookupControllerSpec
               |}
             """.stripMargin)
 
-          val result = TestLookupController
-            .getResidencyStatus()
+          val result = TestLookupController.getResidencyStatus
             .apply(
               FakeRequest(Helpers.GET, "/")
                 .withHeaders(acceptHeader)
@@ -765,8 +747,7 @@ class LookupControllerSpec
             |}
           """.stripMargin)
 
-        val result = TestLookupController
-          .getResidencyStatus()
+        val result = TestLookupController.getResidencyStatus
           .apply(FakeRequest(Helpers.GET, "/").withHeaders(acceptHeader, authorisationHeader))
 
         status(result)        shouldBe UNAUTHORIZED
@@ -785,8 +766,7 @@ class LookupControllerSpec
             |}
           """.stripMargin)
 
-        val result = TestLookupController
-          .getResidencyStatus()
+        val result = TestLookupController.getResidencyStatus
           .apply(
             FakeRequest(Helpers.GET, "/")
               .withHeaders(acceptHeader)
@@ -811,8 +791,7 @@ class LookupControllerSpec
             |}
           """.stripMargin)
 
-        val result = TestLookupController
-          .getResidencyStatus()
+        val result = TestLookupController.getResidencyStatus
           .apply(
             FakeRequest(Helpers.GET, "/")
               .withHeaders(acceptHeader, authorisationHeader)
@@ -838,8 +817,7 @@ class LookupControllerSpec
             |}
           """.stripMargin)
 
-        val result = TestLookupController
-          .getResidencyStatus()
+        val result = TestLookupController.getResidencyStatus
           .apply(
             FakeRequest(Helpers.GET, "/")
               .withHeaders(acceptHeader, authorisationHeader)
@@ -864,8 +842,7 @@ class LookupControllerSpec
             |}
           """.stripMargin)
 
-        val result = TestLookupController
-          .getResidencyStatus()
+        val result = TestLookupController.getResidencyStatus
           .apply(
             FakeRequest(Helpers.GET, "/")
               .withHeaders(acceptHeader, authorisationHeader)
@@ -893,8 +870,7 @@ class LookupControllerSpec
         when(mockDesConnector.getResidencyStatus(any(), any(), any(), any()))
           .thenReturn(Future.successful(Right(residencyStatusFailure)))
 
-        val result = TestLookupController
-          .getResidencyStatus()
+        val result = TestLookupController.getResidencyStatus
           .apply(
             FakeRequest(Helpers.GET, "/")
               .withHeaders(acceptHeader)
@@ -917,8 +893,7 @@ class LookupControllerSpec
         when(mockDesConnector.getResidencyStatus(any(), any(), any(), any()))
           .thenReturn(Future.successful(Right(residencyStatusFailure)))
 
-        val result = TestLookupController
-          .getResidencyStatus()
+        val result = TestLookupController.getResidencyStatus
           .apply(
             FakeRequest(Helpers.GET, "/")
               .withHeaders(acceptHeader)
@@ -947,8 +922,7 @@ class LookupControllerSpec
         when(mockDesConnector.getResidencyStatus(any(), any(), any(), any()))
           .thenReturn(Future.successful(Right(residencyStatusFailure)))
 
-        val result = TestLookupController
-          .getResidencyStatus()
+        val result = TestLookupController.getResidencyStatus
           .apply(
             FakeRequest(Helpers.GET, "/")
               .withHeaders(acceptHeader)
@@ -976,8 +950,7 @@ class LookupControllerSpec
         when(mockDesConnector.getResidencyStatus(any(), any(), any(), any()))
           .thenReturn(Future.successful(Right(residencyStatusFailure)))
 
-        val result = TestLookupController
-          .getResidencyStatus()
+        val result = TestLookupController.getResidencyStatus
           .apply(
             FakeRequest(Helpers.GET, "/")
               .withHeaders(acceptHeader)

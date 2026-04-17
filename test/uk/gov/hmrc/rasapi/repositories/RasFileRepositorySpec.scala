@@ -51,8 +51,11 @@ class RasFileRepositorySpec
   val mockAppContext: AppContext = mock[AppContext]
   when(mockAppContext.resultsExpriyTime).thenReturn(3600)
 
-  override lazy val repository = new RasFilesRepository(mongoComponent, mockAppContext)
-  val userId: String           = "A1234567"
+  val repository: RasFilesRepository = new RasFilesRepository(mongoComponent, mockAppContext)(using
+    scala.concurrent.ExecutionContext.global
+  )
+
+  val userId: String = "A1234567"
 
   "RasFileRepository" should {
     "saveFile should successfully save a file in storage" in {
@@ -67,7 +70,7 @@ class RasFileRepositorySpec
     "saveFile should return a RuntimeException if checkAndEnsureTTL is false" in {
       val testRepository                                               = new RasFilesRepository(mongoComponent, mockAppContext) {
         override val gridFSG: GridFSBucket = mock[GridFSBucket]
-        override def checkAndEnsureTTL(mdb: MongoDatabase, collectionName: String)(implicit
+        override def checkAndEnsureTTL(mdb: MongoDatabase, collectionName: String)(using
           ec: ExecutionContext
         ): Future[Boolean] = Future.successful(false)
       }

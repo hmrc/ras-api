@@ -17,7 +17,6 @@
 package uk.gov.hmrc.rasapi.helpers
 
 import java.time.LocalDate
-
 import javax.inject.Inject
 
 class ResidencyYearResolver @Inject() () {

@@ -32,6 +32,6 @@ case class ResidencyStatusSuccess(
 case class ResidencyStatusFailure(code: String, reason: String)
 
 object ResidencyStatusFormats {
-  implicit val successFormats: OFormat[ResidencyStatusSuccess] = Json.format[ResidencyStatusSuccess]
-  implicit val failureFormats: OFormat[ResidencyStatusFailure] = Json.format[ResidencyStatusFailure]
+  given successFormats: OFormat[ResidencyStatusSuccess] = Json.format[ResidencyStatusSuccess]
+  given failureFormats: OFormat[ResidencyStatusFailure] = Json.format[ResidencyStatusFailure]
 }

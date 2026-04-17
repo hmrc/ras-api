@@ -17,7 +17,7 @@
 package uk.gov.hmrc.rasapi.controllers
 
 import play.api.http.HeaderNames
-import play.api.mvc._
+import play.api.mvc.*
 import uk.gov.hmrc.rasapi.models.ApiErrorResponse
 
 import scala.concurrent.{ExecutionContext, Future}

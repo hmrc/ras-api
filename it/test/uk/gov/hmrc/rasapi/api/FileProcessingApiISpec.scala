@@ -33,7 +33,7 @@ import uk.gov.hmrc.rasapi.repository.RasFilesRepository
 
 import java.io.File
 import scala.concurrent.ExecutionContext.Implicits.global
-import scala.concurrent.duration._
+import scala.concurrent.duration.*
 import scala.io.{BufferedSource, Source}
 
 class FileProcessingApiISpec
@@ -55,7 +55,7 @@ class FileProcessingApiISpec
   lazy val ws: WSClient                          = app.injector.instanceOf[WSClient]
   lazy val client1: HttpClientV2                 = app.injector.instanceOf[HttpClientV2]
   private val uri                                = s"http://localhost:$port/ras-api/file/getFile/reference-1"
-  implicit val hc: HeaderCarrier                 = HeaderCarrier()
+  given hc: HeaderCarrier                        = HeaderCarrier()
 
   class Setup(filename: String) {
     val largeFile: File = new File("it/test/resources/testFiles/bulk.csv")
@@ -79,7 +79,7 @@ class FileProcessingApiISpec
       val headers                    = Map("Authorization" -> "Bearer123")
       authMocks
       val testSource: BufferedSource = Source.fromFile("it/test/resources/testFiles/bulk.csv")
-      val response                   = await(client1.get(url"$uri").setHeader(headers.toSeq: _*).execute)
+      val response                   = await(client1.get(url"$uri").setHeader(headers.toSeq*).execute)
       response.status                 mustBe OK
       response.body                   mustBe testSource.getLines().toList.mkString("\n")
       response.header("Content-Type") mustBe Some("application/csv")

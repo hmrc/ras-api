@@ -18,7 +18,7 @@ package uk.gov.hmrc.rasapi.controllers.fileProcessing
 
 import play.api.Logging
 import play.api.libs.json.JsSuccess
-import play.api.mvc._
+import play.api.mvc.*
 import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
 import uk.gov.hmrc.rasapi.models.{ApiVersion, UpscanCallbackData, V1_0, V2_0}
 import uk.gov.hmrc.rasapi.services.{FileProcessingService, RasFilesSessionService}
@@ -30,12 +30,12 @@ import scala.util.{Failure, Success, Try}
 class FileProcessingController @Inject() (
   val sessionCacheService: RasFilesSessionService,
   val fileProcessingService: FileProcessingService,
-  cc: ControllerComponents,
-  implicit val ec: ExecutionContext
-) extends BackendController(cc) with Logging {
+  cc: ControllerComponents
+)(using ec: ExecutionContext)
+    extends BackendController(cc) with Logging {
 
-  val STATUS_READY: String  = "READY"
-  val STATUS_FAILED: String = "FAILED"
+  private val STATUS_READY: String  = "READY"
+  private val STATUS_FAILED: String = "FAILED"
 
   def statusCallback(userId: String, version: String): Action[AnyContent] = Action.async { implicit request =>
     val optVersion = version match {
@@ -82,7 +82,7 @@ class FileProcessingController @Inject() (
     Future.successful(BadRequest(""))
   }
 
-  private def withValidJson()(implicit request: Request[AnyContent]): Option[UpscanCallbackData] =
+  private def withValidJson()(using request: Request[AnyContent]): Option[UpscanCallbackData] =
     request.body.asJson match {
       case Some(json) =>
         Try(json.validate[UpscanCallbackData]) match {

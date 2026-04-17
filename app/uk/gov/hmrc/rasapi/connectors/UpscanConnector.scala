@@ -25,11 +25,11 @@ import java.io.InputStream
 import javax.inject.Inject
 import scala.concurrent.{ExecutionContext, Future}
 
-class UpscanConnector @Inject() (val wsHttp: WSHttp, val appContext: AppContext, implicit val ec: ExecutionContext)
+class UpscanConnector @Inject() (val wsHttp: WSHttp, val appContext: AppContext)(using ec: ExecutionContext)
     extends Logging {
 
   def getUpscanFile(downloadUrl: String, reference: String, userId: String): Future[Option[InputStream]] = {
-    implicit val system: ActorSystem = ActorSystem()
+    given system: ActorSystem = ActorSystem()
     logger.info(s"[UpscanConnector][getUpscanFile] Trying to retrieve file from Upscan: $reference")
 
     wsHttp.buildRequestWithStream(uri = downloadUrl).map { res =>
