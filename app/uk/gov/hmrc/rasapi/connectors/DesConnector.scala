@@ -28,7 +28,6 @@ import java.util.UUID.randomUUID
 import javax.inject.Inject
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.{Failure, Success, Try}
-import uk.gov.hmrc.http.HttpReads.Implicits.*
 
 class DesConnector @Inject() (
   httpPost: HttpClientV2Provider,
