@@ -154,6 +154,19 @@ class RasFilesSessionServiceSpec
 
       exception.getMessage.contains("Error in saving sessionCache") shouldBe true
     }
+
+    "throw RuntimeException when storing FileSession fails and resultsFile is None" in new Setup {
+      when(sessionCacheRepositoryMock.get[FileSession]("A1234533")(DataKey("fileSession")))
+        .thenReturn(Future.successful(Some(rasSession)))
+      when(sessionCacheRepositoryMock.put[FileSession](any[String])(any(), any())(any()))
+        .thenReturn(Future.failed(new RuntimeException("disk full")))
+
+      val exception: RuntimeException = intercept[RuntimeException] {
+        await(sessionService.updateFileSession("A1234533", callbackData, None, None))
+      }
+
+      exception.getMessage.contains("Error in saving sessionCache") shouldBe true
+    }
   }
 
   trait Setup {

@@ -22,7 +22,7 @@ import uk.gov.hmrc.rasapi.services.DataCleansingService
 
 class DataCleansingModule extends Module {
 
-  lazy val bindServices: Seq[Binding[_]] = Seq(bind[DataCleansingService].toSelf.eagerly())
+  lazy val bindServices: Seq[Binding[?]] = Seq(bind[DataCleansingService].toSelf.eagerly())
 
   override def bindings(environment: Environment, configuration: Configuration): Seq[Binding[?]] =
     bindServices

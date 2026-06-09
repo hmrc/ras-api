@@ -69,7 +69,7 @@ class LookupController @Inject() (
   private val acceptHeaderValidationRules: Seq[String] =
     Seq("application/vnd.hmrc.1.0+json", "application/vnd.hmrc.2.0+json")
 
-  implicit class VersionUtil(request: Request[_]) {
+  extension (request: Request[?])
 
     def getVersion: ApiVersion =
       request.headers
@@ -84,8 +84,6 @@ class LookupController @Inject() (
           logger.warn(s"[LookupController][getVersion] Invalid Accept header: $providedAcceptHeader")
           throw new BadRequestException(ApiErrorResponse.acceptHeaderInvalid.toJson.toString())
         }
-
-  }
 
   def getResidencyStatus: Action[AnyContent] = validateAccept(acceptHeaderValidationRules).async { implicit request =>
     val apiMetrics = metrics.responseTimer.time

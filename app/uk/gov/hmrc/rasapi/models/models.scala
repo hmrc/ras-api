@@ -55,19 +55,15 @@ package object models {
     val isoDate: Reads[LocalDate]  = dateReads(isoDatePattern)
     val bulkDate: Reads[LocalDate] = dateReads(bulkDatePatterns)
 
-    private def ninoReads(): Reads[NINO] = new Reads[NINO] {
-
-      def reads(json: JsValue): JsResult[NINO] =
-        json match {
-          case JsString(data) =>
-            data match {
-              case strValue if strValue.isEmpty                         => JsError(Seq(JsPath() -> Seq(JsonValidationError(missing))))
-              case strValue if !strValue.toUpperCase.matches(ninoRegex) =>
-                JsError(Seq(JsPath() -> Seq(JsonValidationError(invalidFormat))))
-              case strValue                                             => JsSuccess(strValue)
-            }
-          case _              => JsError(Seq(JsPath() -> Seq(JsonValidationError(invalidDataType))))
+    private def ninoReads(): Reads[NINO] = {
+      case JsString(data) =>
+        data match {
+          case strValue if strValue.isEmpty                         => JsError(Seq(JsPath() -> Seq(JsonValidationError(missing))))
+          case strValue if !strValue.toUpperCase.matches(ninoRegex) =>
+            JsError(Seq(JsPath() -> Seq(JsonValidationError(invalidFormat))))
+          case strValue                                             => JsSuccess(strValue)
         }
+      case _              => JsError(Seq(JsPath() -> Seq(JsonValidationError(invalidDataType))))
     }
 
     /**
@@ -76,20 +72,15 @@ package object models {
       *
       * @return
       */
-    private def nameReads(): Reads[Name] = new Reads[Name] {
-
-      def reads(json: JsValue): JsResult[Name] =
-
-        json match {
-          case JsString(data) =>
-            data match {
-              case strValue if strValue.trim.isEmpty                           => JsError(Seq(JsPath() -> Seq(JsonValidationError(missing))))
-              case strValue if !strValue.matches("^[a-zA-Z &`\\-\\'^]{1,35}$") =>
-                JsError(Seq(JsPath() -> Seq(JsonValidationError(invalidFormat))))
-              case strValue                                                    => JsSuccess(strValue)
-            }
-          case _              => JsError(Seq(JsPath() -> Seq(JsonValidationError(invalidDataType))))
+    private def nameReads(): Reads[Name] = {
+      case JsString(data) =>
+        data match {
+          case strValue if strValue.trim.isEmpty                           => JsError(Seq(JsPath() -> Seq(JsonValidationError(missing))))
+          case strValue if !strValue.matches("^[a-zA-Z &`\\-\\'^]{1,35}$") =>
+            JsError(Seq(JsPath() -> Seq(JsonValidationError(invalidFormat))))
+          case strValue                                                    => JsSuccess(strValue)
         }
+      case _              => JsError(Seq(JsPath() -> Seq(JsonValidationError(invalidDataType))))
     }
 
     /**
@@ -98,55 +89,35 @@ package object models {
       *
       * @param patterns
       */
-    private def dateReads(patterns: Map[String, String]): Reads[LocalDate] = new Reads[LocalDate] {
-      def reads(json: JsValue): JsResult[LocalDate] = json match {
-        case JsString(s) if s.trim.nonEmpty =>
-          s.extractDateFormat(patterns) match {
-            case Some(format) =>
-              s.toDateTime(format) match {
-                case Some(d: LocalDate) if !d.isAfter(LocalDate.now()) => JsSuccess(d)
-                case _                                                 => JsError(Seq(JsPath() -> Seq(JsonValidationError(invalidDateValidation))))
-              }
-            case None         => JsError(Seq(JsPath() -> Seq(JsonValidationError(invalidFormat))))
-          }
-        case JsString(s) if s.trim.isEmpty  => JsError(Seq(JsPath() -> Seq(JsonValidationError(missing))))
-        case _                              => JsError(Seq(JsPath() -> Seq(JsonValidationError(invalidDataType))))
-      }
+    private def dateReads(patterns: Map[String, String]): Reads[LocalDate] = {
+      case JsString(s) if s.trim.nonEmpty =>
+        s.extractDateFormat(patterns) match {
+          case Some(format) =>
+            s.toDateTime(format) match {
+              case Some(d: LocalDate) if !d.isAfter(LocalDate.now()) => JsSuccess(d)
+              case _                                                 => JsError(Seq(JsPath() -> Seq(JsonValidationError(invalidDateValidation))))
+            }
+          case None         => JsError(Seq(JsPath() -> Seq(JsonValidationError(invalidFormat))))
+        }
+      case JsString(s) if s.trim.isEmpty  => JsError(Seq(JsPath() -> Seq(JsonValidationError(missing))))
+      case _                              => JsError(Seq(JsPath() -> Seq(JsonValidationError(invalidDataType))))
     }
 
   }
 
   object Extensions {
 
-    implicit class StringDateUtils(date: String) {
+    extension (date: String) {
 
-      /**
-        * Given a map of date formats (ie dd/mm/yyyy) and date regexes (ie [\\d]{2}/[\\d]{2}/[\\d]{4}),
-        * it will find the first regex in the map for which the string is a match
-        * and return the associated date format
-        *
-        * for example, it will return "dd/mm/yyyy" for an input string like "12/01/1999"
-        *
-        * @param patterns
-        * @return
-        */
       def extractDateFormat(patterns: Map[String, String]): Option[String] =
         patterns.find(pattern => date.matches(pattern._2)) match {
           case Some((format, _)) => Some(format)
           case _                 => None
         }
 
-      /**
-        * Converts to DateTime a string passed in in a specific format (ie, "dd/mm/yyyy")
-        *
-        * @param format
-        * @return
-        */
       def toDateTime(format: String): Option[LocalDate] = {
         val formatter = DateTimeFormatter.ofPattern(format).withResolverStyle(ResolverStyle.STRICT)
-        scala.util.control.Exception.allCatch[LocalDate] opt (
-          LocalDate.parse(date, formatter)
-        )
+        scala.util.control.Exception.allCatch[LocalDate] opt LocalDate.parse(date, formatter)
       }
 
     }

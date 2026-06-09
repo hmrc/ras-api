@@ -14,7 +14,7 @@ lazy val microservice = Project("ras-api", file("."))
   .settings(
     PlayKeys.playDefaultPort := 9669,
     libraryDependencies ++= AppDependencies(),
-    scalacOptions ++= Seq("-Wconf:src=routes/.*:s")
+    scalacOptions ++= Seq("-feature", "-Wconf:src=routes/.*:s")
   )
 
 lazy val it = project

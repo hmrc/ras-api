@@ -112,7 +112,7 @@ class DesConnector @Inject() (
 
   def generateNewUUID: String = randomUUID.toString
 
-  def correlationId(implicit hc: HeaderCarrier): String = {
+  def correlationId(using hc: HeaderCarrier): String = {
     val CorrelationIdPattern = """.*([A-Za-z0-9]{8}-[A-Za-z0-9]{4}-[A-Za-z0-9]{4}-[A-Za-z0-9]{4}).*""".r
     hc.requestId match {
       case Some(requestId) =>

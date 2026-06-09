@@ -44,12 +44,12 @@ class DesConnectorSpec
 
   val mockHttp: HttpClientV2Provider            = mock[HttpClientV2Provider]
   val mockHttpClient: HttpClientV2              = mock[HttpClientV2]
-  val mockRequestBuilder                        = mock[RequestBuilder]
+  val mockRequestBuilder: RequestBuilder        = mock[RequestBuilder]
   val mockAuditService: AuditService            = mock[AuditService]
   given format: OFormat[ResidencyStatusSuccess] = ResidencyStatusFormats.successFormats
 
-  val servicesConfig         = app.injector.instanceOf[ServicesConfig]
-  val appContext: AppContext = app.injector.instanceOf[AppContext]
+  val servicesConfig: ServicesConfig = app.injector.instanceOf[ServicesConfig]
+  val appContext: AppContext         = app.injector.instanceOf[AppContext]
 
   before {
     reset(mockHttp)
@@ -550,19 +550,19 @@ class DesConnectorSpec
     "requestID is present in the headerCarrier" should {
       "return new ID pre-appending the requestID when the requestID matches the format(8-4-4-4)" in {
         val requestId = "abcd0000-dh12-fg34-ij56"
-        TestDesConnector.correlationId(
+        TestDesConnector.correlationId(using
           HeaderCarrier(requestId = Some(RequestId(requestId)))
         ) shouldBe s"$requestId-${uuid.substring(24)}"
       }
 
       "return new ID when the requestID does not match the format(8-4-4-4)" in {
         val requestId = "1a2b-dh12-fg34-ij56"
-        TestDesConnector.correlationId(HeaderCarrier(requestId = Some(RequestId(requestId)))) shouldBe uuid
+        TestDesConnector.correlationId(using HeaderCarrier(requestId = Some(RequestId(requestId)))) shouldBe uuid
       }
     }
 
     "requestID is not present in the headerCarrier should return a new ID" in {
-      TestDesConnector.correlationId(HeaderCarrier()) shouldBe uuid
+      TestDesConnector.correlationId(using HeaderCarrier()) shouldBe uuid
     }
   }
 
