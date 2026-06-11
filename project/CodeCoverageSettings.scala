@@ -3,15 +3,15 @@ import scoverage.ScoverageKeys.*
 
 object CodeCoverageSettings {
 
-  private val excludedPackages: Seq[String] = Seq("<empty>", ".*Routes.*", "uk.gov.hmrc.rasapi.views.*")
+  private val excludedPackages: Seq[String] = Seq("<empty>", ".*Routes.*")
 
-  private val settings: Seq[Setting[_]] = Seq(
+  private val settings: Seq[Setting[?]] = Seq(
     coverageExcludedPackages := excludedPackages.mkString(";"),
-    coverageMinimumStmtTotal := 82,
+    coverageMinimumStmtTotal := 84,
     coverageFailOnMinimum := true,
     coverageHighlighting := true
   )
 
-  def apply(): Seq[Setting[_]] = settings
+  def apply(): Seq[Setting[?]] = settings
 
 }

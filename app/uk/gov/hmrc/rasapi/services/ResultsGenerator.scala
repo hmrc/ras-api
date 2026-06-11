@@ -46,7 +46,7 @@ trait ResultsGenerator {
   val FILE_PROCESSING_MATCHING_FAILED: String
   val FILE_PROCESSING_INTERNAL_SERVER_ERROR: String
 
-  def fetchResult(inputRow: String, userId: String, fileId: String, apiVersion: ApiVersion)(implicit
+  def fetchResult(inputRow: String, userId: String, fileId: String, apiVersion: ApiVersion)(using
     hc: HeaderCarrier,
     request: Request[AnyContent]
   ): String =
@@ -102,7 +102,7 @@ trait ResultsGenerator {
     }
   }
 
-  private def parseString(inputRow: String) = {
+  def parseString(inputRow: String): RawMemberDetails = {
     val cols = inputRow.split(comma)
     val res  = cols ++ (for (x <- 0 until 4 - cols.length) yield "")
     RawMemberDetails(res(0), res(1), res(2), res(3))
@@ -131,7 +131,7 @@ trait ResultsGenerator {
     residencyStatus: Option[ResidencyStatus],
     userId: String,
     fileId: String
-  )(implicit request: Request[AnyContent], hc: HeaderCarrier): Future[AuditResult] =
+  )(using request: Request[AnyContent], hc: HeaderCarrier): Future[AuditResult] =
 
     auditService.audit(
       auditType = "ReliefAtSourceResidency",
