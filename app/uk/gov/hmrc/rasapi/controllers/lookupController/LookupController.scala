@@ -110,6 +110,7 @@ class LookupController @Inject() (
                 failureReason = None,
                 nino = Some(individualDetails.nino),
                 residencyStatus = Some(residencyStatus),
+                rasApiVersion = request.getVersion,
                 userId = id
               )
               logger.info(
@@ -125,6 +126,7 @@ class LookupController @Inject() (
                     failureReason = Some(STATUS_DECEASED),
                     nino = Some(individualDetails.nino),
                     residencyStatus = None,
+                    rasApiVersion = request.getVersion,
                     userId = id
                   )
                   logger.info(s"[LookupController][getResidencyStatus] Individual is deceased for userId ($id).")
@@ -135,6 +137,7 @@ class LookupController @Inject() (
                     failureReason = Some("MATCHING_FAILED"),
                     nino = Some(individualDetails.nino),
                     residencyStatus = None,
+                    rasApiVersion = request.getVersion,
                     userId = id
                   )
                   logger.warn(s"[LookupController][getResidencyStatus] Individual not matched for userId ($id).")
@@ -145,6 +148,7 @@ class LookupController @Inject() (
                     failureReason = Some(STATUS_TOO_MANY_REQUESTS),
                     nino = Some(individualDetails.nino),
                     residencyStatus = None,
+                    rasApiVersion = request.getVersion,
                     userId = id
                   )
                   logger.error(s"[LookupController][getResidencyStatus] Too Many Requests for userId ($id).")
@@ -155,6 +159,7 @@ class LookupController @Inject() (
                     failureReason = Some("SERVICE_UNAVAILABLE"),
                     nino = Some(individualDetails.nino),
                     residencyStatus = None,
+                    rasApiVersion = request.getVersion,
                     userId = id
                   )
                   logger.error(s"[LookupController][getResidencyStatus] Service unavailable for userId ($id).")
@@ -165,6 +170,7 @@ class LookupController @Inject() (
                     failureReason = Some(ApiErrorResponse.internalServerError.code),
                     nino = Some(individualDetails.nino),
                     residencyStatus = None,
+                    rasApiVersion = request.getVersion,
                     userId = id
                   )
                   logger.warn(
@@ -179,6 +185,7 @@ class LookupController @Inject() (
               failureReason = Some(ApiErrorResponse.internalServerError.code),
               nino = None,
               residencyStatus = None,
+              rasApiVersion = request.getVersion,
               userId = id
             )
             logger.error(
@@ -268,6 +275,7 @@ class LookupController @Inject() (
     failureReason: Option[String],
     nino: Option[String],
     residencyStatus: Option[ResidencyStatus],
+    rasApiVersion: ApiVersion,
     userId: String
   )(using request: Request[AnyContent], hc: HeaderCarrier): Unit = {
 

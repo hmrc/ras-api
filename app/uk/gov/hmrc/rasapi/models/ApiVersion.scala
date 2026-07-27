@@ -18,6 +18,10 @@ package uk.gov.hmrc.rasapi.models
 
 sealed trait ApiVersion
 
-case object V1_0 extends ApiVersion
+case object V1_0 extends ApiVersion {
+  override def toString: String = "v1"
+}
 
-case object V2_0 extends ApiVersion
+case object V2_0 extends ApiVersion {
+  override def toString: String = "v2"
+}
