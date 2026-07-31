@@ -28,10 +28,10 @@ import org.scalatest.wordspec.AnyWordSpecLike
 import org.scalatestplus.mockito.MockitoSugar
 import org.scalatestplus.play.guice.GuiceOneAppPerSuite
 import play.api.libs.json.{JsObject, Json}
-import play.api.mvc.AnyContentAsEmpty
+import play.api.mvc.{AnyContentAsEmpty, Request}
 import play.api.test.FakeRequest
 import play.api.test.Helpers.{await, defaultAwaitTimeout}
-import uk.gov.hmrc.http.HeaderCarrier
+import uk.gov.hmrc.http.{BadRequestException, HeaderCarrier}
 import uk.gov.hmrc.mongo.cache.CacheItem
 import uk.gov.hmrc.mongo.test.DefaultPlayMongoRepositorySupport
 import uk.gov.hmrc.rasapi.config.AppContext
@@ -107,7 +107,22 @@ class FileProcessingServiceSpec
     override val FILE_PROCESSING_INTERNAL_SERVER_ERROR: String = STATUS_FILE_PROCESSING_INTERNAL_SERVER_ERROR
     override val SERVICE_UNAVAILABLE: String                   = STATUS_SERVICE_UNAVAILABLE
   }
+  extension (request: Request[?])
 
+    def getVersion: ApiVersion =
+      request.headers
+        .get(ACCEPT)
+        .flatMap {
+          case accept if accept.contains("application/vnd.hmrc.1.0+json") => Some(V1_0)
+          case accept if accept.contains("application/vnd.hmrc.2.0+json") => Some(V2_0)
+          case _ => None
+        }
+        .getOrElse {
+          val providedAcceptHeader = request.headers.get(ACCEPT).getOrElse("<missing>")
+          logger.warn(s"[LookupController][getVersion] Invalid Accept header: $providedAcceptHeader")
+          throw new BadRequestException(ApiErrorResponse.acceptHeaderInvalid.toJson.toString())
+        }
+        
   def getTestFilePath: Path = {
     val successresultsArr = Array(
       "LE241131B,Jim,Jimson,1990-02-21",
@@ -222,7 +237,8 @@ class FileProcessingServiceSpec
               "fileId"           -> fileId,
               "nino"             -> "LE241131B",
               "userIdentifier"   -> "user1234",
-              "requestSource"    -> "FE_BULK"
+              "requestSource"    -> "FE_BULK",
+              "rasApiVersion"    -> getVersion.toString
             )
           )
         )(using any())
@@ -315,7 +331,9 @@ class FileProcessingServiceSpec
               "fileId"           -> fileId,
               "nino"             -> "LE241131B",
               "userIdentifier"   -> "user1234",
-              "requestSource"    -> "FE_BULK"
+              "requestSource"    -> "FE_BULK",
+              "rasApiVersion"    -> getVersion.toString
+            )
             )
           )
         )(using any())
@@ -407,7 +425,9 @@ class FileProcessingServiceSpec
               "fileId"           -> fileId,
               "nino"             -> "LE241131B",
               "userIdentifier"   -> "user1234",
-              "requestSource"    -> "FE_BULK"
+              "requestSource"    -> "FE_BULK",
+              "rasApiVersion"    -> getVersion.toString
+            )
             )
           )
         )(using any())
@@ -502,7 +522,9 @@ class FileProcessingServiceSpec
               "fileId"           -> fileId,
               "reason"           -> "MATCHING_FAILED",
               "userIdentifier"   -> "user1234",
-              "requestSource"    -> "FE_BULK"
+              "requestSource"    -> "FE_BULK",
+              "rasApiVersion"    -> getVersion.toString
+            )
             )
           )
         )(using any())
@@ -595,7 +617,8 @@ class FileProcessingServiceSpec
               "fileId"           -> fileId,
               "reason"           -> s"$STATUS_DECEASED",
               "userIdentifier"   -> "user1234",
-              "requestSource"    -> "FE_BULK"
+              "requestSource"    -> "FE_BULK",
+              "rasApiVersion"    -> getVersion.toString
             )
           )
         )(using any())
@@ -691,7 +714,8 @@ class FileProcessingServiceSpec
               "fileId"           -> fileId,
               "reason"           -> s"$STATUS_SERVICE_UNAVAILABLE",
               "userIdentifier"   -> "user1234",
-              "requestSource"    -> "FE_BULK"
+              "requestSource"    -> "FE_BULK",
+              "rasApiVersion"    -> getVersion.toString
             )
           )
         )(using any())

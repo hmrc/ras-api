@@ -16,9 +16,10 @@
 
 package uk.gov.hmrc.rasapi.services
 
+import play.api.Logging
 import play.api.libs.json.{JsError, JsSuccess, Json}
 import play.api.mvc.{AnyContent, Request}
-import uk.gov.hmrc.http.HeaderCarrier
+import uk.gov.hmrc.http.{BadRequestException, HeaderCarrier}
 import uk.gov.hmrc.play.audit.http.connector.AuditResult
 import uk.gov.hmrc.rasapi.connectors.DesConnector
 import uk.gov.hmrc.rasapi.helpers.ResidencyYearResolver
@@ -45,6 +46,23 @@ trait ResultsGenerator {
   val SERVICE_UNAVAILABLE: String
   val FILE_PROCESSING_MATCHING_FAILED: String
   val FILE_PROCESSING_INTERNAL_SERVER_ERROR: String
+  val ACCEPT = "Accept"
+  
+  extension (request: Request[?])
+
+    def getVersion: ApiVersion =
+      request.headers
+        .get(ACCEPT)
+        .flatMap {
+          case accept if accept.contains("application/vnd.hmrc.1.0+json") => Some(V1_0)
+          case accept if accept.contains("application/vnd.hmrc.2.0+json") => Some(V2_0)
+          case _ => None
+        }
+        .getOrElse {
+          val providedAcceptHeader = request.headers.get(ACCEPT).getOrElse("<missing>")
+          //ogger.warn(s"[LookupController][getVersion] Invalid Accept header: $providedAcceptHeader")
+          throw new BadRequestException(ApiErrorResponse.acceptHeaderInvalid.toJson.toString())
+        }
 
   def fetchResult(inputRow: String, userId: String, fileId: String, apiVersion: ApiVersion)(using
     hc: HeaderCarrier,
@@ -144,7 +162,8 @@ trait ResultsGenerator {
         "NextCYStatus"     -> residencyStatus.flatMap(_.nextYearForecastResidencyStatus).getOrElse(""),
         "successfulLookup" -> failureReason.getOrElse("").isEmpty.toString,
         "reason"           -> failureReason.getOrElse(""),
-        "CYStatus"         -> residencyStatus.map(_.currentYearResidencyStatus).getOrElse("")
+        "CYStatus"         -> residencyStatus.map(_.currentYearResidencyStatus).getOrElse(""),
+        "rasApiVersion"    -> getVersion.toString()
       ).filterNot(_._2 == "")
     )
 

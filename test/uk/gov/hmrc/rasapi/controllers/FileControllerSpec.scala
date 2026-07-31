@@ -90,6 +90,22 @@ class FileControllerSpec
     reset(mockAuditService)
   }
 
+  extension (request: Request[?])
+
+    def getVersion: ApiVersion =
+      request.headers
+        .get(ACCEPT)
+        .flatMap {
+          case accept if accept.contains("application/vnd.hmrc.1.0+json") => Some(V1_0)
+          case accept if accept.contains("application/vnd.hmrc.2.0+json") => Some(V2_0)
+          case _ => None
+        }
+        .getOrElse {
+          val providedAcceptHeader = request.headers.get(ACCEPT).getOrElse("<missing>")
+          logger.warn(s"[LookupController][getVersion] Invalid Accept header: $providedAcceptHeader")
+          throw new BadRequestException(ApiErrorResponse.acceptHeaderInvalid.toJson.toString())
+        }
+
   "FileController" should {
     "serve a file" when {
       "valid filename is provided" in {
@@ -190,7 +206,7 @@ class FileControllerSpec
         verify(mockAuditService).audit(
           auditType = Meq("FileDeletion"),
           path = any(),
-          auditData = Meq(Map("userIdentifier" -> "A123456", "fileName" -> fileName, "chunkDeletionSuccess" -> "true"))
+          auditData = Meq(Map("userIdentifier" -> "A123456", "fileName" -> fileName, "chunkDeletionSuccess" -> "true", "rasApiVersion" -> getVersion.toString)
         )(using any())
       }
 
@@ -219,7 +235,7 @@ class FileControllerSpec
         verify(mockAuditService).audit(
           auditType = Meq("FileDeletion"),
           path = any(),
-          auditData = Meq(Map("userIdentifier" -> "A123456", "fileName" -> fileName, "chunkDeletionSuccess" -> "false"))
+          auditData = Meq(Map("userIdentifier" -> "A123456", "fileName" -> fileName, "chunkDeletionSuccess" -> "false", "rasApiVersion" -> getVersion.toString))
         )(using any())
       }
 
@@ -254,7 +270,8 @@ class FileControllerSpec
               "userIdentifier"       -> userId,
               "fileName"             -> fileName,
               "chunkDeletionSuccess" -> "false",
-              "reason"               -> "fileName could not be converted to ObjectId"
+              "reason"               -> "fileName could not be converted to ObjectId",
+              "rasApiVersion"        -> getVersion.toString
             )
           )
         )(using any())
