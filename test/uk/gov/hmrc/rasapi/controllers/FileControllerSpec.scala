@@ -17,6 +17,9 @@
 package uk.gov.hmrc.rasapi.controllers
 
 import org.apache.pekko.actor.ActorSystem
+import play.api.Logging
+import uk.gov.hmrc.rasapi.models.{ApiErrorResponse, ApiVersion, V1_0, V2_0}
+import uk.gov.hmrc.http.BadRequestException
 import org.apache.pekko.stream.Materializer
 import org.apache.pekko.stream.scaladsl.Source
 import org.bson.types.ObjectId
@@ -32,12 +35,15 @@ import play.api.http.Status
 import play.api.http.Status.UNAUTHORIZED
 import play.api.inject.guice.GuiceApplicationBuilder
 import play.api.mvc.ControllerComponents
+import play.api.mvc.Request
+import play.api.http.HeaderNames.ACCEPT
 import play.api.test.Helpers.{await, defaultAwaitTimeout, status}
 import play.api.test.{FakeRequest, Helpers}
 import uk.gov.hmrc.auth.core.*
 import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.rasapi.controllers.fileController.FileController
 import uk.gov.hmrc.rasapi.metrics.Metrics
+import uk.gov.hmrc.rasapi.models.ApiVersion
 import uk.gov.hmrc.rasapi.repository.{FileData, RasChunksRepository, RasFilesRepository}
 import uk.gov.hmrc.rasapi.services.AuditService
 
@@ -51,7 +57,8 @@ class FileControllerSpec
     with MockitoSugar
     with GuiceOneAppPerSuite
     with BeforeAndAfter
-    with TestEnrolments {
+    with TestEnrolments
+    with Logging {
 
   given hc: HeaderCarrier = HeaderCarrier()
 
@@ -98,7 +105,7 @@ class FileControllerSpec
         .flatMap {
           case accept if accept.contains("application/vnd.hmrc.1.0+json") => Some(V1_0)
           case accept if accept.contains("application/vnd.hmrc.2.0+json") => Some(V2_0)
-          case _ => None
+          case _                                                          => None
         }
         .getOrElse {
           val providedAcceptHeader = request.headers.get(ACCEPT).getOrElse("<missing>")
@@ -200,13 +207,23 @@ class FileControllerSpec
         val result   = await(
           fileController
             .remove(fileName, userId)
-            .apply(FakeRequest(Helpers.DELETE, s"/ras-api/file/remove/:$fileName/:$userId"))
+            .apply(
+              FakeRequest(Helpers.DELETE, s"/ras-api/file/remove/:$fileName/:$userId")
+                .withHeaders(ACCEPT -> "application/vnd.hmrc.1.0+json")
+            )
         )
         result.header.status shouldBe Status.OK
         verify(mockAuditService).audit(
           auditType = Meq("FileDeletion"),
           path = any(),
-          auditData = Meq(Map("userIdentifier" -> "A123456", "fileName" -> fileName, "chunkDeletionSuccess" -> "true", "rasApiVersion" -> getVersion.toString)
+          auditData = Meq(
+            Map(
+              "userIdentifier"       -> "A123456",
+              "fileName"             -> fileName,
+              "chunkDeletionSuccess" -> "true",
+              "rasApiVersion"        -> V1_0.toString
+            )
+          )
         )(using any())
       }
 
@@ -229,13 +246,23 @@ class FileControllerSpec
         val result   = await(
           fileController
             .remove(fileName, userId)
-            .apply(FakeRequest(Helpers.DELETE, s"/ras-api/file/remove/:$fileName/:$userId"))
+            .apply(
+              FakeRequest(Helpers.DELETE, s"/ras-api/file/remove/:$fileName/:$userId")
+                .withHeaders(ACCEPT -> "application/vnd.hmrc.1.0+json")
+            )
         )
         result.header.status shouldBe Status.OK
         verify(mockAuditService).audit(
           auditType = Meq("FileDeletion"),
           path = any(),
-          auditData = Meq(Map("userIdentifier" -> "A123456", "fileName" -> fileName, "chunkDeletionSuccess" -> "false", "rasApiVersion" -> getVersion.toString))
+          auditData = Meq(
+            Map(
+              "userIdentifier"       -> "A123456",
+              "fileName"             -> fileName,
+              "chunkDeletionSuccess" -> "false",
+              "rasApiVersion"        -> V1_0.toString
+            )
+          )
         )(using any())
       }
 
@@ -258,7 +285,12 @@ class FileControllerSpec
         val fileName = "testFile.csv"
         val userId   = "A123456"
         val result   = await(
-          fileController.remove(fileName, userId).apply(FakeRequest(Helpers.DELETE, s"/ras-api/file/remove/:$fileName"))
+          fileController
+            .remove(fileName, userId)
+            .apply(
+              FakeRequest(Helpers.DELETE, s"/ras-api/file/remove/:$fileName")
+                .withHeaders(ACCEPT -> "application/vnd.hmrc.1.0+json")
+            )
         )
         result.header.status shouldBe Status.OK
 
@@ -271,7 +303,7 @@ class FileControllerSpec
               "fileName"             -> fileName,
               "chunkDeletionSuccess" -> "false",
               "reason"               -> "fileName could not be converted to ObjectId",
-              "rasApiVersion"        -> getVersion.toString
+              "rasApiVersion"        -> V1_0.toString
             )
           )
         )(using any())
@@ -296,7 +328,10 @@ class FileControllerSpec
         val result   = await(
           fileController
             .remove(fileName, "5b4628e02f00002501139c8c")
-            .apply(FakeRequest(Helpers.DELETE, s"/ras-api/file/remove/:$fileName"))
+            .apply(
+              FakeRequest(Helpers.DELETE, s"/ras-api/file/remove/:$fileName")
+                .withHeaders(ACCEPT -> "application/vnd.hmrc.1.0+json")
+            )
         )
         result.header.status shouldBe Status.OK
       }
@@ -320,7 +355,10 @@ class FileControllerSpec
         val result   = await(
           fileController
             .remove(fileName, "5b4628e02f00002501139c8c")
-            .apply(FakeRequest(Helpers.DELETE, s"/ras-api/file/remove/:$fileName"))
+            .apply(
+              FakeRequest(Helpers.DELETE, s"/ras-api/file/remove/:$fileName")
+                .withHeaders(ACCEPT -> "application/vnd.hmrc.1.0+json")
+            )
         )
         result.header.status shouldBe Status.INTERNAL_SERVER_ERROR
       }
@@ -335,7 +373,10 @@ class FileControllerSpec
         val fileName = "testFile.csv"
         val result   = fileController
           .remove(fileName, "5b4628e02f00002501139c8c")
-          .apply(FakeRequest(Helpers.DELETE, s"/ras-api/file/remove/:$fileName"))
+          .apply(
+            FakeRequest(Helpers.DELETE, s"/ras-api/file/remove/:$fileName")
+              .withHeaders(ACCEPT -> "application/vnd.hmrc.1.0+json")
+          )
         status(result) shouldBe UNAUTHORIZED
       }
     }
@@ -349,7 +390,10 @@ class FileControllerSpec
         val fileName = "testFile.csv"
         val result   = fileController
           .remove(fileName, "5b4628e02f00002501139c8c")
-          .apply(FakeRequest(Helpers.DELETE, s"/ras-api/file/remove/:$fileName"))
+          .apply(
+            FakeRequest(Helpers.DELETE, s"/ras-api/file/remove/:$fileName")
+              .withHeaders(ACCEPT -> "application/vnd.hmrc.1.0+json")
+          )
         status(result) shouldBe UNAUTHORIZED
       }
     }

@@ -47,7 +47,7 @@ trait ResultsGenerator {
   val FILE_PROCESSING_MATCHING_FAILED: String
   val FILE_PROCESSING_INTERNAL_SERVER_ERROR: String
   val ACCEPT = "Accept"
-  
+
   extension (request: Request[?])
 
     def getVersion: ApiVersion =
@@ -56,11 +56,11 @@ trait ResultsGenerator {
         .flatMap {
           case accept if accept.contains("application/vnd.hmrc.1.0+json") => Some(V1_0)
           case accept if accept.contains("application/vnd.hmrc.2.0+json") => Some(V2_0)
-          case _ => None
+          case _                                                          => None
         }
         .getOrElse {
           val providedAcceptHeader = request.headers.get(ACCEPT).getOrElse("<missing>")
-          //ogger.warn(s"[LookupController][getVersion] Invalid Accept header: $providedAcceptHeader")
+          // ogger.warn(s"[LookupController][getVersion] Invalid Accept header: $providedAcceptHeader")
           throw new BadRequestException(ApiErrorResponse.acceptHeaderInvalid.toJson.toString())
         }
 
@@ -163,7 +163,7 @@ trait ResultsGenerator {
         "successfulLookup" -> failureReason.getOrElse("").isEmpty.toString,
         "reason"           -> failureReason.getOrElse(""),
         "CYStatus"         -> residencyStatus.map(_.currentYearResidencyStatus).getOrElse(""),
-        "rasApiVersion"    -> getVersion.toString()
+        "rasApiVersion"    -> request.getVersion.toString()
       ).filterNot(_._2 == "")
     )
 

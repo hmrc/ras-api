@@ -300,7 +300,11 @@ class LookupController @Inject() (
     auditService.audit(
       auditType = "ReliefAtSourceResidency",
       path = request.path,
-      auditData = auditDataMap ++ Map("userIdentifier" -> userId, "requestSource" -> "API", "rasApiVersion" -> rasApiVersion.toString) ++ ninoMap
+      auditData = auditDataMap ++ Map(
+        "userIdentifier" -> userId,
+        "requestSource"  -> "API",
+        "rasApiVersion"  -> rasApiVersion.toString
+      ) ++ ninoMap
     )
   }
 

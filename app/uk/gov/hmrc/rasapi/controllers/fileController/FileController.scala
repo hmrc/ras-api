@@ -60,7 +60,7 @@ class FileController @Inject() (
         .flatMap {
           case accept if accept.contains("application/vnd.hmrc.1.0+json") => Some(V1_0)
           case accept if accept.contains("application/vnd.hmrc.2.0+json") => Some(V2_0)
-          case _ => None
+          case _                                                          => None
         }
         .getOrElse {
           val providedAcceptHeader = request.headers.get(ACCEPT).getOrElse("<missing>")
@@ -130,13 +130,23 @@ class FileController @Inject() (
                     auditService.audit(
                       auditType = "FileDeletion",
                       path = request.path,
-                      auditData = Map("userIdentifier" -> id, "fileName" -> fileName, "chunkDeletionSuccess" -> "true", "rasApiVersion" -> getVersion.toString)
+                      auditData = Map(
+                        "userIdentifier"       -> id,
+                        "fileName"             -> fileName,
+                        "chunkDeletionSuccess" -> "true",
+                        "rasApiVersion"        -> request.getVersion.toString
+                      )
                     )
                   } else {
                     auditService.audit(
                       auditType = "FileDeletion",
                       path = request.path,
-                      auditData = Map("userIdentifier" -> id, "fileName" -> fileName, "chunkDeletionSuccess" -> "false", "rasApiVersion" -> getVersion.toString)
+                      auditData = Map(
+                        "userIdentifier"       -> id,
+                        "fileName"             -> fileName,
+                        "chunkDeletionSuccess" -> "false",
+                        "rasApiVersion"        -> request.getVersion.toString
+                      )
                     )
                     logger.warn(s"[FileController][remove] Chunk deletion failed, fileName is: $fileName")
                   }
@@ -159,7 +169,7 @@ class FileController @Inject() (
                   "fileName"             -> fileName,
                   "chunkDeletionSuccess" -> "false",
                   "reason"               -> "fileName could not be converted to ObjectId",
-                  "rasApiVersion"        -> getVersion.toString
+                  "rasApiVersion"        -> request.getVersion.toString
                 )
               )
               Future.successful(())

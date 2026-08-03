@@ -247,7 +247,8 @@ class LookupControllerSpec
               "NextCYStatus"     -> "otherUKResident",
               "nino"             -> "LE241131B",
               "userIdentifier"   -> "A123456",
-              "requestSource"    -> "API"
+              "requestSource"    -> "API",
+              "rasApiVersion"    -> "v2"
             )
           )
         )(using any())
@@ -283,7 +284,8 @@ class LookupControllerSpec
               "NextCYStatus"     -> "otherUKResident",
               "nino"             -> "LE241131B",
               "userIdentifier"   -> "A123456",
-              "requestSource"    -> "API"
+              "requestSource"    -> "API",
+              "rasApiVersion"    -> "v2"
             )
           )
         )(using any())
@@ -318,7 +320,8 @@ class LookupControllerSpec
               "CYStatus"         -> "otherUKResident",
               "nino"             -> "LE241131B",
               "userIdentifier"   -> "A123456",
-              "requestSource"    -> "API"
+              "requestSource"    -> "API",
+              "rasApiVersion"    -> "v2"
             )
           )
         )(using any())
@@ -350,7 +353,8 @@ class LookupControllerSpec
               "reason"           -> STATUS_DECEASED,
               "nino"             -> "LE241131B",
               "userIdentifier"   -> "A123456",
-              "requestSource"    -> "API"
+              "requestSource"    -> "API",
+              "rasApiVersion"    -> "v2"
             )
           )
         )(using any())
@@ -386,7 +390,8 @@ class LookupControllerSpec
               "successfulLookup" -> "false",
               "reason"           -> "MATCHING_FAILED",
               "userIdentifier"   -> "A123456",
-              "requestSource"    -> "API"
+              "requestSource"    -> "API",
+              "rasApiVersion"    -> "v2"
             )
           )
         )(using any())
@@ -419,7 +424,8 @@ class LookupControllerSpec
               "successfulLookup" -> "false",
               "reason"           -> s"$STATUS_INTERNAL_SERVER_ERROR",
               "userIdentifier"   -> "A123456",
-              "requestSource"    -> "API"
+              "requestSource"    -> "API",
+              "rasApiVersion"    -> "v2"
             )
           )
         )(using any())

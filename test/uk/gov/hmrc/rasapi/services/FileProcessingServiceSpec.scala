@@ -17,6 +17,7 @@
 package uk.gov.hmrc.rasapi.services
 
 import org.apache.pekko.actor.ActorSystem
+import play.api.Logging
 import org.apache.pekko.stream.Materializer
 import org.mockito.ArgumentCaptor
 import org.mockito.ArgumentMatchers.{eq as Meq, *}
@@ -29,6 +30,7 @@ import org.scalatestplus.mockito.MockitoSugar
 import org.scalatestplus.play.guice.GuiceOneAppPerSuite
 import play.api.libs.json.{JsObject, Json}
 import play.api.mvc.{AnyContentAsEmpty, Request}
+import play.api.http.HeaderNames.ACCEPT
 import play.api.test.FakeRequest
 import play.api.test.Helpers.{await, defaultAwaitTimeout}
 import uk.gov.hmrc.http.{BadRequestException, HeaderCarrier}
@@ -59,10 +61,14 @@ class FileProcessingServiceSpec
     with ScalaFutures
     with MockitoSugar
     with BeforeAndAfter
-    with DefaultPlayMongoRepositorySupport[Chunks] {
+    with DefaultPlayMongoRepositorySupport[Chunks]
+    with Logging {
 
   given hc: HeaderCarrier                            = HeaderCarrier()
-  given fakeReq: FakeRequest[AnyContentAsEmpty.type] = FakeRequest("POST", "/residency-status")
+
+  given fakeReq: FakeRequest[AnyContentAsEmpty.type] =
+    FakeRequest("POST", "/residency-status").withHeaders(ACCEPT -> "application/vnd.hmrc.2.0+json")
+
   given system: ActorSystem                          = ActorSystem()
   given materializers: Materializer                  = Materializer(system)
 
@@ -107,6 +113,7 @@ class FileProcessingServiceSpec
     override val FILE_PROCESSING_INTERNAL_SERVER_ERROR: String = STATUS_FILE_PROCESSING_INTERNAL_SERVER_ERROR
     override val SERVICE_UNAVAILABLE: String                   = STATUS_SERVICE_UNAVAILABLE
   }
+
   extension (request: Request[?])
 
     def getVersion: ApiVersion =
@@ -115,14 +122,14 @@ class FileProcessingServiceSpec
         .flatMap {
           case accept if accept.contains("application/vnd.hmrc.1.0+json") => Some(V1_0)
           case accept if accept.contains("application/vnd.hmrc.2.0+json") => Some(V2_0)
-          case _ => None
+          case _                                                          => None
         }
         .getOrElse {
           val providedAcceptHeader = request.headers.get(ACCEPT).getOrElse("<missing>")
           logger.warn(s"[LookupController][getVersion] Invalid Accept header: $providedAcceptHeader")
           throw new BadRequestException(ApiErrorResponse.acceptHeaderInvalid.toJson.toString())
         }
-        
+
   def getTestFilePath: Path = {
     val successresultsArr = Array(
       "LE241131B,Jim,Jimson,1990-02-21",
@@ -238,7 +245,7 @@ class FileProcessingServiceSpec
               "nino"             -> "LE241131B",
               "userIdentifier"   -> "user1234",
               "requestSource"    -> "FE_BULK",
-              "rasApiVersion"    -> getVersion.toString
+              "rasApiVersion"    -> V2_0.toString
             )
           )
         )(using any())
@@ -332,8 +339,7 @@ class FileProcessingServiceSpec
               "nino"             -> "LE241131B",
               "userIdentifier"   -> "user1234",
               "requestSource"    -> "FE_BULK",
-              "rasApiVersion"    -> getVersion.toString
-            )
+              "rasApiVersion"    -> V2_0.toString
             )
           )
         )(using any())
@@ -426,8 +432,7 @@ class FileProcessingServiceSpec
               "nino"             -> "LE241131B",
               "userIdentifier"   -> "user1234",
               "requestSource"    -> "FE_BULK",
-              "rasApiVersion"    -> getVersion.toString
-            )
+              "rasApiVersion"    -> V2_0.toString
             )
           )
         )(using any())
@@ -523,8 +528,7 @@ class FileProcessingServiceSpec
               "reason"           -> "MATCHING_FAILED",
               "userIdentifier"   -> "user1234",
               "requestSource"    -> "FE_BULK",
-              "rasApiVersion"    -> getVersion.toString
-            )
+              "rasApiVersion"    -> V2_0.toString
             )
           )
         )(using any())
@@ -618,7 +622,7 @@ class FileProcessingServiceSpec
               "reason"           -> s"$STATUS_DECEASED",
               "userIdentifier"   -> "user1234",
               "requestSource"    -> "FE_BULK",
-              "rasApiVersion"    -> getVersion.toString
+              "rasApiVersion"    -> V2_0.toString
             )
           )
         )(using any())
@@ -715,7 +719,7 @@ class FileProcessingServiceSpec
               "reason"           -> s"$STATUS_SERVICE_UNAVAILABLE",
               "userIdentifier"   -> "user1234",
               "requestSource"    -> "FE_BULK",
-              "rasApiVersion"    -> getVersion.toString
+              "rasApiVersion"    -> V2_0.toString
             )
           )
         )(using any())
