@@ -64,13 +64,13 @@ class FileProcessingServiceSpec
     with DefaultPlayMongoRepositorySupport[Chunks]
     with Logging {
 
-  given hc: HeaderCarrier                            = HeaderCarrier()
+  given hc: HeaderCarrier = HeaderCarrier()
 
   given fakeReq: FakeRequest[AnyContentAsEmpty.type] =
     FakeRequest("POST", "/residency-status").withHeaders(ACCEPT -> "application/vnd.hmrc.2.0+json")
 
-  given system: ActorSystem                          = ActorSystem()
-  given materializers: Materializer                  = Materializer(system)
+  given system: ActorSystem         = ActorSystem()
+  given materializers: Materializer = Materializer(system)
 
   val mockUpscanConnector: UpscanConnector = mock[UpscanConnector]
 
