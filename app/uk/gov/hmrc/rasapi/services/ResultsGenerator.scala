@@ -163,7 +163,7 @@ trait ResultsGenerator {
         "successfulLookup" -> failureReason.getOrElse("").isEmpty.toString,
         "reason"           -> failureReason.getOrElse(""),
         "CYStatus"         -> residencyStatus.map(_.currentYearResidencyStatus).getOrElse(""),
-        "rasApiVersion"    -> request.getVersion.toString()
+        "rasApiVersion"    -> request.getVersion.toString
       ).filterNot(_._2 == "")
     )
 

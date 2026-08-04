@@ -33,7 +33,7 @@ import play.api.test.Helpers.*
 import play.api.test.{FakeRequest, Helpers}
 import play.mvc.Http.HeaderNames
 import uk.gov.hmrc.auth.core.*
-import uk.gov.hmrc.http.HeaderCarrier
+import uk.gov.hmrc.http.{BadRequestException, HeaderCarrier}
 import uk.gov.hmrc.rasapi.config.AppContext
 import uk.gov.hmrc.rasapi.connectors.DesConnector
 import uk.gov.hmrc.rasapi.controllers.lookupController.LookupController
@@ -966,6 +966,27 @@ class LookupControllerSpec
         status(result)        shouldBe SERVICE_UNAVAILABLE
         contentAsJson(result) shouldBe expectedJsonResult
       }
+    }
+  }
+
+  "LookupController.getVersion" should {
+    import TestLookupController.getVersion
+
+    "return V1_0 when the Accept header requests version 1.0" in {
+      FakeRequest(Helpers.GET, "/").withHeaders(acceptHeaderV1).getVersion shouldBe V1_0
+    }
+
+    "return V2_0 when the Accept header requests version 2.0" in {
+      FakeRequest(Helpers.GET, "/").withHeaders(acceptHeader).getVersion shouldBe V2_0
+    }
+
+    "throw a BadRequestException when the Accept header is invalid" in {
+      a[BadRequestException] should be thrownBy
+        FakeRequest(Helpers.GET, "/").withHeaders(HeaderNames.ACCEPT -> "application/vnd.hmrc.9.9+json").getVersion
+    }
+
+    "throw a BadRequestException when the Accept header is missing" in {
+      a[BadRequestException] should be thrownBy FakeRequest(Helpers.GET, "/").getVersion
     }
   }
 
