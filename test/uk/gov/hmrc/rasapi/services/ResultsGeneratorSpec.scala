@@ -21,7 +21,6 @@ import org.scalatest.wordspec.AnyWordSpecLike
 import org.scalatestplus.mockito.MockitoSugar
 import play.api.http.HeaderNames.ACCEPT
 import play.api.test.FakeRequest
-import uk.gov.hmrc.http.BadRequestException
 import uk.gov.hmrc.rasapi.connectors.DesConnector
 import uk.gov.hmrc.rasapi.helpers.ResidencyYearResolver
 import uk.gov.hmrc.rasapi.models.{IndividualDetails, RawMemberDetails, V1_0, V2_0}
@@ -57,19 +56,19 @@ class ResultsGeneratorSpec extends AnyWordSpecLike with Matchers with MockitoSug
 
   "ResultsGenerator.getVersion" should {
 
-    "return V1_0 when the Accept header requests version 1.0" in {
+    "return Some(V1_0) when the Accept header requests version 1.0" in {
       val request = FakeRequest().withHeaders(ACCEPT -> "application/vnd.hmrc.1.0+json")
-      request.getVersion shouldBe V1_0
+      request.getVersion shouldBe Some(V1_0)
     }
 
-    "return V2_0 when the Accept header requests version 2.0" in {
+    "return Some(V2_0) when the Accept header requests version 2.0" in {
       val request = FakeRequest().withHeaders(ACCEPT -> "application/vnd.hmrc.2.0+json")
-      request.getVersion shouldBe V2_0
+      request.getVersion shouldBe Some(V2_0)
     }
 
-    "throw a BadRequestException when the Accept header is missing or invalid" in {
+    "return None when the Accept header is missing or invalid" in {
       val request = FakeRequest().withHeaders(ACCEPT -> "application/vnd.hmrc.9.9+json")
-      a[BadRequestException] should be thrownBy request.getVersion
+      request.getVersion shouldBe None
     }
   }
 

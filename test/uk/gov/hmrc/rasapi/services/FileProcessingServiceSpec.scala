@@ -29,11 +29,11 @@ import org.scalatest.wordspec.AnyWordSpecLike
 import org.scalatestplus.mockito.MockitoSugar
 import org.scalatestplus.play.guice.GuiceOneAppPerSuite
 import play.api.libs.json.{JsObject, Json}
-import play.api.mvc.{AnyContentAsEmpty, Request}
+import play.api.mvc.AnyContentAsEmpty
 import play.api.http.HeaderNames.ACCEPT
 import play.api.test.FakeRequest
 import play.api.test.Helpers.{await, defaultAwaitTimeout}
-import uk.gov.hmrc.http.{BadRequestException, HeaderCarrier}
+import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.mongo.cache.CacheItem
 import uk.gov.hmrc.mongo.test.DefaultPlayMongoRepositorySupport
 import uk.gov.hmrc.rasapi.config.AppContext
@@ -113,22 +113,6 @@ class FileProcessingServiceSpec
     override val FILE_PROCESSING_INTERNAL_SERVER_ERROR: String = STATUS_FILE_PROCESSING_INTERNAL_SERVER_ERROR
     override val SERVICE_UNAVAILABLE: String                   = STATUS_SERVICE_UNAVAILABLE
   }
-
-  extension (request: Request[?])
-
-    def getVersion: ApiVersion =
-      request.headers
-        .get(ACCEPT)
-        .flatMap {
-          case accept if accept.contains("application/vnd.hmrc.1.0+json") => Some(V1_0)
-          case accept if accept.contains("application/vnd.hmrc.2.0+json") => Some(V2_0)
-          case _                                                          => None
-        }
-        .getOrElse {
-          val providedAcceptHeader = request.headers.get(ACCEPT).getOrElse("<missing>")
-          logger.warn(s"[LookupController][getVersion] Invalid Accept header: $providedAcceptHeader")
-          throw new BadRequestException(ApiErrorResponse.acceptHeaderInvalid.toJson.toString())
-        }
 
   def getTestFilePath: Path = {
     val successresultsArr = Array(
@@ -940,6 +924,17 @@ class FileProcessingServiceSpec
         val inputRow = "456C,John,Smith,1994-02-21"
         val result   = SUT.fetchResult(inputRow, userId, fileId, V2_0)
         result shouldBe "456C,John,Smith,1994-02-21,nino-INVALID_FORMAT"
+      }
+
+      "the request has no Accept header, auditing the API version as MISSING" in {
+        when(mockDesConnector.getResidencyStatus(data, userId, V2_0, isBulkRequest = true))
+          .thenReturn(Future.successful(Left(ResidencyStatus("otherUKResident", Some("scotResident")))))
+        when(mockResidencyYearResolver.isBetweenJanAndApril).thenReturn(false)
+
+        val noVersionReq: FakeRequest[AnyContentAsEmpty.type] = FakeRequest("POST", "/residency-status")
+        val inputRow                                          = "AB123456C,John,Smith,1992-02-21"
+        val result                                            = SUT.fetchResult(inputRow, userId, fileId, V2_0)(using hc, noVersionReq)
+        result shouldBe "AB123456C,John,Smith,1992-02-21,otherUKResident"
       }
     }
 

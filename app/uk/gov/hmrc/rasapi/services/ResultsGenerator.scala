@@ -19,7 +19,7 @@ package uk.gov.hmrc.rasapi.services
 import play.api.Logging
 import play.api.libs.json.{JsError, JsSuccess, Json}
 import play.api.mvc.{AnyContent, Request}
-import uk.gov.hmrc.http.{BadRequestException, HeaderCarrier}
+import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.play.audit.http.connector.AuditResult
 import uk.gov.hmrc.rasapi.connectors.DesConnector
 import uk.gov.hmrc.rasapi.helpers.ResidencyYearResolver
@@ -30,7 +30,7 @@ import scala.concurrent.duration.*
 import scala.concurrent.{Await, Future}
 import scala.util.{Failure, Success, Try}
 
-trait ResultsGenerator {
+trait ResultsGenerator extends Logging {
   private val comma = ","
 
   val desConnector: DesConnector
@@ -50,18 +50,13 @@ trait ResultsGenerator {
 
   extension (request: Request[?])
 
-    def getVersion: ApiVersion =
+    def getVersion: Option[ApiVersion] =
       request.headers
         .get(ACCEPT)
         .flatMap {
           case accept if accept.contains("application/vnd.hmrc.1.0+json") => Some(V1_0)
           case accept if accept.contains("application/vnd.hmrc.2.0+json") => Some(V2_0)
           case _                                                          => None
-        }
-        .getOrElse {
-          val providedAcceptHeader = request.headers.get(ACCEPT).getOrElse("<missing>")
-          // ogger.warn(s"[LookupController][getVersion] Invalid Accept header: $providedAcceptHeader")
-          throw new BadRequestException(ApiErrorResponse.acceptHeaderInvalid.toJson.toString())
         }
 
   def fetchResult(inputRow: String, userId: String, fileId: String, apiVersion: ApiVersion)(using
@@ -149,7 +144,12 @@ trait ResultsGenerator {
     residencyStatus: Option[ResidencyStatus],
     userId: String,
     fileId: String
-  )(using request: Request[AnyContent], hc: HeaderCarrier): Future[AuditResult] =
+  )(using request: Request[AnyContent], hc: HeaderCarrier): Future[AuditResult] = {
+
+    val rasApiVersion: String = request.getVersion.map(_.toString).getOrElse {
+      logger.warn(s"[ResultsGenerator][auditResponse] API version missing for userId ($userId); auditing as MISSING.")
+      "MISSING"
+    }
 
     auditService.audit(
       auditType = "ReliefAtSourceResidency",
@@ -163,8 +163,9 @@ trait ResultsGenerator {
         "successfulLookup" -> failureReason.getOrElse("").isEmpty.toString,
         "reason"           -> failureReason.getOrElse(""),
         "CYStatus"         -> residencyStatus.map(_.currentYearResidencyStatus).getOrElse(""),
-        "rasApiVersion"    -> request.getVersion.toString
+        "rasApiVersion"    -> rasApiVersion
       ).filterNot(_._2 == "")
     )
+  }
 
 }

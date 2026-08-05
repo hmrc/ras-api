@@ -25,7 +25,6 @@ import play.api.mvc.*
 import uk.gov.hmrc.auth.core.*
 import uk.gov.hmrc.auth.core.AuthProvider.GovernmentGateway
 import uk.gov.hmrc.auth.core.retrieve.v2.Retrievals.authorisedEnrolments
-import uk.gov.hmrc.http.BadRequestException
 import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
 import uk.gov.hmrc.rasapi.controllers.*
 import uk.gov.hmrc.rasapi.controllers.errorResponseWrites
@@ -54,18 +53,13 @@ class FileController @Inject() (
 
   extension (request: Request[?])
 
-    def getVersion: ApiVersion =
+    def getVersion: Option[ApiVersion] =
       request.headers
         .get(ACCEPT)
         .flatMap {
           case accept if accept.contains("application/vnd.hmrc.1.0+json") => Some(V1_0)
           case accept if accept.contains("application/vnd.hmrc.2.0+json") => Some(V2_0)
           case _                                                          => None
-        }
-        .getOrElse {
-          val providedAcceptHeader = request.headers.get(ACCEPT).getOrElse("<missing>")
-          logger.warn(s"[LookupController][getVersion] Invalid Accept header: $providedAcceptHeader")
-          throw new BadRequestException(ApiErrorResponse.acceptHeaderInvalid.toJson.toString())
         }
 
   def parseStringIdToObjectId(id: String): Try[ObjectId] =
@@ -117,7 +111,11 @@ class FileController @Inject() (
         PSA_PODS_ENROLMENT
       ) or Enrolment(PSP_ENROLMENT))
     ).retrieve(authorisedEnrolments) { enrols =>
-      val id = getEnrolmentIdentifier(enrols)
+      val id                    = getEnrolmentIdentifier(enrols)
+      val rasApiVersion: String = request.getVersion.map(_.toString).getOrElse {
+        logger.warn(s"[FileController][remove] API version missing for fileName ($fileName); auditing as MISSING.")
+        "MISSING"
+      }
       deleteFile(fileName, id)
         .flatMap { res =>
           (parseStringIdToObjectId(fileName) match {
@@ -134,7 +132,7 @@ class FileController @Inject() (
                         "userIdentifier"       -> id,
                         "fileName"             -> fileName,
                         "chunkDeletionSuccess" -> "true",
-                        "rasApiVersion"        -> request.getVersion.toString
+                        "rasApiVersion"        -> rasApiVersion
                       )
                     )
                   } else {
@@ -145,7 +143,7 @@ class FileController @Inject() (
                         "userIdentifier"       -> id,
                         "fileName"             -> fileName,
                         "chunkDeletionSuccess" -> "false",
-                        "rasApiVersion"        -> request.getVersion.toString
+                        "rasApiVersion"        -> rasApiVersion
                       )
                     )
                     logger.warn(s"[FileController][remove] Chunk deletion failed, fileName is: $fileName")
@@ -169,7 +167,7 @@ class FileController @Inject() (
                   "fileName"             -> fileName,
                   "chunkDeletionSuccess" -> "false",
                   "reason"               -> "fileName could not be converted to ObjectId",
-                  "rasApiVersion"        -> request.getVersion.toString
+                  "rasApiVersion"        -> rasApiVersion
                 )
               )
               Future.successful(())
