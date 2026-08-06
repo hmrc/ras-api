@@ -16,12 +16,21 @@
 
 package uk.gov.hmrc.rasapi.models
 
-sealed trait ApiVersion
+import org.scalatest.matchers.must.Matchers
+import org.scalatest.wordspec.AnyWordSpec
 
-case object V1_0 extends ApiVersion {
-  override def toString: String = "v1"
-}
+class ApiVersionSpec extends AnyWordSpec with Matchers {
 
-case object V2_0 extends ApiVersion {
-  override def toString: String = "v2"
+  "V1_0" must {
+    "return 'v1' as string" in {
+      V1_0.toString mustEqual "v1"
+    }
+  }
+
+  "V2_0" must {
+    "return 'v2' as string" in {
+      V2_0.toString mustEqual "v2"
+    }
+  }
+
 }

@@ -29,7 +29,7 @@ import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
 import uk.gov.hmrc.rasapi.controllers.*
 import uk.gov.hmrc.rasapi.controllers.errorResponseWrites
 import uk.gov.hmrc.rasapi.metrics.Metrics
-import uk.gov.hmrc.rasapi.models.ApiErrorResponse
+import uk.gov.hmrc.rasapi.models.{ApiErrorResponse, ApiVersion, V1_0, V2_0}
 import uk.gov.hmrc.rasapi.repository.{FileData, RasChunksRepository, RasFilesRepository}
 import uk.gov.hmrc.rasapi.services.AuditService
 
@@ -50,6 +50,17 @@ class FileController @Inject() (
   val fileRemove: String           = "File-Remove"
   val fileServe: String            = "File-Read"
   private val _contentType: String = "application/csv"
+
+  extension (request: Request[?])
+
+    def getVersion: Option[ApiVersion] =
+      request.headers
+        .get(ACCEPT)
+        .flatMap {
+          case accept if accept.contains("application/vnd.hmrc.1.0+json") => Some(V1_0)
+          case accept if accept.contains("application/vnd.hmrc.2.0+json") => Some(V2_0)
+          case _                                                          => None
+        }
 
   def parseStringIdToObjectId(id: String): Try[ObjectId] =
     Try {
@@ -100,7 +111,11 @@ class FileController @Inject() (
         PSA_PODS_ENROLMENT
       ) or Enrolment(PSP_ENROLMENT))
     ).retrieve(authorisedEnrolments) { enrols =>
-      val id = getEnrolmentIdentifier(enrols)
+      val id                    = getEnrolmentIdentifier(enrols)
+      val rasApiVersion: String = request.getVersion.map(_.toString).getOrElse {
+        logger.warn(s"[FileController][remove] API version missing for fileName ($fileName); auditing as MISSING.")
+        "MISSING"
+      }
       deleteFile(fileName, id)
         .flatMap { res =>
           (parseStringIdToObjectId(fileName) match {
@@ -113,13 +128,23 @@ class FileController @Inject() (
                     auditService.audit(
                       auditType = "FileDeletion",
                       path = request.path,
-                      auditData = Map("userIdentifier" -> id, "fileName" -> fileName, "chunkDeletionSuccess" -> "true")
+                      auditData = Map(
+                        "userIdentifier"       -> id,
+                        "fileName"             -> fileName,
+                        "chunkDeletionSuccess" -> "true",
+                        "rasApiVersion"        -> rasApiVersion
+                      )
                     )
                   } else {
                     auditService.audit(
                       auditType = "FileDeletion",
                       path = request.path,
-                      auditData = Map("userIdentifier" -> id, "fileName" -> fileName, "chunkDeletionSuccess" -> "false")
+                      auditData = Map(
+                        "userIdentifier"       -> id,
+                        "fileName"             -> fileName,
+                        "chunkDeletionSuccess" -> "false",
+                        "rasApiVersion"        -> rasApiVersion
+                      )
                     )
                     logger.warn(s"[FileController][remove] Chunk deletion failed, fileName is: $fileName")
                   }
@@ -141,7 +166,8 @@ class FileController @Inject() (
                   "userIdentifier"       -> id,
                   "fileName"             -> fileName,
                   "chunkDeletionSuccess" -> "false",
-                  "reason"               -> "fileName could not be converted to ObjectId"
+                  "reason"               -> "fileName could not be converted to ObjectId",
+                  "rasApiVersion"        -> rasApiVersion
                 )
               )
               Future.successful(())

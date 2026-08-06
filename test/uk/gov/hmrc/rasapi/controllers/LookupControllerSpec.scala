@@ -247,7 +247,8 @@ class LookupControllerSpec
               "NextCYStatus"     -> "otherUKResident",
               "nino"             -> "LE241131B",
               "userIdentifier"   -> "A123456",
-              "requestSource"    -> "API"
+              "requestSource"    -> "API",
+              "rasApiVersion"    -> "v2"
             )
           )
         )(using any())
@@ -283,7 +284,8 @@ class LookupControllerSpec
               "NextCYStatus"     -> "otherUKResident",
               "nino"             -> "LE241131B",
               "userIdentifier"   -> "A123456",
-              "requestSource"    -> "API"
+              "requestSource"    -> "API",
+              "rasApiVersion"    -> "v2"
             )
           )
         )(using any())
@@ -318,7 +320,8 @@ class LookupControllerSpec
               "CYStatus"         -> "otherUKResident",
               "nino"             -> "LE241131B",
               "userIdentifier"   -> "A123456",
-              "requestSource"    -> "API"
+              "requestSource"    -> "API",
+              "rasApiVersion"    -> "v2"
             )
           )
         )(using any())
@@ -350,7 +353,8 @@ class LookupControllerSpec
               "reason"           -> STATUS_DECEASED,
               "nino"             -> "LE241131B",
               "userIdentifier"   -> "A123456",
-              "requestSource"    -> "API"
+              "requestSource"    -> "API",
+              "rasApiVersion"    -> "v2"
             )
           )
         )(using any())
@@ -386,7 +390,8 @@ class LookupControllerSpec
               "successfulLookup" -> "false",
               "reason"           -> "MATCHING_FAILED",
               "userIdentifier"   -> "A123456",
-              "requestSource"    -> "API"
+              "requestSource"    -> "API",
+              "rasApiVersion"    -> "v2"
             )
           )
         )(using any())
@@ -419,7 +424,8 @@ class LookupControllerSpec
               "successfulLookup" -> "false",
               "reason"           -> s"$STATUS_INTERNAL_SERVER_ERROR",
               "userIdentifier"   -> "A123456",
-              "requestSource"    -> "API"
+              "requestSource"    -> "API",
+              "rasApiVersion"    -> "v2"
             )
           )
         )(using any())
@@ -960,6 +966,28 @@ class LookupControllerSpec
         status(result)        shouldBe SERVICE_UNAVAILABLE
         contentAsJson(result) shouldBe expectedJsonResult
       }
+    }
+  }
+
+  "LookupController.getVersion" should {
+    import TestLookupController.getVersion
+
+    "return Some(V1_0) when the Accept header requests version 1.0" in {
+      FakeRequest(Helpers.GET, "/").withHeaders(acceptHeaderV1).getVersion shouldBe Some(V1_0)
+    }
+
+    "return Some(V2_0) when the Accept header requests version 2.0" in {
+      FakeRequest(Helpers.GET, "/").withHeaders(acceptHeader).getVersion shouldBe Some(V2_0)
+    }
+
+    "return None when the Accept header is invalid" in {
+      FakeRequest(Helpers.GET, "/")
+        .withHeaders(HeaderNames.ACCEPT -> "application/vnd.hmrc.9.9+json")
+        .getVersion shouldBe None
+    }
+
+    "return None when the Accept header is missing" in {
+      FakeRequest(Helpers.GET, "/").getVersion shouldBe None
     }
   }
 

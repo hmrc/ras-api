@@ -23,7 +23,7 @@ import play.api.mvc.*
 import uk.gov.hmrc.auth.core.*
 import uk.gov.hmrc.auth.core.AuthProvider.GovernmentGateway
 import uk.gov.hmrc.auth.core.retrieve.v2.Retrievals.*
-import uk.gov.hmrc.http.{BadRequestException, HeaderCarrier}
+import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
 import uk.gov.hmrc.rasapi.config.AppContext
 import uk.gov.hmrc.rasapi.connectors.DesConnector
@@ -71,18 +71,13 @@ class LookupController @Inject() (
 
   extension (request: Request[?])
 
-    def getVersion: ApiVersion =
+    def getVersion: Option[ApiVersion] =
       request.headers
         .get(ACCEPT)
         .flatMap {
           case accept if accept.contains("application/vnd.hmrc.1.0+json") => Some(V1_0)
           case accept if accept.contains("application/vnd.hmrc.2.0+json") => Some(V2_0)
           case _                                                          => None
-        }
-        .getOrElse {
-          val providedAcceptHeader = request.headers.get(ACCEPT).getOrElse("<missing>")
-          logger.warn(s"[LookupController][getVersion] Invalid Accept header: $providedAcceptHeader")
-          throw new BadRequestException(ApiErrorResponse.acceptHeaderInvalid.toJson.toString())
         }
 
   def getResidencyStatus: Action[AnyContent] = validateAccept(acceptHeaderValidationRules).async { implicit request =>
@@ -93,12 +88,15 @@ class LookupController @Inject() (
         PSA_PODS_ENROLMENT
       ) or Enrolment(PSP_ENROLMENT))
     ).retrieve(authorisedEnrolments) { enrols =>
-      val id = getEnrolmentIdentifier(enrols)
+      val id         = getEnrolmentIdentifier(enrols)
+      val apiVersion = request.getVersion
 
       withValidJson(
         id,
         individualDetails =>
-          desConnector.getResidencyStatus(individualDetails, id, request.getVersion).map {
+          // The Accept header is validated by validateAccept before this body runs, so apiVersion is always defined
+          // here; the V2_0 fallback only guards the unreachable None case so a missing version never fails the request.
+          desConnector.getResidencyStatus(individualDetails, id, apiVersion.getOrElse(V2_0)).map {
             case Left(residencyStatusResponse) =>
               val residencyStatus =
                 if (residencyYearResolver.isBetweenJanAndApril) {
@@ -110,6 +108,7 @@ class LookupController @Inject() (
                 failureReason = None,
                 nino = Some(individualDetails.nino),
                 residencyStatus = Some(residencyStatus),
+                rasApiVersion = apiVersion,
                 userId = id
               )
               logger.info(
@@ -125,6 +124,7 @@ class LookupController @Inject() (
                     failureReason = Some(STATUS_DECEASED),
                     nino = Some(individualDetails.nino),
                     residencyStatus = None,
+                    rasApiVersion = apiVersion,
                     userId = id
                   )
                   logger.info(s"[LookupController][getResidencyStatus] Individual is deceased for userId ($id).")
@@ -135,6 +135,7 @@ class LookupController @Inject() (
                     failureReason = Some("MATCHING_FAILED"),
                     nino = Some(individualDetails.nino),
                     residencyStatus = None,
+                    rasApiVersion = apiVersion,
                     userId = id
                   )
                   logger.warn(s"[LookupController][getResidencyStatus] Individual not matched for userId ($id).")
@@ -145,6 +146,7 @@ class LookupController @Inject() (
                     failureReason = Some(STATUS_TOO_MANY_REQUESTS),
                     nino = Some(individualDetails.nino),
                     residencyStatus = None,
+                    rasApiVersion = apiVersion,
                     userId = id
                   )
                   logger.error(s"[LookupController][getResidencyStatus] Too Many Requests for userId ($id).")
@@ -155,6 +157,7 @@ class LookupController @Inject() (
                     failureReason = Some("SERVICE_UNAVAILABLE"),
                     nino = Some(individualDetails.nino),
                     residencyStatus = None,
+                    rasApiVersion = apiVersion,
                     userId = id
                   )
                   logger.error(s"[LookupController][getResidencyStatus] Service unavailable for userId ($id).")
@@ -165,6 +168,7 @@ class LookupController @Inject() (
                     failureReason = Some(ApiErrorResponse.internalServerError.code),
                     nino = Some(individualDetails.nino),
                     residencyStatus = None,
+                    rasApiVersion = apiVersion,
                     userId = id
                   )
                   logger.warn(
@@ -179,6 +183,7 @@ class LookupController @Inject() (
               failureReason = Some(ApiErrorResponse.internalServerError.code),
               nino = None,
               residencyStatus = None,
+              rasApiVersion = apiVersion,
               userId = id
             )
             logger.error(
@@ -268,8 +273,13 @@ class LookupController @Inject() (
     failureReason: Option[String],
     nino: Option[String],
     residencyStatus: Option[ResidencyStatus],
+    rasApiVersion: Option[ApiVersion],
     userId: String
   )(using request: Request[AnyContent], hc: HeaderCarrier): Unit = {
+
+    if (rasApiVersion.isEmpty) {
+      logger.warn(s"[LookupController][auditResponse] API version missing for userId ($userId); auditing as MISSING.")
+    }
 
     val ninoMap: Map[String, String]           = nino.map(nino => Map("nino" -> nino)).getOrElse(Map())
     val nextYearStatusMap: Map[String, String] = if (residencyStatus.nonEmpty) {
@@ -292,7 +302,11 @@ class LookupController @Inject() (
     auditService.audit(
       auditType = "ReliefAtSourceResidency",
       path = request.path,
-      auditData = auditDataMap ++ Map("userIdentifier" -> userId, "requestSource" -> "API") ++ ninoMap
+      auditData = auditDataMap ++ Map(
+        "userIdentifier" -> userId,
+        "requestSource"  -> "API",
+        "rasApiVersion"  -> rasApiVersion.map(_.toString).getOrElse("MISSING")
+      ) ++ ninoMap
     )
   }
 

@@ -17,6 +17,7 @@
 package uk.gov.hmrc.rasapi.services
 
 import org.apache.pekko.actor.ActorSystem
+import play.api.Logging
 import org.apache.pekko.stream.Materializer
 import org.mockito.ArgumentCaptor
 import org.mockito.ArgumentMatchers.{eq as Meq, *}
@@ -29,6 +30,7 @@ import org.scalatestplus.mockito.MockitoSugar
 import org.scalatestplus.play.guice.GuiceOneAppPerSuite
 import play.api.libs.json.{JsObject, Json}
 import play.api.mvc.AnyContentAsEmpty
+import play.api.http.HeaderNames.ACCEPT
 import play.api.test.FakeRequest
 import play.api.test.Helpers.{await, defaultAwaitTimeout}
 import uk.gov.hmrc.http.HeaderCarrier
@@ -59,12 +61,16 @@ class FileProcessingServiceSpec
     with ScalaFutures
     with MockitoSugar
     with BeforeAndAfter
-    with DefaultPlayMongoRepositorySupport[Chunks] {
+    with DefaultPlayMongoRepositorySupport[Chunks]
+    with Logging {
 
-  given hc: HeaderCarrier                            = HeaderCarrier()
-  given fakeReq: FakeRequest[AnyContentAsEmpty.type] = FakeRequest("POST", "/residency-status")
-  given system: ActorSystem                          = ActorSystem()
-  given materializers: Materializer                  = Materializer(system)
+  given hc: HeaderCarrier = HeaderCarrier()
+
+  given fakeReq: FakeRequest[AnyContentAsEmpty.type] =
+    FakeRequest("POST", "/residency-status").withHeaders(ACCEPT -> "application/vnd.hmrc.2.0+json")
+
+  given system: ActorSystem         = ActorSystem()
+  given materializers: Materializer = Materializer(system)
 
   val mockUpscanConnector: UpscanConnector = mock[UpscanConnector]
 
@@ -222,7 +228,8 @@ class FileProcessingServiceSpec
               "fileId"           -> fileId,
               "nino"             -> "LE241131B",
               "userIdentifier"   -> "user1234",
-              "requestSource"    -> "FE_BULK"
+              "requestSource"    -> "FE_BULK",
+              "rasApiVersion"    -> V2_0.toString
             )
           )
         )(using any())
@@ -315,7 +322,8 @@ class FileProcessingServiceSpec
               "fileId"           -> fileId,
               "nino"             -> "LE241131B",
               "userIdentifier"   -> "user1234",
-              "requestSource"    -> "FE_BULK"
+              "requestSource"    -> "FE_BULK",
+              "rasApiVersion"    -> V2_0.toString
             )
           )
         )(using any())
@@ -407,7 +415,8 @@ class FileProcessingServiceSpec
               "fileId"           -> fileId,
               "nino"             -> "LE241131B",
               "userIdentifier"   -> "user1234",
-              "requestSource"    -> "FE_BULK"
+              "requestSource"    -> "FE_BULK",
+              "rasApiVersion"    -> V2_0.toString
             )
           )
         )(using any())
@@ -502,7 +511,8 @@ class FileProcessingServiceSpec
               "fileId"           -> fileId,
               "reason"           -> "MATCHING_FAILED",
               "userIdentifier"   -> "user1234",
-              "requestSource"    -> "FE_BULK"
+              "requestSource"    -> "FE_BULK",
+              "rasApiVersion"    -> V2_0.toString
             )
           )
         )(using any())
@@ -595,7 +605,8 @@ class FileProcessingServiceSpec
               "fileId"           -> fileId,
               "reason"           -> s"$STATUS_DECEASED",
               "userIdentifier"   -> "user1234",
-              "requestSource"    -> "FE_BULK"
+              "requestSource"    -> "FE_BULK",
+              "rasApiVersion"    -> V2_0.toString
             )
           )
         )(using any())
@@ -691,7 +702,8 @@ class FileProcessingServiceSpec
               "fileId"           -> fileId,
               "reason"           -> s"$STATUS_SERVICE_UNAVAILABLE",
               "userIdentifier"   -> "user1234",
-              "requestSource"    -> "FE_BULK"
+              "requestSource"    -> "FE_BULK",
+              "rasApiVersion"    -> V2_0.toString
             )
           )
         )(using any())
@@ -912,6 +924,17 @@ class FileProcessingServiceSpec
         val inputRow = "456C,John,Smith,1994-02-21"
         val result   = SUT.fetchResult(inputRow, userId, fileId, V2_0)
         result shouldBe "456C,John,Smith,1994-02-21,nino-INVALID_FORMAT"
+      }
+
+      "the request has no Accept header, auditing the API version as MISSING" in {
+        when(mockDesConnector.getResidencyStatus(data, userId, V2_0, isBulkRequest = true))
+          .thenReturn(Future.successful(Left(ResidencyStatus("otherUKResident", Some("scotResident")))))
+        when(mockResidencyYearResolver.isBetweenJanAndApril).thenReturn(false)
+
+        val noVersionReq: FakeRequest[AnyContentAsEmpty.type] = FakeRequest("POST", "/residency-status")
+        val inputRow                                          = "AB123456C,John,Smith,1992-02-21"
+        val result                                            = SUT.fetchResult(inputRow, userId, fileId, V2_0)(using hc, noVersionReq)
+        result shouldBe "AB123456C,John,Smith,1992-02-21,otherUKResident"
       }
     }
 
