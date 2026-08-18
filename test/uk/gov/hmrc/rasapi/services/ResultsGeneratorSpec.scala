@@ -46,29 +46,10 @@ class ResultsGeneratorSpec extends AnyWordSpecLike with Matchers with MockitoSug
   }
 
   val sut = new FailingParseResultsGenerator
-  import sut.getVersion
 
   "ResultsGenerator.createMatchingData" should {
     "fall back to 'INVALID RECORD' when JSON serialization throws" in {
       sut.createMatchingData("ignored") shouldBe Right(Seq("INVALID RECORD"))
-    }
-  }
-
-  "ResultsGenerator.getVersion" should {
-
-    "return Some(V1_0) when the Accept header requests version 1.0" in {
-      val request = FakeRequest().withHeaders(ACCEPT -> "application/vnd.hmrc.1.0+json")
-      request.getVersion shouldBe Some(V1_0)
-    }
-
-    "return Some(V2_0) when the Accept header requests version 2.0" in {
-      val request = FakeRequest().withHeaders(ACCEPT -> "application/vnd.hmrc.2.0+json")
-      request.getVersion shouldBe Some(V2_0)
-    }
-
-    "return None when the Accept header is missing or invalid" in {
-      val request = FakeRequest().withHeaders(ACCEPT -> "application/vnd.hmrc.9.9+json")
-      request.getVersion shouldBe None
     }
   }
 

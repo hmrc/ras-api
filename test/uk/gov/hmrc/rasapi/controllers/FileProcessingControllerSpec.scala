@@ -131,6 +131,15 @@ class FileProcessingControllerSpec
 
     }
 
+    "return BadRequest and not interact with FileProcessingService" when {
+      "no json is provided" in {
+        val result = SUT.statusCallback(userId, version = "2.0").apply(fakeRequest)
+
+        status(result) mustBe BAD_REQUEST
+        verify(mockFileProcessingService, never()).processFile(any(), any(), any())(using any(), any())
+      }
+    }
+
     "return Ok and not interact with FileProcessingService" when {
       "an 'FAILED' status is given" in {
         val fileStatus = "FAILED"
