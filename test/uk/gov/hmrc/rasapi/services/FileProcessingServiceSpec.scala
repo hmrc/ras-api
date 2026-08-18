@@ -66,8 +66,9 @@ class FileProcessingServiceSpec
 
   given hc: HeaderCarrier = HeaderCarrier()
 
-  given fakeReq: FakeRequest[AnyContentAsEmpty.type] =
-    FakeRequest("POST", "/residency-status").withHeaders(ACCEPT -> "application/vnd.hmrc.2.0+json")
+  // Bulk processing is driven by the upscan status callback, which carries no versioned Accept header. This request
+  // deliberately has none, so the audited version can only come from the apiVersion passed down from the route.
+  given fakeReq: FakeRequest[AnyContentAsEmpty.type] = FakeRequest("POST", "/residency-status")
 
   given system: ActorSystem         = ActorSystem()
   given materializers: Materializer = Materializer(system)
@@ -124,8 +125,9 @@ class FileProcessingServiceSpec
     TestFileWriter.generateFile(successresultsArr.iterator)
   }
 
-  val userId: String = "A1234567"
-  val fileId: String = "file-id-1234"
+  val userId: String        = "A1234567"
+  val fileId: String        = "file-id-1234"
+  private val newLineRegexp = "(\\r|\\n)"
 
   when(mockDesConnector.otherUk).thenReturn("otherUKResident")
   when(mockDesConnector.scotRes).thenReturn("scotResident")
@@ -213,7 +215,7 @@ class FileProcessingServiceSpec
             result = result.concat(new String(bytes))
           }
         }))
-        result.replaceAll("(\\r|\\n)", "") shouldBe expectedResultsFile.mkString
+        result.replaceAll(newLineRegexp, "") shouldBe expectedResultsFile.mkString
 
         Files.deleteIfExists(testFilePath)
 
@@ -308,7 +310,7 @@ class FileProcessingServiceSpec
             result = result.concat(new String(bytes))
           }
         }))
-        result.replaceAll("(\\r|\\n)", "") shouldBe expectedResultsFile.mkString
+        result.replaceAll(newLineRegexp, "") shouldBe expectedResultsFile.mkString
         Files.deleteIfExists(testFilePath)
 
         verify(mockAuditService, times(4)).audit(
@@ -402,7 +404,7 @@ class FileProcessingServiceSpec
             result = result.concat(new String(bytes))
           }
         }))
-        result.replaceAll("(\\r|\\n)", "") shouldBe expectedResultsFile.mkString
+        result.replaceAll(newLineRegexp, "") shouldBe expectedResultsFile.mkString
         Files.deleteIfExists(testFilePath)
 
         verify(mockAuditService, times(4)).audit(
@@ -498,7 +500,7 @@ class FileProcessingServiceSpec
             result = result.concat(new String(bytes))
           }
         }))
-        result.replaceAll("(\\r|\\n)", "") shouldBe expectedResultsFile.mkString
+        result.replaceAll(newLineRegexp, "") shouldBe expectedResultsFile.mkString
         Files.deleteIfExists(testFilePath)
 
         verify(mockAuditService, times(4)).audit(
@@ -592,7 +594,7 @@ class FileProcessingServiceSpec
             result = result.concat(new String(bytes))
           }
         }))
-        result.replaceAll("(\\r|\\n)", "") shouldBe expectedResultsFile.mkString
+        result.replaceAll(newLineRegexp, "") shouldBe expectedResultsFile.mkString
         Files.deleteIfExists(testFilePath)
 
         verify(mockAuditService, times(4)).audit(
@@ -689,7 +691,7 @@ class FileProcessingServiceSpec
             result = result.concat(new String(bytes))
           }
         }))
-        result.replaceAll("(\\r|\\n)", "") shouldBe expectedResultsFile.mkString
+        result.replaceAll(newLineRegexp, "") shouldBe expectedResultsFile.mkString
         Files.deleteIfExists(testFilePath)
 
         verify(mockAuditService, times(4)).audit(
@@ -926,15 +928,33 @@ class FileProcessingServiceSpec
         result shouldBe "456C,John,Smith,1994-02-21,nino-INVALID_FORMAT"
       }
 
-      "the request has no Accept header, auditing the API version as MISSING" in {
-        when(mockDesConnector.getResidencyStatus(data, userId, V2_0, isBulkRequest = true))
+      "the request has no Accept header, auditing the version passed down from the callback route" in {
+        when(mockDesConnector.getResidencyStatus(data, userId, V1_0, isBulkRequest = true))
           .thenReturn(Future.successful(Left(ResidencyStatus("otherUKResident", Some("scotResident")))))
         when(mockResidencyYearResolver.isBetweenJanAndApril).thenReturn(false)
 
         val noVersionReq: FakeRequest[AnyContentAsEmpty.type] = FakeRequest("POST", "/residency-status")
-        val inputRow                                          = "AB123456C,John,Smith,1992-02-21"
-        val result                                            = SUT.fetchResult(inputRow, userId, fileId, V2_0)(using hc, noVersionReq)
+        noVersionReq.headers.get(ACCEPT) shouldBe None
+
+        val inputRow = "AB123456C,John,Smith,1992-02-21"
+        val result   = SUT.fetchResult(inputRow, userId, fileId, V1_0)(using hc, noVersionReq)
+
         result shouldBe "AB123456C,John,Smith,1992-02-21,otherUKResident"
+        verify(mockAuditService).audit(
+          auditType = Meq("ReliefAtSourceResidency"),
+          path = Meq("/residency-status"),
+          auditData = Meq(
+            Map(
+              "successfulLookup" -> "true",
+              "CYStatus"         -> "otherUKResident",
+              "fileId"           -> fileId,
+              "nino"             -> "AB123456C",
+              "userIdentifier"   -> userId,
+              "requestSource"    -> "FE_BULK",
+              "rasApiVersion"    -> V1_0.toString
+            )
+          )
+        )(using any())
       }
     }
 
@@ -986,7 +1006,7 @@ class FileProcessingServiceSpec
             result = result.concat(new String(bytes))
           }
         }))
-        result.replaceAll("(\\r|\\n)", "") shouldBe expectedResultsFile.mkString
+        result.replaceAll(newLineRegexp, "") shouldBe expectedResultsFile.mkString
         Files.deleteIfExists(testFilePath)
       }
     }

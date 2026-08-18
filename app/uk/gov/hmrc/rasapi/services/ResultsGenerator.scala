@@ -46,18 +46,6 @@ trait ResultsGenerator extends Logging {
   val SERVICE_UNAVAILABLE: String
   val FILE_PROCESSING_MATCHING_FAILED: String
   val FILE_PROCESSING_INTERNAL_SERVER_ERROR: String
-  val ACCEPT = "Accept"
-
-  extension (request: Request[?])
-
-    def getVersion: Option[ApiVersion] =
-      request.headers
-        .get(ACCEPT)
-        .flatMap {
-          case accept if accept.contains("application/vnd.hmrc.1.0+json") => Some(V1_0)
-          case accept if accept.contains("application/vnd.hmrc.2.0+json") => Some(V2_0)
-          case _                                                          => None
-        }
 
   def fetchResult(inputRow: String, userId: String, fileId: String, apiVersion: ApiVersion)(using
     hc: HeaderCarrier,
@@ -85,7 +73,8 @@ trait ResultsGenerator extends Logging {
               nino = memberDetails.nino,
               residencyStatus = Some(resStatus),
               userId = userId,
-              fileId = fileId
+              fileId = fileId,
+              apiVersion = apiVersion
             )
             inputRow + comma + resStatus.toString
           case Right(residencyStatusFailure) =>
@@ -94,7 +83,8 @@ trait ResultsGenerator extends Logging {
               nino = memberDetails.nino,
               residencyStatus = None,
               userId = userId,
-              fileId = fileId
+              fileId = fileId,
+              apiVersion = apiVersion
             )
 
             inputRow + comma + residencyStatusFailure.code
@@ -135,6 +125,8 @@ trait ResultsGenerator extends Logging {
     * @param nino Optional user identifier, present if the customer-matching-cache call was a success, else not
     * @param residencyStatus Optional status object returned from the HoD, present if the journey succeeded, else not
     * @param userId Identifies the user which made the request
+    * @param apiVersion The version the bulk file was submitted under, taken from the upscan callback route. It cannot
+    *                   be read from `request`: that is the upscan callback, which carries no versioned `Accept` header.
     * @param request Object containing request made by the user
     * @param hc Headers
     */
@@ -143,14 +135,9 @@ trait ResultsGenerator extends Logging {
     nino: String,
     residencyStatus: Option[ResidencyStatus],
     userId: String,
-    fileId: String
-  )(using request: Request[AnyContent], hc: HeaderCarrier): Future[AuditResult] = {
-
-    val rasApiVersion: String = request.getVersion.map(_.toString).getOrElse {
-      logger.warn(s"[ResultsGenerator][auditResponse] API version missing for userId ($userId); auditing as MISSING.")
-      "MISSING"
-    }
-
+    fileId: String,
+    apiVersion: ApiVersion
+  )(using request: Request[AnyContent], hc: HeaderCarrier): Future[AuditResult] =
     auditService.audit(
       auditType = "ReliefAtSourceResidency",
       path = request.path,
@@ -163,9 +150,8 @@ trait ResultsGenerator extends Logging {
         "successfulLookup" -> failureReason.getOrElse("").isEmpty.toString,
         "reason"           -> failureReason.getOrElse(""),
         "CYStatus"         -> residencyStatus.map(_.currentYearResidencyStatus).getOrElse(""),
-        "rasApiVersion"    -> rasApiVersion
+        "rasApiVersion"    -> apiVersion.toString
       ).filterNot(_._2 == "")
     )
-  }
 
 }
