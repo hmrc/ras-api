@@ -30,7 +30,6 @@ import org.scalatestplus.mockito.MockitoSugar
 import org.scalatestplus.play.guice.GuiceOneAppPerSuite
 import play.api.libs.json.{JsObject, Json}
 import play.api.mvc.AnyContentAsEmpty
-import play.api.http.HeaderNames.ACCEPT
 import play.api.test.FakeRequest
 import play.api.test.Helpers.{await, defaultAwaitTimeout}
 import uk.gov.hmrc.http.HeaderCarrier
@@ -230,8 +229,7 @@ class FileProcessingServiceSpec
               "fileId"           -> fileId,
               "nino"             -> "LE241131B",
               "userIdentifier"   -> "user1234",
-              "requestSource"    -> "FE_BULK",
-              "rasApiVersion"    -> V2_0.toString
+              "requestSource"    -> "FE_BULK"
             )
           )
         )(using any())
@@ -324,8 +322,7 @@ class FileProcessingServiceSpec
               "fileId"           -> fileId,
               "nino"             -> "LE241131B",
               "userIdentifier"   -> "user1234",
-              "requestSource"    -> "FE_BULK",
-              "rasApiVersion"    -> V2_0.toString
+              "requestSource"    -> "FE_BULK"
             )
           )
         )(using any())
@@ -417,8 +414,7 @@ class FileProcessingServiceSpec
               "fileId"           -> fileId,
               "nino"             -> "LE241131B",
               "userIdentifier"   -> "user1234",
-              "requestSource"    -> "FE_BULK",
-              "rasApiVersion"    -> V2_0.toString
+              "requestSource"    -> "FE_BULK"
             )
           )
         )(using any())
@@ -513,8 +509,7 @@ class FileProcessingServiceSpec
               "fileId"           -> fileId,
               "reason"           -> "MATCHING_FAILED",
               "userIdentifier"   -> "user1234",
-              "requestSource"    -> "FE_BULK",
-              "rasApiVersion"    -> V2_0.toString
+              "requestSource"    -> "FE_BULK"
             )
           )
         )(using any())
@@ -607,8 +602,7 @@ class FileProcessingServiceSpec
               "fileId"           -> fileId,
               "reason"           -> s"$STATUS_DECEASED",
               "userIdentifier"   -> "user1234",
-              "requestSource"    -> "FE_BULK",
-              "rasApiVersion"    -> V2_0.toString
+              "requestSource"    -> "FE_BULK"
             )
           )
         )(using any())
@@ -704,8 +698,7 @@ class FileProcessingServiceSpec
               "fileId"           -> fileId,
               "reason"           -> s"$STATUS_SERVICE_UNAVAILABLE",
               "userIdentifier"   -> "user1234",
-              "requestSource"    -> "FE_BULK",
-              "rasApiVersion"    -> V2_0.toString
+              "requestSource"    -> "FE_BULK"
             )
           )
         )(using any())
@@ -926,35 +919,6 @@ class FileProcessingServiceSpec
         val inputRow = "456C,John,Smith,1994-02-21"
         val result   = SUT.fetchResult(inputRow, userId, fileId, V2_0)
         result shouldBe "456C,John,Smith,1994-02-21,nino-INVALID_FORMAT"
-      }
-
-      "the request has no Accept header, auditing the version passed down from the callback route" in {
-        when(mockDesConnector.getResidencyStatus(data, userId, V1_0, isBulkRequest = true))
-          .thenReturn(Future.successful(Left(ResidencyStatus("otherUKResident", Some("scotResident")))))
-        when(mockResidencyYearResolver.isBetweenJanAndApril).thenReturn(false)
-
-        val noVersionReq: FakeRequest[AnyContentAsEmpty.type] = FakeRequest("POST", "/residency-status")
-        noVersionReq.headers.get(ACCEPT) shouldBe None
-
-        val inputRow = "AB123456C,John,Smith,1992-02-21"
-        val result   = SUT.fetchResult(inputRow, userId, fileId, V1_0)(using hc, noVersionReq)
-
-        result shouldBe "AB123456C,John,Smith,1992-02-21,otherUKResident"
-        verify(mockAuditService).audit(
-          auditType = Meq("ReliefAtSourceResidency"),
-          path = Meq("/residency-status"),
-          auditData = Meq(
-            Map(
-              "successfulLookup" -> "true",
-              "CYStatus"         -> "otherUKResident",
-              "fileId"           -> fileId,
-              "nino"             -> "AB123456C",
-              "userIdentifier"   -> userId,
-              "requestSource"    -> "FE_BULK",
-              "rasApiVersion"    -> V1_0.toString
-            )
-          )
-        )(using any())
       }
     }
 
