@@ -73,8 +73,7 @@ trait ResultsGenerator extends Logging {
               nino = memberDetails.nino,
               residencyStatus = Some(resStatus),
               userId = userId,
-              fileId = fileId,
-              apiVersion = apiVersion
+              fileId = fileId
             )
             inputRow + comma + resStatus.toString
           case Right(residencyStatusFailure) =>
@@ -83,8 +82,7 @@ trait ResultsGenerator extends Logging {
               nino = memberDetails.nino,
               residencyStatus = None,
               userId = userId,
-              fileId = fileId,
-              apiVersion = apiVersion
+              fileId = fileId
             )
 
             inputRow + comma + residencyStatusFailure.code
@@ -125,8 +123,6 @@ trait ResultsGenerator extends Logging {
     * @param nino Optional user identifier, present if the customer-matching-cache call was a success, else not
     * @param residencyStatus Optional status object returned from the HoD, present if the journey succeeded, else not
     * @param userId Identifies the user which made the request
-    * @param apiVersion The version the bulk file was submitted under, taken from the upscan callback route. It cannot
-    *                   be read from `request`: that is the upscan callback, which carries no versioned `Accept` header.
     * @param request Object containing request made by the user
     * @param hc Headers
     */
@@ -135,8 +131,7 @@ trait ResultsGenerator extends Logging {
     nino: String,
     residencyStatus: Option[ResidencyStatus],
     userId: String,
-    fileId: String,
-    apiVersion: ApiVersion
+    fileId: String
   )(using request: Request[AnyContent], hc: HeaderCarrier): Future[AuditResult] =
     auditService.audit(
       auditType = "ReliefAtSourceResidency",
@@ -149,8 +144,7 @@ trait ResultsGenerator extends Logging {
         "NextCYStatus"     -> residencyStatus.flatMap(_.nextYearForecastResidencyStatus).getOrElse(""),
         "successfulLookup" -> failureReason.getOrElse("").isEmpty.toString,
         "reason"           -> failureReason.getOrElse(""),
-        "CYStatus"         -> residencyStatus.map(_.currentYearResidencyStatus).getOrElse(""),
-        "rasApiVersion"    -> apiVersion.toString
+        "CYStatus"         -> residencyStatus.map(_.currentYearResidencyStatus).getOrElse("")
       ).filterNot(_._2 == "")
     )
 

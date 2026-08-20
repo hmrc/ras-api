@@ -2,7 +2,7 @@
 
 POST    /residency-status                          uk.gov.hmrc.rasapi.controllers.lookupController.LookupController.getResidencyStatus()
 
-POST    /ras-api/file-processing/status/:userId    uk.gov.hmrc.rasapi.controllers.fileProcessing.FileProcessingController.statusCallback(userId, version ?= "1.0")
+POST    /ras-api/file-processing/status/:userId    uk.gov.hmrc.rasapi.controllers.fileProcessing.FileProcessingController.statusCallback(userId, version ?= "2.0")
 
 GET     /ras-api/file/getFile/:name                uk.gov.hmrc.rasapi.controllers.fileController.FileController.serveFile(name)
 
