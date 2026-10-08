@@ -47,7 +47,7 @@ trait ResultsGenerator extends Logging {
   val FILE_PROCESSING_MATCHING_FAILED: String
   val FILE_PROCESSING_INTERNAL_SERVER_ERROR: String
 
-  def fetchResult(inputRow: String, userId: String, fileId: String, apiVersion: ApiVersion)(using
+  def fetchResult(inputRow: String, userId: String, fileId: String)(using
     hc: HeaderCarrier,
     request: Request[AnyContent]
   ): String =
@@ -56,7 +56,7 @@ trait ResultsGenerator extends Logging {
       case Right(errors)       => s"$inputRow,${errors.mkString(comma)}"
       case Left(memberDetails) =>
         val result = Await.result(
-          desConnector.getResidencyStatus(memberDetails, userId, apiVersion, isBulkRequest = true),
+          desConnector.getResidencyStatus(memberDetails, userId, isBulkRequest = true),
           20.seconds
         )
 

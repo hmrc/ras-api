@@ -30,7 +30,7 @@ trait SimpleHeaderValidator { self: BaseController =>
 
   private val acceptHeaderVersionRegex = "application/vnd\\.hmrc\\.(\\d+\\.\\d+)\\+json".r
 
-  protected def matchesAcceptHeader(accepted: Seq[String])(request: RequestHeader): Boolean =
+  protected def matchesAcceptHeader(accepted: String)(request: RequestHeader): Boolean =
     request.headers
       .get(HeaderNames.ACCEPT)
       .exists { header =>
@@ -40,7 +40,7 @@ trait SimpleHeaderValidator { self: BaseController =>
           .exists(m => validateVersion(m.group(1)))
       }
 
-  protected def validateAccept(accepted: Seq[String]): ActionBuilder[Request, AnyContent] =
+  protected def validateAccept(accepted: String): ActionBuilder[Request, AnyContent] =
     new ActionBuilderImpl(controllerComponents.parsers.default)(executionContext) {
       override def invokeBlock[A](
         request: Request[A],

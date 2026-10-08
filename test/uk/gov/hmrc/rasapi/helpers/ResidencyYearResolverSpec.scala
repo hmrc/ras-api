@@ -34,7 +34,7 @@ class ResidencyYearResolverSpec
       "the date is on 6th April" in {
 
         val SUT = new ResidencyYearResolver {
-          override def currentDate = LocalDate.of(2017, 4, 6)
+          override def currentDate: LocalDate = LocalDate.of(2017, 4, 6)
         }
 
         SUT.isBetweenJanAndApril shouldBe false
@@ -43,7 +43,7 @@ class ResidencyYearResolverSpec
       "the date is on 31st December" in {
 
         val SUT = new ResidencyYearResolver {
-          override def currentDate = LocalDate.of(2017, 12, 31)
+          override def currentDate: LocalDate = LocalDate.of(2017, 12, 31)
         }
 
         SUT.isBetweenJanAndApril shouldBe false
@@ -52,7 +52,7 @@ class ResidencyYearResolverSpec
       "the date is after 6th April but before 31st December" in {
 
         val SUT = new ResidencyYearResolver {
-          override def currentDate = LocalDate.of(2017, 8, 22)
+          override def currentDate: LocalDate = LocalDate.of(2017, 8, 22)
         }
 
         SUT.isBetweenJanAndApril shouldBe false
@@ -63,7 +63,7 @@ class ResidencyYearResolverSpec
       "the date is on 1st January" in {
 
         val SUT = new ResidencyYearResolver {
-          override def currentDate = LocalDate.of(2017, 1, 22)
+          override def currentDate: LocalDate = LocalDate.of(2017, 1, 22)
         }
 
         SUT.isBetweenJanAndApril shouldBe true
@@ -72,7 +72,7 @@ class ResidencyYearResolverSpec
       "the date is on 5th April" in {
 
         val SUT = new ResidencyYearResolver {
-          override def currentDate = LocalDate.of(2017, 4, 5)
+          override def currentDate: LocalDate = LocalDate.of(2017, 4, 5)
         }
 
         SUT.isBetweenJanAndApril shouldBe true
@@ -81,7 +81,7 @@ class ResidencyYearResolverSpec
       "the date is between 1st Jan and 5th April" in {
 
         val SUT = new ResidencyYearResolver {
-          override def currentDate = LocalDate.of(2017, 2, 25)
+          override def currentDate: LocalDate = LocalDate.of(2017, 2, 25)
         }
 
         SUT.isBetweenJanAndApril shouldBe true

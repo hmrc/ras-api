@@ -16,7 +16,6 @@
 
 package uk.gov.hmrc.rasapi.controllers
 
-import org.mockito.ArgumentMatchers
 import org.mockito.ArgumentMatchers.{eq as Meq, *}
 import org.mockito.Mockito.*
 import org.scalatest.BeforeAndAfter
@@ -52,7 +51,6 @@ class LookupControllerSpec
     extends AnyWordSpecLike with Matchers with MockitoSugar with GuiceOneAppPerSuite with BeforeAndAfter {
 
   implicit override lazy val app: Application = new GuiceApplicationBuilder()
-    .configure("api-v2_0.enabled" -> "true")
     .build()
 
   given hc: HeaderCarrier = HeaderCarrier()
@@ -204,7 +202,6 @@ class LookupControllerSpec
     override lazy val STATUS_MATCHING_FAILED: String     = "STATUS_UNAVAILABLE"
     override lazy val STATUS_TOO_MANY_REQUESTS: String   = "TOO_MANY_REQUESTS"
     override lazy val STATUS_SERVICE_UNAVAILABLE: String = "SERVICE_UNAVAILABLE"
-    override lazy val apiV2_0Enabled: Boolean            = false
   }
 
   before {
@@ -225,7 +222,7 @@ class LookupControllerSpec
 
         val residencyStatus = ResidencyStatus("scotResident", Some("otherUKResident"))
 
-        when(mockDesConnector.getResidencyStatus(any(), any(), any(), any()))
+        when(mockDesConnector.getResidencyStatus(any(), any(), any()))
           .thenReturn(Future.successful(Left(residencyStatus)))
 
         await(
@@ -262,7 +259,7 @@ class LookupControllerSpec
 
         val residencyStatus = ResidencyStatus("scotResident", Some("otherUKResident"))
 
-        when(mockDesConnector.getResidencyStatus(any(), any(), any(), any()))
+        when(mockDesConnector.getResidencyStatus(any(), any(), any()))
           .thenReturn(Future.successful(Left(residencyStatus)))
 
         await(
@@ -299,7 +296,7 @@ class LookupControllerSpec
 
         val residencyStatus = ResidencyStatus("otherUKResident", Some("otherUKResident"))
 
-        when(mockDesConnector.getResidencyStatus(any(), any(), any(), any()))
+        when(mockDesConnector.getResidencyStatus(any(), any(), any()))
           .thenReturn(Future.successful(Left(residencyStatus)))
 
         await(
@@ -332,7 +329,7 @@ class LookupControllerSpec
 
         when(mockResidencyYearResolver.isBetweenJanAndApril).thenReturn(false)
 
-        when(mockDesConnector.getResidencyStatus(any(), any(), any(), any()))
+        when(mockDesConnector.getResidencyStatus(any(), any(), any()))
           .thenReturn(Future.successful(Right(ResidencyStatusFailure(STATUS_DECEASED, "Individual is deceased"))))
 
         await(
@@ -369,7 +366,7 @@ class LookupControllerSpec
 
         val residencyStatusFailure = ResidencyStatusFailure("STATUS_UNAVAILABLE", "")
 
-        when(mockDesConnector.getResidencyStatus(any(), any(), any(), any()))
+        when(mockDesConnector.getResidencyStatus(any(), any(), any()))
           .thenReturn(Future.successful(Right(residencyStatusFailure)))
 
         await(
@@ -403,7 +400,7 @@ class LookupControllerSpec
 
         val residencyStatusFailure = ResidencyStatusFailure("INTERNAL_SERVER_ERROR", "")
 
-        when(mockDesConnector.getResidencyStatus(any(), any(), any(), any()))
+        when(mockDesConnector.getResidencyStatus(any(), any(), any()))
           .thenReturn(Future.successful(Right(residencyStatusFailure)))
 
         await(
@@ -435,55 +432,30 @@ class LookupControllerSpec
 
   "LookupController" when {
 
-    "Version 2 is disabled" when {
-      "a version 1.0 request payload is given" should {
-        "return status 200 with correct residency status json" in {
+    "a version 1.0 request payload is given" should {
+      "return status 406 with NOT_ACCEPTABLE response" in {
 
-          when(mockAuthConnector.authorise[Enrolments](any(), any())(any(), any())).thenReturn(successfulRetrieval)
+        when(mockAuthConnector.authorise[Enrolments](any(), any())(any(), any())).thenReturn(successfulRetrieval)
 
-          when(mockResidencyYearResolver.isBetweenJanAndApril).thenReturn(true)
+        when(mockResidencyYearResolver.isBetweenJanAndApril).thenReturn(true)
 
-          val residencyStatus = ResidencyStatus("scotResident", Some("otherUKResident"))
+        val residencyStatus = ResidencyStatus("scotResident", Some("otherUKResident"))
 
-          val expectedJsonResult = Json.parse("""
-              {
-                "currentYearResidencyStatus" : "scotResident",
-                "nextYearForecastResidencyStatus" : "otherUKResident"
-              }
-            """.stripMargin)
+        when(mockDesConnector.getResidencyStatus(any(), any(), any()))
+          .thenReturn(Future.successful(Left(residencyStatus)))
 
-          when(mockDesConnector.getResidencyStatus(any(), any(), ArgumentMatchers.eq(V1_0), any()))
-            .thenReturn(Future.successful(Left(residencyStatus)))
+        val result = TestLookupControllerVersion1.getResidencyStatus
+          .apply(
+            FakeRequest(Helpers.GET, "/")
+              .withHeaders(acceptHeaderV1)
+              .withJsonBody(Json.toJson(individualDetails)(individualDetailssWrites))
+          )
 
-          val result = TestLookupControllerVersion1.getResidencyStatus
-            .apply(
-              FakeRequest(Helpers.GET, "/")
-                .withHeaders(acceptHeaderV1)
-                .withJsonBody(Json.toJson(individualDetails)(individualDetailssWrites))
-            )
-
-          status(result)        shouldBe OK
-          contentAsJson(result) shouldBe expectedJsonResult
-        }
+        status(result)        shouldBe NOT_ACCEPTABLE
+        contentAsJson(result) shouldBe ApiErrorResponse.acceptHeaderInvalid.toJson
       }
-
-      "a version 2.0 request payload is given" should {
-        "return status 406 with invalid accept header json" in {
-          val result = TestLookupControllerVersion1.getResidencyStatus
-            .apply(
-              FakeRequest(Helpers.GET, "/")
-                .withHeaders(acceptHeader)
-                .withJsonBody(Json.toJson(individualDetails)(individualDetailssWrites))
-            )
-
-          status(result)        shouldBe NOT_ACCEPTABLE
-          contentAsJson(result) shouldBe Json.toJson(ApiErrorResponse.acceptHeaderInvalid)
-        }
-      }
-
     }
-
-    "Version 2 is enabled" should {
+    "a version 2.0 request payload is given" should {
       "return status 200 with correct residency status json" when {
         "a valid request payload is given and the date of the request is between january and april 2018" in {
 
@@ -494,13 +466,13 @@ class LookupControllerSpec
           val residencyStatus = ResidencyStatus("scotResident", Some("otherUKResident"))
 
           val expectedJsonResult = Json.parse("""
-            {
-              "currentYearResidencyStatus" : "otherUKResident",
-              "nextYearForecastResidencyStatus" : "otherUKResident"
-            }
-          """.stripMargin)
+                  {
+                    "currentYearResidencyStatus" : "otherUKResident",
+                    "nextYearForecastResidencyStatus" : "otherUKResident"
+                  }
+                """.stripMargin)
 
-          when(mockDesConnector.getResidencyStatus(any(), any(), any(), any()))
+          when(mockDesConnector.getResidencyStatus(any(), any(), any()))
             .thenReturn(Future.successful(Left(residencyStatus)))
 
           val result = TestLookupControllerFeb18.getResidencyStatus
@@ -508,233 +480,62 @@ class LookupControllerSpec
               FakeRequest(Helpers.GET, "/")
                 .withHeaders(acceptHeader)
                 .withJsonBody(Json.toJson(individualDetails)(individualDetailssWrites))
-            )
-
-          status(result)        shouldBe OK
-          contentAsJson(result) shouldBe expectedJsonResult
-        }
-
-        "a version 1.0 request payload is given and the date of the request is between january and april 2018" in {
-
-          when(mockAuthConnector.authorise[Enrolments](any(), any())(any(), any())).thenReturn(successfulRetrieval)
-
-          when(mockResidencyYearResolver.isBetweenJanAndApril).thenReturn(true)
-
-          val residencyStatus = ResidencyStatus("scotResident", Some("otherUKResident"))
-
-          val expectedJsonResult = Json.parse("""
-            {
-              "currentYearResidencyStatus" : "otherUKResident",
-              "nextYearForecastResidencyStatus" : "otherUKResident"
-            }
-          """.stripMargin)
-
-          when(mockDesConnector.getResidencyStatus(any(), any(), ArgumentMatchers.eq(V1_0), any()))
-            .thenReturn(Future.successful(Left(residencyStatus)))
-
-          val result = TestLookupControllerFeb18.getResidencyStatus
-            .apply(
-              FakeRequest(Helpers.GET, "/")
-                .withHeaders(acceptHeaderV1)
-                .withJsonBody(Json.toJson(individualDetails)(individualDetailssWrites))
-            )
-
-          status(result)        shouldBe OK
-          contentAsJson(result) shouldBe expectedJsonResult
-        }
-
-        "a version 2.0 request payload is given and the date of the request is between january and april 2018" in {
-          when(mockAuthConnector.authorise[Enrolments](any(), any())(any(), any())).thenReturn(successfulRetrieval)
-
-          when(mockResidencyYearResolver.isBetweenJanAndApril).thenReturn(true)
-
-          val residencyStatus = ResidencyStatus("scotResident", Some("otherUKResident"))
-
-          val expectedJsonResult = Json.parse("""
-            {
-              "currentYearResidencyStatus" : "otherUKResident",
-              "nextYearForecastResidencyStatus" : "otherUKResident"
-            }
-          """.stripMargin)
-
-          when(mockDesConnector.getResidencyStatus(any(), any(), ArgumentMatchers.eq(V2_0), any()))
-            .thenReturn(Future.successful(Left(residencyStatus)))
-
-          val result = TestLookupControllerFeb18.getResidencyStatus
-            .apply(
-              FakeRequest(Helpers.GET, "/")
-                .withHeaders(acceptHeader)
-                .withJsonBody(Json.toJson(individualDetails)(individualDetailssWrites))
-            )
-
-          status(result)        shouldBe OK
-          contentAsJson(result) shouldBe expectedJsonResult
-        }
-
-        "a valid request payload is given and the date of the request is between january and april 2019" in {
-
-          when(mockAuthConnector.authorise[Enrolments](any(), any())(any(), any())).thenReturn(successfulRetrieval)
-
-          when(mockResidencyYearResolver.isBetweenJanAndApril).thenReturn(true)
-
-          val residencyStatus = ResidencyStatus("scotResident", Some("otherUKResident"))
-
-          val expectedJsonResult = Json.parse("""
-            {
-              "currentYearResidencyStatus" : "scotResident",
-              "nextYearForecastResidencyStatus" : "otherUKResident"
-            }
-          """.stripMargin)
-
-          when(mockDesConnector.getResidencyStatus(any(), any(), any(), any()))
-            .thenReturn(Future.successful(Left(residencyStatus)))
-
-          val result = TestLookupControllerFeb19.getResidencyStatus
-            .apply(
-              FakeRequest(Helpers.GET, "/")
-                .withHeaders(acceptHeader)
-                .withJsonBody(Json.toJson(individualDetails)(individualDetailssWrites))
-            )
-
-          status(result)        shouldBe OK
-          contentAsJson(result) shouldBe expectedJsonResult
-        }
-
-        "a valid request payload is given with a nino which is 9 characters in length e.g. AA123456A" in {
-
-          when(mockAuthConnector.authorise[Enrolments](any(), any())(any(), any())).thenReturn(successfulRetrieval)
-
-          when(mockResidencyYearResolver.isBetweenJanAndApril).thenReturn(true)
-
-          val residencyStatus = ResidencyStatus("otherUKResident", Some("otherUKResident"))
-
-          val expectedJsonResult = Json.parse("""
-            {
-              "currentYearResidencyStatus" : "otherUKResident",
-              "nextYearForecastResidencyStatus" : "otherUKResident"
-            }
-          """.stripMargin)
-
-          when(mockDesConnector.getResidencyStatus(any(), any(), any(), any()))
-            .thenReturn(Future.successful(Left(residencyStatus)))
-
-          val result = TestLookupController.getResidencyStatus
-            .apply(
-              FakeRequest(Helpers.GET, "/")
-                .withHeaders(acceptHeader)
-                .withJsonBody(Json.toJson(individualDetails.copy(nino = individualDetails.nino.toLowerCase)))
-            )
-
-          status(result)        shouldBe OK
-          contentAsJson(result) shouldBe expectedJsonResult
-        }
-
-        "a valid request payload is given and the date of the request is between april and december" in {
-
-          when(mockAuthConnector.authorise[Enrolments](any(), any())(any(), any())).thenReturn(successfulRetrieval)
-
-          when(mockResidencyYearResolver.isBetweenJanAndApril).thenReturn(false)
-
-          val residencyStatus = ResidencyStatus("otherUKResident", Some("otherUKResident"))
-
-          val expectedJsonResult = Json.parse("""
-            {
-              "currentYearResidencyStatus" : "otherUKResident"
-            }
-          """.stripMargin)
-
-          when(mockDesConnector.getResidencyStatus(any(), any(), any(), any()))
-            .thenReturn(Future.successful(Left(residencyStatus)))
-
-          val result = TestLookupController.getResidencyStatus
-            .apply(
-              FakeRequest(Helpers.GET, "/")
-                .withHeaders(acceptHeader)
-                .withJsonBody(Json.toJson(individualDetails)(individualDetailssWrites))
-            )
-
-          status(result)        shouldBe OK
-          contentAsJson(result) shouldBe expectedJsonResult
-        }
-
-        "a valid request payload is given with a nino which is 8 characters in length e.g. AA123456" in {
-
-          when(mockAuthConnector.authorise[Enrolments](any(), any())(any(), any())).thenReturn(successfulRetrieval)
-          when(mockResidencyYearResolver.isBetweenJanAndApril).thenReturn(true)
-
-          val residencyStatus = ResidencyStatus("otherUKResident", Some("otherUKResident"))
-
-          val expectedJsonResult = Json.parse("""
-            {
-              "currentYearResidencyStatus" : "otherUKResident",
-              "nextYearForecastResidencyStatus" : "otherUKResident"
-            }
-          """.stripMargin)
-
-          when(mockDesConnector.getResidencyStatus(any(), any(), any(), any()))
-            .thenReturn(Future.successful(Left(residencyStatus)))
-
-          val result = TestLookupController.getResidencyStatus
-            .apply(
-              FakeRequest(Helpers.GET, "/")
-                .withHeaders(acceptHeader)
-                .withJsonBody(Json.toJson(individualDetails.copy(nino = "AA123456")))
             )
 
           status(result)        shouldBe OK
           contentAsJson(result) shouldBe expectedJsonResult
         }
       }
+    }
 
-      "return status 400" when {
-        "an invalid payload is provided" in {
+    "return status 400" when {
+      "an invalid payload is provided" in {
 
-          when(mockAuthConnector.authorise[Enrolments](any(), any())(any(), any())).thenReturn(successfulRetrieval)
+        when(mockAuthConnector.authorise[Enrolments](any(), any())(any(), any())).thenReturn(successfulRetrieval)
 
-          val invalidPayload = Json.parse(
-            """
-              |{
-              |   "firstName": "Joe",
-              |   "nino": "AA123243E",
-              |   "dob": ""
-              |}
+        val invalidPayload = Json.parse(
+          """
+            |{
+            |   "firstName": "Joe",
+            |   "nino": "AA123243E",
+            |   "dob": ""
+            |}
             """.stripMargin
-          )
+        )
 
-          val expectedJsonResult = Json.parse("""
-              |{
-              |  "code": "BAD_REQUEST",
-              |  "message": "Bad Request",
-              |  "errors": [
-              |     {
-              |       "code": "MISSING_FIELD",
-              |       "message": "This field is required",
-              |       "path": "/lastName"
-              |     },
-              |     {
-              |       "code": "MISSING_FIELD",
-              |       "message": "This field is required",
-              |       "path": "/dateOfBirth"
-              |     },
-              |     {
-              |       "code": "INVALID_FORMAT",
-              |       "message": "Invalid format has been used",
-              |       "path": "/nino"
-              |     }
-              |  ]
-              |}
+        val expectedJsonResult = Json.parse("""
+            |{
+            |  "code": "BAD_REQUEST",
+            |  "message": "Bad Request",
+            |  "errors": [
+            |     {
+            |       "code": "MISSING_FIELD",
+            |       "message": "This field is required",
+            |       "path": "/lastName"
+            |     },
+            |     {
+            |       "code": "MISSING_FIELD",
+            |       "message": "This field is required",
+            |       "path": "/dateOfBirth"
+            |     },
+            |     {
+            |       "code": "INVALID_FORMAT",
+            |       "message": "Invalid format has been used",
+            |       "path": "/nino"
+            |     }
+            |  ]
+            |}
             """.stripMargin)
 
-          val result = TestLookupController.getResidencyStatus
-            .apply(
-              FakeRequest(Helpers.GET, "/")
-                .withHeaders(acceptHeader)
-                .withJsonBody(invalidPayload)
-            )
+        val result = TestLookupController.getResidencyStatus
+          .apply(
+            FakeRequest(Helpers.GET, "/")
+              .withHeaders(acceptHeader)
+              .withJsonBody(invalidPayload)
+          )
 
-          status(result)        shouldBe BAD_REQUEST
-          contentAsJson(result) shouldBe expectedJsonResult
-        }
+        status(result)        shouldBe BAD_REQUEST
+        contentAsJson(result) shouldBe expectedJsonResult
       }
     }
 
@@ -873,7 +674,7 @@ class LookupControllerSpec
 
         val residencyStatusFailure = ResidencyStatusFailure("STATUS_UNAVAILABLE", "")
 
-        when(mockDesConnector.getResidencyStatus(any(), any(), any(), any()))
+        when(mockDesConnector.getResidencyStatus(any(), any(), any()))
           .thenReturn(Future.successful(Right(residencyStatusFailure)))
 
         val result = TestLookupController.getResidencyStatus
@@ -896,7 +697,7 @@ class LookupControllerSpec
 
         val residencyStatusFailure = ResidencyStatusFailure("TOO_MANY_REQUESTS", "")
 
-        when(mockDesConnector.getResidencyStatus(any(), any(), any(), any()))
+        when(mockDesConnector.getResidencyStatus(any(), any(), any()))
           .thenReturn(Future.successful(Right(residencyStatusFailure)))
 
         val result = TestLookupController.getResidencyStatus
@@ -925,7 +726,7 @@ class LookupControllerSpec
 
         val residencyStatusFailure = ResidencyStatusFailure("INTERNAL_SERVER_ERROR", "")
 
-        when(mockDesConnector.getResidencyStatus(any(), any(), any(), any()))
+        when(mockDesConnector.getResidencyStatus(any(), any(), any()))
           .thenReturn(Future.successful(Right(residencyStatusFailure)))
 
         val result = TestLookupController.getResidencyStatus
@@ -953,7 +754,7 @@ class LookupControllerSpec
 
         val residencyStatusFailure = ResidencyStatusFailure("SERVICE_UNAVAILABLE", "")
 
-        when(mockDesConnector.getResidencyStatus(any(), any(), any(), any()))
+        when(mockDesConnector.getResidencyStatus(any(), any(), any()))
           .thenReturn(Future.successful(Right(residencyStatusFailure)))
 
         val result = TestLookupController.getResidencyStatus
@@ -972,8 +773,8 @@ class LookupControllerSpec
   "LookupController.getVersion" should {
     import TestLookupController.getVersion
 
-    "return Some(V1_0) when the Accept header requests version 1.0" in {
-      FakeRequest(Helpers.GET, "/").withHeaders(acceptHeaderV1).getVersion shouldBe Some(V1_0)
+    "return None when the Accept header requests version 1.0" in {
+      FakeRequest(Helpers.GET, "/").withHeaders(acceptHeaderV1).getVersion shouldBe None
     }
 
     "return Some(V2_0) when the Accept header requests version 2.0" in {

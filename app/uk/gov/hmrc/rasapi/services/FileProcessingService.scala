@@ -60,7 +60,7 @@ class FileProcessingService @Inject() (
   val fileSave: String      = "File-Save"
   val STATUS_FAILED: String = "FAILED"
 
-  def processFile(userId: String, callbackData: UpscanCallbackData, apiVersion: ApiVersion)(using
+  def processFile(userId: String, callbackData: UpscanCallbackData)(using
     hc: HeaderCarrier,
     request: Request[AnyContent]
   ): Boolean = {
@@ -72,7 +72,7 @@ class FileProcessingService @Inject() (
           fileReadMetrics.stop
           inputFileData =>
             if (inputFileData.isSuccess) {
-              manipulateFile(inputFileData, userId, callbackData, apiVersion)
+              manipulateFile(inputFileData, userId, callbackData)
             }
         }
         true
@@ -88,8 +88,7 @@ class FileProcessingService @Inject() (
   def manipulateFile(
     inputFileData: Try[Iterator[String]],
     userId: String,
-    callbackData: UpscanCallbackData,
-    apiVersion: ApiVersion
+    callbackData: UpscanCallbackData
   )(using hc: HeaderCarrier, request: Request[AnyContent]): Unit = {
     val fileResultsMetrics = metrics.register(fileResults).time
     val writer             = createFileWriter(callbackData.reference, userId)
@@ -112,7 +111,7 @@ class FileProcessingService @Inject() (
         if (row.nonEmpty) {
           writeResultToFile(
             writer._2,
-            fetchResult(removeDoubleQuotes(row), userId, callbackData.reference, apiVersion = apiVersion),
+            fetchResult(removeDoubleQuotes(row), userId, callbackData.reference),
             userId
           )
         }

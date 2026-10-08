@@ -20,7 +20,7 @@ import play.api.Logging
 import play.api.libs.json.JsSuccess
 import play.api.mvc.*
 import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
-import uk.gov.hmrc.rasapi.models.{ApiVersion, UpscanCallbackData, V1_0, V2_0}
+import uk.gov.hmrc.rasapi.models.UpscanCallbackData
 import uk.gov.hmrc.rasapi.services.{FileProcessingService, RasFilesSessionService}
 
 import javax.inject.Inject
@@ -37,21 +37,16 @@ class FileProcessingController @Inject() (
   private val STATUS_READY: String  = "READY"
   private val STATUS_FAILED: String = "FAILED"
 
-  def statusCallback(userId: String, version: String): Action[AnyContent] = Action.async { implicit request =>
-    val optVersion = version match {
-      case "1.0" => Some(V1_0)
-      case "2.0" => Some(V2_0)
-      case _     => None
-    }
-    (optVersion, withValidJson()) match {
-      case (Some(apiVersion), Some(callbackData)) =>
+  def statusCallback(userId: String): Action[AnyContent] = Action.async { implicit request =>
+    withValidJson() match {
+      case Some(callbackData) =>
         callbackData.fileStatus match {
           case STATUS_READY  =>
             logger.info(
               s"[FileProcessingController][statusCallback] Callback request received with status available: file processing " +
                 s"started for userId ($userId)."
             )
-            if (fileProcessingService.processFile(userId, callbackData, apiVersion)) {
+            if (fileProcessingService.processFile(userId, callbackData)) {
               sessionCacheService.updateFileSession(userId, callbackData, None, None)
             }
           case STATUS_FAILED =>
@@ -67,19 +62,10 @@ class FileProcessingController @Inject() (
             )
         }
         Future(Ok(""))
-      case (optVer, optData)                      => handleInvalidRequest(optVer, optData)
+      case None               =>
+        logger.warn("[FileProcessingController][handleInvalidRequest] Invalid Json supplied")
+        Future.successful(BadRequest(""))
     }
-  }
-
-  private def handleInvalidRequest(
-    optVersion: Option[ApiVersion],
-    optCallBackData: Option[UpscanCallbackData]
-  ): Future[Result] = {
-    (optVersion, optCallBackData) match {
-      case (None, _) => logger.warn("[FileProcessingController][handleInvalidRequest] Unsupported api version supplied")
-      case _         => logger.warn("[FileProcessingController][handleInvalidRequest] Invalid Json supplied")
-    }
-    Future.successful(BadRequest(""))
   }
 
   private def withValidJson()(using request: Request[AnyContent]): Option[UpscanCallbackData] =
