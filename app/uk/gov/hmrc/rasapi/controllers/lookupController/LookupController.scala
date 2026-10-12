@@ -59,7 +59,6 @@ class LookupController @Inject() (
   lazy val STATUS_MATCHING_FAILED: String                   = appContext.matchingFailedStatus
   lazy val STATUS_TOO_MANY_REQUESTS: String                 = appContext.tooManyRequestsStatus
   lazy val STATUS_SERVICE_UNAVAILABLE: String               = appContext.serviceUnavailableStatus
-  lazy val apiV2_0Enabled: Boolean                          = appContext.apiV2_0Enabled
   def parser: BodyParser[AnyContent]                        = bodyParser
   override protected val executionContext: ExecutionContext = ec
 
@@ -95,12 +94,13 @@ class LookupController @Inject() (
           // here; the V2_0 fallback only guards the unreachable None case so a missing version never fails the request.
           desConnector.getResidencyStatus(individualDetails, id).map {
             case Left(residencyStatusResponse) =>
-              val residencyStatus =
+              val residencyStatus = {
                 if (residencyYearResolver.isBetweenJanAndApril) {
                   updateResidencyResponse(residencyStatusResponse)
                 } else {
                   residencyStatusResponse.copy(nextYearForecastResidencyStatus = None)
                 }
+              }
               auditResponse(
                 failureReason = None,
                 nino = Some(individualDetails.nino),
@@ -273,7 +273,6 @@ class LookupController @Inject() (
     rasApiVersion: Option[ApiVersion],
     userId: String
   )(using request: Request[AnyContent], hc: HeaderCarrier): Unit = {
-
     if (rasApiVersion.isEmpty) {
       logger.warn(s"[LookupController][auditResponse] API version missing for userId ($userId); auditing as MISSING.")
     }

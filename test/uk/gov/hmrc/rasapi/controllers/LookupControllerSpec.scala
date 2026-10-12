@@ -136,7 +136,6 @@ class LookupControllerSpec
     override lazy val STATUS_MATCHING_FAILED: String     = "STATUS_UNAVAILABLE"
     override lazy val STATUS_TOO_MANY_REQUESTS: String   = "TOO_MANY_REQUESTS"
     override lazy val STATUS_SERVICE_UNAVAILABLE: String = "SERVICE_UNAVAILABLE"
-    override lazy val apiV2_0Enabled: Boolean            = true
   }
 
   object TestLookupControllerFeb18
@@ -158,7 +157,6 @@ class LookupControllerSpec
     override lazy val STATUS_MATCHING_FAILED: String     = "STATUS_UNAVAILABLE"
     override lazy val STATUS_TOO_MANY_REQUESTS: String   = "TOO_MANY_REQUESTS"
     override lazy val STATUS_SERVICE_UNAVAILABLE: String = "SERVICE_UNAVAILABLE"
-    override lazy val apiV2_0Enabled: Boolean            = true
   }
 
   object TestLookupControllerFeb19
@@ -180,7 +178,6 @@ class LookupControllerSpec
     override lazy val STATUS_MATCHING_FAILED: String     = "STATUS_UNAVAILABLE"
     override lazy val STATUS_SERVICE_UNAVAILABLE: String = "SERVICE_UNAVAILABLE"
     override lazy val STATUS_TOO_MANY_REQUESTS: String   = "TOO_MANY_REQUESTS"
-    override lazy val apiV2_0Enabled: Boolean            = true
   }
 
   object TestLookupControllerVersion1
