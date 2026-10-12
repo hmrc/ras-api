@@ -1,15 +1,10 @@
-@(context : String, v1Status : String, v2Status : String, endpointsEnabled : Boolean, version2Enabled : Boolean)
+@(context : String,  v2Status : String, version2Enabled : Boolean)
 {
   "api": {
     "name": "Relief At Source",
     "description": "For pension scheme administrators to identify the residency status for their scheme members.",
     "context": "@context",
     "versions": [
-      {
-        "version": "1.0",
-        "status": "@v1Status",
-        "endpointsEnabled": @endpointsEnabled
-      },
       {
         "version": "2.0",
         "status": "@v2Status",

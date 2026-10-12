@@ -24,8 +24,6 @@ import scala.concurrent.duration.Duration
 class AppContext @Inject() (val servicesConfig: ServicesConfig) {
   lazy val appName: String                            = servicesConfig.getString("appName")
   lazy val apiContext: String                         = servicesConfig.getString(s"api.context")
-  lazy val apiStatus: String                          = servicesConfig.getString("api.status")
-  lazy val endpointsEnabled: Boolean                  = servicesConfig.getBoolean("api.endpointsEnabled")
   lazy val desAuthToken: String                       = servicesConfig.getString("desauthtoken")
   lazy val desUrlHeaderEnv: String                    = servicesConfig.getString("environment")
   lazy val resultsExpriyTime: Int                     = servicesConfig.getInt("results.expiry.time")
@@ -41,7 +39,6 @@ class AppContext @Inject() (val servicesConfig: ServicesConfig) {
   lazy val serviceUnavailableStatus: String           = servicesConfig.getString("status.service-unavailable")
   lazy val doNotReProcessStatus: String               = servicesConfig.getString("status.do-not-re-process")
   lazy val fileProcessingMatchingFailedStatus: String = servicesConfig.getString("status.matching-failed.csv")
-  lazy val apiv1Status: String                        = servicesConfig.getString("api.versions.v1_0.status")
   lazy val apiv2Status: String                        = servicesConfig.getString("api.versions.v2_0.status")
 
   lazy val fileProcessingInternalServerErrorStatus: String =

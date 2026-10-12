@@ -36,14 +36,6 @@ class AppContextSpec extends AnyWordSpecLike with Matchers with GuiceOneAppPerSu
       appContext.apiContext shouldBe "individuals/relief-at-source"
     }
 
-    "expose apiStatus from configuration" in {
-      appContext.apiStatus shouldBe "BETA"
-    }
-
-    "expose endpointsEnabled from configuration" in {
-      appContext.endpointsEnabled shouldBe true
-    }
-
     "expose desAuthToken from configuration" in {
       appContext.desAuthToken should not be empty
     }
@@ -102,10 +94,6 @@ class AppContextSpec extends AnyWordSpecLike with Matchers with GuiceOneAppPerSu
 
     "expose fileProcessingMatchingFailedStatus from configuration" in {
       appContext.fileProcessingMatchingFailedStatus shouldBe "cannot_provide_status"
-    }
-
-    "expose apiv1Status from configuration" in {
-      appContext.apiv1Status shouldBe "RETIRED"
     }
 
     "expose apiv2Status from configuration" in {
