@@ -193,9 +193,8 @@ class DesConnector @Inject() (
     }
   }
 
-  private def convertResidencyStatus(residencyStatus: String): String = {
+  private def convertResidencyStatus(residencyStatus: String): String =
     residencyStatus.replace(uk, otherUk).replace(scot, scotRes).replace(welsh, welshRes)
-  }
 
   private def resolveResponse(httpResponse: HttpResponse, userId: String, nino: NINO)(using
     hc: HeaderCarrier

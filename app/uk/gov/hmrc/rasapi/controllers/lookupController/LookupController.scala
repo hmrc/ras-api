@@ -94,13 +94,12 @@ class LookupController @Inject() (
           // here; the V2_0 fallback only guards the unreachable None case so a missing version never fails the request.
           desConnector.getResidencyStatus(individualDetails, id).map {
             case Left(residencyStatusResponse) =>
-              val residencyStatus = {
+              val residencyStatus =
                 if (residencyYearResolver.isBetweenJanAndApril) {
                   updateResidencyResponse(residencyStatusResponse)
                 } else {
                   residencyStatusResponse.copy(nextYearForecastResidencyStatus = None)
                 }
-              }
               auditResponse(
                 failureReason = None,
                 nino = Some(individualDetails.nino),
