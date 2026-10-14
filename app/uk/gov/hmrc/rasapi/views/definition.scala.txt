@@ -6,6 +6,11 @@
     "context": "@context",
     "versions": [
       {
+        "version": "1.0",
+        "status": "RETIRED",
+        "endpointsEnabled": false
+      },
+      {
         "version": "2.0",
         "status": "@v2Status",
         "endpointsEnabled": @version2Enabled
