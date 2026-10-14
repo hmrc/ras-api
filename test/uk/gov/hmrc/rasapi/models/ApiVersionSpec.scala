@@ -21,12 +21,6 @@ import org.scalatest.wordspec.AnyWordSpec
 
 class ApiVersionSpec extends AnyWordSpec with Matchers {
 
-  "V1_0" must {
-    "return 'v1' as string" in {
-      V1_0.toString mustEqual "v1"
-    }
-  }
-
   "V2_0" must {
     "return 'v2' as string" in {
       V2_0.toString mustEqual "v2"

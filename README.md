@@ -5,7 +5,7 @@ Check if a pension scheme member is a resident in Scotland for tax purposes.
 If you're a pension scheme administrator, you need to know this to make the correct relief at source claims.
 
 > [!WARNING]
-> **v1.0 is deprecated and will be removed in September 2026.** All consumers must migrate to **v2.0**. All links in this document point to v2.0.
+> **v1.0 is retired and removed in October 2026.** All consumers must migrate to **v2.0**. All links in this document point to v2.0.
 
 ## Before You Start
 

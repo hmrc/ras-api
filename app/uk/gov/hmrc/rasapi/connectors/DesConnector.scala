@@ -68,7 +68,6 @@ class DesConnector @Inject() (
   def getResidencyStatus(
     member: IndividualDetails,
     userId: String,
-    apiVersion: ApiVersion,
     isBulkRequest: Boolean = false
   ): Future[Either[ResidencyStatus, ResidencyStatusFailure]] = {
 
@@ -95,7 +94,7 @@ class DesConnector @Inject() (
         )
       }
 
-      sendResidencyStatusRequest(uri, member, userId, desHeaders, apiVersion) flatMap {
+      sendResidencyStatusRequest(uri, member, userId, desHeaders) flatMap {
         case Left(result)                                                                              => Future.successful(Left(result))
         case Right(result) if retryCount < retryLimit && isCodeRetryable(result.code, isBulkRequest)   =>
           Thread.sleep(retryDelay) // Delay before sending to HoD to try to avoid transactions per second(tps) clash
@@ -128,8 +127,7 @@ class DesConnector @Inject() (
     uri: String,
     member: IndividualDetails,
     userId: String,
-    desHeaders: Seq[(String, String)],
-    apiVersion: ApiVersion
+    desHeaders: Seq[(String, String)]
   )(using rasHeaders: HeaderCarrier): Future[Either[ResidencyStatus, ResidencyStatusFailure]] = {
 
     val payload = Json.toJson(
@@ -143,7 +141,7 @@ class DesConnector @Inject() (
       .setHeader(desHeaders*)
       .withBody(payload)
       .execute[HttpResponse]
-    result.map(response => resolveResponse(response, userId, member.nino, apiVersion)).recover {
+    result.map(response => resolveResponse(response, userId, member.nino)).recover {
       case _: BadRequestException              =>
         logger.error(
           s"[DesConnector][getResidencyStatus] Bad Request returned from des. The details sent were not " +
@@ -195,17 +193,10 @@ class DesConnector @Inject() (
     }
   }
 
-  private def convertResidencyStatus(residencyStatus: String, apiVersion: ApiVersion): String = {
-    val ukAndScotRes = residencyStatus.replace(uk, otherUk).replace(scot, scotRes)
-    apiVersion match {
-      case V1_0 =>
-        ukAndScotRes.replace(welsh, otherUk)
-      case V2_0 =>
-        ukAndScotRes.replace(welsh, welshRes)
-    }
-  }
+  private def convertResidencyStatus(residencyStatus: String): String =
+    residencyStatus.replace(uk, otherUk).replace(scot, scotRes).replace(welsh, welshRes)
 
-  private def resolveResponse(httpResponse: HttpResponse, userId: String, nino: NINO, apiVersion: ApiVersion)(using
+  private def resolveResponse(httpResponse: HttpResponse, userId: String, nino: NINO)(using
     hc: HeaderCarrier
   ): Either[ResidencyStatus, ResidencyStatusFailure] =
 
@@ -231,9 +222,9 @@ class DesConnector @Inject() (
 
               Right(ResidencyStatusFailure(error_DoNotReProcess, "Internal server error."))
             } else {
-              val currentStatus                  = convertResidencyStatus(payload.currentYearResidencyStatus, apiVersion)
+              val currentStatus                  = convertResidencyStatus(payload.currentYearResidencyStatus)
               val nextYearStatus: Option[String] =
-                payload.nextYearResidencyStatus.map(convertResidencyStatus(_, apiVersion))
+                payload.nextYearResidencyStatus.map(convertResidencyStatus)
               Left(ResidencyStatus(currentStatus, nextYearStatus))
             }
         }

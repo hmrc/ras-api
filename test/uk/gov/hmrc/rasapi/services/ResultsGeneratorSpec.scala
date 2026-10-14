@@ -19,11 +19,9 @@ package uk.gov.hmrc.rasapi.services
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpecLike
 import org.scalatestplus.mockito.MockitoSugar
-import play.api.http.HeaderNames.ACCEPT
-import play.api.test.FakeRequest
 import uk.gov.hmrc.rasapi.connectors.DesConnector
 import uk.gov.hmrc.rasapi.helpers.ResidencyYearResolver
-import uk.gov.hmrc.rasapi.models.{IndividualDetails, RawMemberDetails, V1_0, V2_0}
+import uk.gov.hmrc.rasapi.models.{IndividualDetails, RawMemberDetails}
 
 import java.time.LocalDate
 

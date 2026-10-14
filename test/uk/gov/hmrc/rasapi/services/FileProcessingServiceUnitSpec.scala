@@ -111,7 +111,7 @@ class FileProcessingServiceUnitSpec
       val sessionCache = mock[RasFilesSessionService]
       val svc          = buildService(upscan = upscan, sessionCache = sessionCache)
 
-      val result = svc.processFile("user1234", callbackWithoutUrl, V2_0)
+      val result = svc.processFile("user1234", callbackWithoutUrl)
 
       result shouldBe false
       verify(upscan, never()).getUpscanFile(any(), any(), any())
@@ -123,7 +123,7 @@ class FileProcessingServiceUnitSpec
       when(upscan.getUpscanFile(any(), any(), any())).thenReturn(Future.successful(None))
 
       val svc    = buildService(upscan = upscan, sessionCache = sessionCache)
-      val result = svc.processFile("user1234", callbackData, V2_0)
+      val result = svc.processFile("user1234", callbackData)
 
       result shouldBe true
 
@@ -153,7 +153,7 @@ class FileProcessingServiceUnitSpec
       )
 
       val inputFileData = Try(Iterator("", "  "))
-      svc.manipulateFile(inputFileData, "user1234", callbackData, V2_0)
+      svc.manipulateFile(inputFileData, "user1234", callbackData)
 
       // Future not mapped, so eventually should capture when done
       eventually {

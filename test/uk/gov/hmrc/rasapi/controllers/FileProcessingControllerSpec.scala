@@ -90,53 +90,27 @@ class FileProcessingControllerSpec
 
     "return Ok and interact with FileProcessingService and SessionCacheService" when {
       "an 'READY' status is given and processFile is successful" in {
-        when(mockFileProcessingService.processFile(any(), any(), any())(using any(), any())).thenReturn(true)
+        when(mockFileProcessingService.processFile(any(), any())(using any(), any())).thenReturn(true)
         val result =
-          SUT.statusCallback(userId, version = "2.0").apply(fakeRequest.withJsonBody(Json.toJson(upscanCallbackData)))
+          SUT.statusCallback(userId).apply(fakeRequest.withJsonBody(Json.toJson(upscanCallbackData)))
 
-        verify(mockFileProcessingService).processFile(Meq(userId), Meq(upscanCallbackData), Meq(V2_0))(using
+        verify(mockFileProcessingService).processFile(Meq(userId), Meq(upscanCallbackData))(using
           any(),
           any()
         )
         verify(mockSessionCacheService).updateFileSession(Meq(userId), Meq(upscanCallbackData), Meq(None), Meq(None))
 
         status(result) shouldBe OK
-      }
-
-      "an 'READY' status is given and processFile is successful for version 1" in {
-        when(mockFileProcessingService.processFile(any(), any(), any())(using any(), any())).thenReturn(true)
-        val result =
-          SUT.statusCallback(userId, version = "1.0").apply(fakeRequest.withJsonBody(Json.toJson(upscanCallbackData)))
-
-        verify(mockFileProcessingService).processFile(Meq(userId), Meq(upscanCallbackData), Meq(V1_0))(using
-          any(),
-          any()
-        )
-        verify(mockSessionCacheService).updateFileSession(Meq(userId), Meq(upscanCallbackData), Meq(None), Meq(None))
-
-        status(result) shouldBe OK
-      }
-
-      "processFile will fail when given version 3 and throws BadRequest" in {
-        when(mockFileProcessingService.processFile(any(), any(), any())(using any(), any()))
-          .thenReturn(true)
-
-        val result =
-          SUT
-            .statusCallback(userId, version = "3.0")
-            .apply(fakeRequest.withJsonBody(Json.toJson(upscanCallbackData)))
-
-        status(result) mustBe BAD_REQUEST
       }
 
     }
 
     "return BadRequest and not interact with FileProcessingService" when {
       "no json is provided" in {
-        val result = SUT.statusCallback(userId, version = "2.0").apply(fakeRequest)
+        val result = SUT.statusCallback(userId).apply(fakeRequest)
 
         status(result) mustBe BAD_REQUEST
-        verify(mockFileProcessingService, never()).processFile(any(), any(), any())(using any(), any())
+        verify(mockFileProcessingService, never()).processFile(any(), any())(using any(), any())
       }
     }
 
@@ -145,7 +119,7 @@ class FileProcessingControllerSpec
         val fileStatus = "FAILED"
 
         val result = SUT
-          .statusCallback(userId, version = "2.0")
+          .statusCallback(userId)
           .apply(fakeRequest.withJsonBody(Json.toJson(upscanCallbackData.copy(fileStatus = fileStatus))))
 
         verifyNoInteractions(mockFileProcessingService)
@@ -163,7 +137,7 @@ class FileProcessingControllerSpec
         val fileStatus = "UNKNOWN"
 
         val result = SUT
-          .statusCallback(userId, version = "2.0")
+          .statusCallback(userId)
           .apply(fakeRequest.withJsonBody(Json.toJson(upscanCallbackData.copy(fileStatus = fileStatus))))
 
         verifyNoInteractions(mockFileProcessingService)
