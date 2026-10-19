@@ -36,9 +36,13 @@ import uk.gov.hmrc.rasapi.services.AuditService
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import scala.concurrent.{ExecutionContext, Future}
+import uk.gov.hmrc.rasapi.utils.WireMockHelper
+import com.github.tomakehurst.wiremock.client.WireMock.{aResponse, post, postRequestedFor, urlEqualTo}
+import com.github.tomakehurst.wiremock.stubbing.Scenario.STARTED
+import com.github.tomakehurst.wiremock.client.WireMock.equalTo
 
 class DesConnectorSpec
-    extends AnyWordSpecLike with Matchers with GuiceOneAppPerSuite with BeforeAndAfter with MockitoSugar {
+    extends AnyWordSpecLike with Matchers with GuiceOneAppPerSuite with BeforeAndAfter with MockitoSugar  with WireMockHelper {
 
   given hc: HeaderCarrier = HeaderCarrier()
 
@@ -50,6 +54,8 @@ class DesConnectorSpec
 
   val servicesConfig: ServicesConfig = app.injector.instanceOf[ServicesConfig]
   val appContext: AppContext         = app.injector.instanceOf[AppContext]
+  lazy val realHttp: HttpClientV2Provider =
+    app.injector.instanceOf[HttpClientV2Provider]
 
   before {
     reset(mockHttp)
@@ -74,6 +80,24 @@ class DesConnectorSpec
 
     override def generateNewUUID: String = uuid
   }
+
+  lazy val wireMockDesConnector =
+    new DesConnector(realHttp, mockAuditService, appContext)(using ExecutionContext.global) {
+
+      override lazy val desBaseUrl: String =
+        s"http://localhost:${server.port()}"
+
+      override lazy val allowNoNextYearStatus: Boolean = true
+      override lazy val retryLimit: Int = 3
+      override lazy val retryDelay: Int = 500
+      override lazy val desUrlHeaderEnv: String = "DES HEADER"
+      override lazy val desAuthToken: String = "DES AUTH TOKEN"
+      override lazy val isRetryEnabled: Boolean = true
+      override lazy val isBulkRetryEnabled: Boolean = false
+
+      override def generateNewUUID: String = uuid
+    }
+
 
   val formatter: DateTimeFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd")
 
@@ -122,16 +146,25 @@ class DesConnectorSpec
 
       val individualDetails = IndividualDetails("AB123456C", "JOHN", "SMITH", LocalDate.parse("1990-02-21", formatter))
 
-      val expectedResponse: Future[HttpResponse] =
-        Future.successful(HttpResponse(200, Json.toJson(successresponse).toString()))
+      server.stubFor(
+        post(urlEqualTo("/individuals/residency-status/"))
+          .willReturn(
+            aResponse()
+              .withStatus(200)
+              .withHeader("Content-Type", "application/json")
+              .withBody(Json.toJson(successresponse).toString())
+          )
+      )
 
-      when(mockRequestBuilder.execute(any[HttpReads[HttpResponse]], any())).thenReturn(expectedResponse)
-
-      val result = await(TestDesConnector.getResidencyStatus(individualDetails, userId))
+      val result =
+        await(wireMockDesConnector.getResidencyStatus(individualDetails, userId))
       result.isLeft                       shouldBe true
       result.left.getOrElse("Get Failed") shouldBe ResidencyStatus("otherUKResident", Some("scotResident"))
 
-      verify(mockHttpClient, times(1)).post(any())(any())
+      server.verify(
+        1,
+        postRequestedFor(urlEqualTo("/individuals/residency-status/"))
+      )
     }
 
     "When the requested API version is V2.0" should {
@@ -150,15 +183,23 @@ class DesConnectorSpec
         val individualDetails =
           IndividualDetails("AB123456C", "JACK", "OSCAR", LocalDate.parse("1962-07-07", formatter))
 
-        val expectedResponse: Future[HttpResponse] =
-          Future.successful(HttpResponse(200, Json.toJson(successResponse).toString()))
+        server.stubFor(
+          post(urlEqualTo("/individuals/residency-status/"))
+            .willReturn(
+              aResponse()
+                .withStatus(200)
+                .withHeader("Content-Type", "application/json")
+                .withBody(Json.toJson(successResponse).toString())
+            )
+        )
 
-        when(mockRequestBuilder.execute(any[HttpReads[HttpResponse]], any())).thenReturn(expectedResponse)
-
-        val result = await(TestDesConnector.getResidencyStatus(individualDetails, userId))
+        val result = await(wireMockDesConnector.getResidencyStatus(individualDetails, userId))
         result shouldBe Left(ResidencyStatus("welshResident", Some("welshResident")))
 
-        verify(mockHttpClient, times(1)).post(any())(any())
+        server.verify(
+          1,
+          postRequestedFor(urlEqualTo("/individuals/residency-status/"))
+        )
       }
 
       "handle successful response when 200 is returned from des where CY and CYPlusOne is present for a Scottish resident moving in Wales" in {
@@ -175,15 +216,23 @@ class DesConnectorSpec
         val individualDetails =
           IndividualDetails("SG123480", "HELEN", "SMITH", LocalDate.parse("1975-02-18", formatter))
 
-        val expectedResponse: Future[HttpResponse] =
-          Future.successful(HttpResponse(200, Json.toJson(successResponse).toString()))
+        server.stubFor(
+          post(urlEqualTo("/individuals/residency-status/"))
+            .willReturn(
+              aResponse()
+                .withStatus(200)
+                .withHeader("Content-Type", "application/json")
+                .withBody(Json.toJson(successResponse).toString())
+            )
+        )
 
-        when(mockRequestBuilder.execute(any[HttpReads[HttpResponse]], any())).thenReturn(expectedResponse)
-
-        val result = await(TestDesConnector.getResidencyStatus(individualDetails, userId))
+        val result = await(wireMockDesConnector.getResidencyStatus(individualDetails, userId))
         result shouldBe Left(ResidencyStatus("welshResident", Some("scotResident")))
 
-        verify(mockHttpClient, times(1)).post(any())(any())
+        server.verify(
+          1,
+          postRequestedFor(urlEqualTo("/individuals/residency-status/"))
+        )
       }
 
     }
@@ -201,16 +250,24 @@ class DesConnectorSpec
 
       val individualDetails = IndividualDetails("AB123456C", "JOHN", "SMITH", LocalDate.parse("1990-02-21", formatter))
 
-      val expectedResponse: Future[HttpResponse] =
-        Future.successful(HttpResponse(200, Json.toJson(successResponse).toString()))
+      server.stubFor(
+        post(urlEqualTo("/individuals/residency-status/"))
+          .willReturn(
+            aResponse()
+              .withStatus(200)
+              .withHeader("Content-Type", "application/json")
+              .withBody(Json.toJson(successResponse).toString())
+          )
+      )
 
-      when(mockRequestBuilder.execute(any[HttpReads[HttpResponse]], any())).thenReturn(expectedResponse)
-
-      val result = await(TestDesConnector.getResidencyStatus(individualDetails, userId))
+      val result = await(wireMockDesConnector.getResidencyStatus(individualDetails, userId))
       result.isLeft                       shouldBe true
       result.left.getOrElse("Get Failed") shouldBe ResidencyStatus("otherUKResident", None)
 
-      verify(mockHttpClient, times(1)).post(any())(any())
+      server.verify(
+        1,
+        postRequestedFor(urlEqualTo("/individuals/residency-status/"))
+      )
     }
 
     "handle unsuccessful response for bulk request when 429 is returned from des the first time around and CY and " +
@@ -218,9 +275,9 @@ class DesConnectorSpec
 
         given formatF: OFormat[ResidencyStatusFailure] = ResidencyStatusFormats.failureFormats
 
-        object TestDesConnector
-            extends DesConnector(mockHttp, mockAuditService, appContext)(using ExecutionContext.global) {
-          override lazy val desBaseUrl                     = "http://localhost:9669"
+      object TestDesConnector
+        extends DesConnector(realHttp, mockAuditService, appContext)(using ExecutionContext.global) {
+        override lazy val desBaseUrl = s"http://localhost:${server.port()}"
 //          override val auditService: AuditService          = mockAuditService
           override lazy val allowNoNextYearStatus: Boolean = true
           override lazy val retryLimit: Int                = 3
@@ -244,20 +301,45 @@ class DesConnectorSpec
         val individualDetails =
           IndividualDetails("AB123456C", "JOHN", "SMITH", LocalDate.parse("1990-02-21", formatter))
 
-        val expectedSuccessResponse: Future[HttpResponse] =
-          Future.successful(HttpResponse(200, Json.toJson(successResponse).toString()))
-        val expectedErrorResponse: Future[HttpResponse]   =
-          Future.successful(HttpResponse(429, Json.toJson(errorResponse).toString()))
 
-        when(mockRequestBuilder.execute(any[HttpReads[HttpResponse]], any()))
-          .thenReturn(expectedErrorResponse, expectedSuccessResponse)
+      val desUrl = "/individuals/residency-status/"
+      val scenarioName = "bulk-retry-429-then-success"
 
-        val result = await(TestDesConnector.getResidencyStatus(individualDetails, userId, isBulkRequest = true))
+      server.stubFor(
+        post(urlEqualTo(desUrl))
+          .inScenario(scenarioName)
+          .whenScenarioStateIs(STARTED)
+          .willReturn(
+            aResponse()
+              .withStatus(429)
+              .withHeader("Content-Type", "application/json")
+              .withBody(Json.toJson(errorResponse).toString())
+          )
+          .willSetStateTo("Second Request")
+      )
+
+      server.stubFor(
+        post(urlEqualTo(desUrl))
+          .inScenario(scenarioName)
+          .whenScenarioStateIs("Second Request")
+          .willReturn(
+            aResponse()
+              .withStatus(200)
+              .withHeader("Content-Type", "application/json")
+              .withBody(Json.toJson(successResponse).toString())
+          )
+      )
+
+
+      val result = await(TestDesConnector.getResidencyStatus(individualDetails, userId, isBulkRequest = true))
 
         result.isRight                      shouldBe false
         result.left.getOrElse("Get Failed") shouldBe ResidencyStatus("otherUKResident", Some("scotResident"))
 
-        verify(mockHttpClient, times(2)).post(any())(any())
+      server.verify(
+        2,
+        postRequestedFor(urlEqualTo("/individuals/residency-status/"))
+      )
       }
 
     "handle unsuccessful response for bulk request when 429 is returned from des the first time around and CY and " +
@@ -266,8 +348,8 @@ class DesConnectorSpec
         given formatF: OFormat[ResidencyStatusFailure] = ResidencyStatusFormats.failureFormats
 
         object TestDesConnector
-            extends DesConnector(mockHttp, mockAuditService, appContext)(using ExecutionContext.global) {
-          override lazy val desBaseUrl                     = "http://localhost:9669"
+            extends DesConnector(realHttp, mockAuditService, appContext)(using ExecutionContext.global) {
+          override lazy val desBaseUrl = s"http://localhost:${server.port()}"
 //          override val auditService: AuditService          = mockAuditService
           override lazy val allowNoNextYearStatus: Boolean = true
           override lazy val retryLimit: Int                = 3
@@ -278,21 +360,29 @@ class DesConnectorSpec
           override lazy val isBulkRetryEnabled: Boolean    = false
         }
 
-        val errorResponse = ResidencyStatusFailure("INTERNAL_SERVER_ERROR", "Internal server error.")
+        val errorResponse = ResidencyStatusFailure("TOO_MANY_REQUESTS","Too Many Requests.")
 
         val individualDetails                           =
           IndividualDetails("AB123456C", "JOHN", "SMITH", LocalDate.parse("1990-02-21", formatter))
-        val expectedErrorResponse: Future[HttpResponse] =
-          Future.successful(HttpResponse(429, Json.toJson(errorResponse).toString()))
-
-        when(mockRequestBuilder.execute(any[HttpReads[HttpResponse]], any())).thenReturn(expectedErrorResponse)
+      server.stubFor(
+        post(urlEqualTo("/individuals/residency-status/"))
+          .willReturn(
+            aResponse()
+              .withStatus(429)
+              .withHeader("Content-Type", "application/json")
+              .withBody(Json.toJson(errorResponse).toString())
+          )
+      )
 
         val result = await(TestDesConnector.getResidencyStatus(individualDetails, userId, isBulkRequest = true))
 
         result.isLeft                  shouldBe false
         result.getOrElse("Get Failed") shouldBe errorResponse
 
-        verify(mockHttpClient, times(1)).post(any())(any())
+      server.verify(
+        1,
+        postRequestedFor(urlEqualTo("/individuals/residency-status/"))
+      )
       }
 
     "handle successful response when 200 is returned from des and only CY is present and no next year status toggle is turned off" in {
