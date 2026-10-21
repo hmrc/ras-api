@@ -57,7 +57,7 @@ trait ResultsGenerator extends Logging {
       case Left(memberDetails) =>
         val result = Await.result(
           desConnector.getResidencyStatus(memberDetails, userId, isBulkRequest = true),
-          20.seconds
+          40.seconds
         )
 
         result match {

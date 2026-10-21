@@ -45,7 +45,7 @@ class FileProcessingApiISpec
     with Eventually
     with WireMockServerHelper {
 
-  implicit override def defaultAwaitTimeout: Timeout = 20.seconds
+  implicit override def defaultAwaitTimeout: Timeout = 40.seconds
 
   implicit override lazy val app: Application = new GuiceApplicationBuilder()
     .configure("microservice.services.auth.port" -> mockPort)
