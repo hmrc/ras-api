@@ -387,8 +387,8 @@ class DesConnectorSpec
 
     "handle successful response when 200 is returned from des and only CY is present and no next year status toggle is turned off" in {
       object TestDesConnector
-          extends DesConnector(mockHttp, mockAuditService, appContext)(using ExecutionContext.global) {
-        override lazy val desBaseUrl                     = "http://localhost:9669"
+          extends DesConnector(realHttp, mockAuditService, appContext)(using ExecutionContext.global) {
+        override lazy val desBaseUrl                     = s"http://localhost:${server.port()}"
 //        override val auditService: AuditService          = mockAuditService
         override lazy val allowNoNextYearStatus: Boolean = false
         override lazy val retryLimit: Int                = 3
@@ -409,12 +409,22 @@ class DesConnectorSpec
       )
       val individualDetails = IndividualDetails("AB123456C", "JOHN", "SMITH", LocalDate.parse("1990-02-21", formatter))
 
-      when(mockRequestBuilder.execute(any[HttpReads[HttpResponse]], any()))
-        .thenReturn(Future.successful(HttpResponse(200, Json.toJson(successResponse).toString())))
+      server.stubFor(
+        post(urlEqualTo("/individuals/residency-status/"))
+          .willReturn(
+            aResponse()
+              .withStatus(200)
+              .withHeader("Content-Type", "application/json")
+              .withBody(Json.toJson(successResponse).toString())
+          )
+      )
       val result = await(TestDesConnector.getResidencyStatus(individualDetails, userId))
       result.isLeft                  shouldBe false
       result.getOrElse("Get Failed") shouldBe errorResponse
-      verify(mockHttpClient, times(1)).post(any())(any())
+      server.verify(
+        1,
+        postRequestedFor(urlEqualTo("/individuals/residency-status/"))
+      )
     }
 
     "handle failure response (no match) from des" in {
@@ -426,8 +436,15 @@ class DesConnectorSpec
 
       val individualDetails = IndividualDetails("AB123456C", "JOHN", "Lewis", LocalDate.parse("1990-02-21", formatter))
 
-      when(mockRequestBuilder.execute(any[HttpReads[HttpResponse]], any()))
-        .thenReturn(Future.successful(HttpResponse(404, Json.toJson(errorResponse).toString())))
+      server.stubFor(
+        post(urlEqualTo("/individuals/residency-status/"))
+          .willReturn(
+            aResponse()
+              .withStatus(404)
+              .withHeader("Content-Type", "application/json")
+              .withBody(Json.toJson(errorResponse).toString())
+          )
+      )
       val result = await(TestDesConnector.getResidencyStatus(individualDetails, userId))
 
       result.isLeft                  shouldBe false
