@@ -37,7 +37,7 @@ import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import scala.concurrent.{ExecutionContext, Future}
 
-class DesConnectorSpec
+class IntegrationPlatformConnectorSpec
     extends AnyWordSpecLike with Matchers with GuiceOneAppPerSuite with BeforeAndAfter with MockitoSugar {
 
   given hc: HeaderCarrier = HeaderCarrier()
@@ -62,8 +62,8 @@ class DesConnectorSpec
 
   val uuid = "123e4567-e89b-42d3-a456-556642440000"
 
-  object TestDesConnector extends DesConnector(mockHttp, mockAuditService, appContext)(using ExecutionContext.global) {
-    override lazy val desBaseUrl                     = "http://localhost:9669"
+  object DesConnector extends DesConnector(mockHttp, mockAuditService, appContext)(using ExecutionContext.global) {
+    override lazy val integrationPlatformUri         = "http://localhost:9669"
     override lazy val allowNoNextYearStatus: Boolean = true
     override lazy val retryLimit: Int                = 3
     override lazy val retryDelay: Int                = 500
@@ -109,7 +109,7 @@ class DesConnectorSpec
 
   "DESConnector getResidencyStatus with matching" should {
 
-    "handle successful response when 200 is returned from des and CY and CYPlusOne is present" in {
+    "handle successful response when 200 is returned from integrationPlatformRouter and CY and CYPlusOne is present" in {
 
       val successresponse = ResidencyStatusSuccess(
         nino = "AB123456C",
@@ -127,7 +127,7 @@ class DesConnectorSpec
 
       when(mockRequestBuilder.execute(any[HttpReads[HttpResponse]], any())).thenReturn(expectedResponse)
 
-      val result = await(TestDesConnector.getResidencyStatus(individualDetails, userId))
+      val result = await(DesConnector.getResidencyStatus(individualDetails, userId))
       result.isLeft                       shouldBe true
       result.left.getOrElse("Get Failed") shouldBe ResidencyStatus("otherUKResident", Some("scotResident"))
 
@@ -136,9 +136,9 @@ class DesConnectorSpec
 
     "When the requested API version is V2.0" should {
 
-      "handle successful response when 200 is returned from des where CY and CYPlusOne is present for a Welsh resident" in {
+      "handle successful response when 200 is returned from integrationPlatformRouter where CY and CYPlusOne is present for a Welsh resident" in {
 
-        val successResponse = ResidencyStatusSuccess(
+        val successResponse = ResidencyStatusSuccess(   // refactor to trait method makeSuccessResponse
           nino = "AA246255",
           deathDate = Some(""),
           deathDateStatus = Some(""),
@@ -155,13 +155,13 @@ class DesConnectorSpec
 
         when(mockRequestBuilder.execute(any[HttpReads[HttpResponse]], any())).thenReturn(expectedResponse)
 
-        val result = await(TestDesConnector.getResidencyStatus(individualDetails, userId))
+        val result = await(DesConnector.getResidencyStatus(individualDetails, userId))
         result shouldBe Left(ResidencyStatus("welshResident", Some("welshResident")))
 
         verify(mockHttpClient, times(1)).post(any())(any())
       }
 
-      "handle successful response when 200 is returned from des where CY and CYPlusOne is present for a Scottish resident moving in Wales" in {
+      "handle successful response when 200 is returned from integrationPlatformRouter where CY and CYPlusOne is present for a Scottish resident moving in Wales" in {
 
         val successResponse = ResidencyStatusSuccess(
           nino = "SG123480",
@@ -180,7 +180,7 @@ class DesConnectorSpec
 
         when(mockRequestBuilder.execute(any[HttpReads[HttpResponse]], any())).thenReturn(expectedResponse)
 
-        val result = await(TestDesConnector.getResidencyStatus(individualDetails, userId))
+        val result = await(DesConnector.getResidencyStatus(individualDetails, userId))
         result shouldBe Left(ResidencyStatus("welshResident", Some("scotResident")))
 
         verify(mockHttpClient, times(1)).post(any())(any())
@@ -188,7 +188,7 @@ class DesConnectorSpec
 
     }
 
-    "handle successful response when 200 is returned from des and only CY is present and feature toggle is turned on" in {
+    "handle successful response when 200 is returned from integrationPlatformRouter and only CY is present and feature toggle is turned on" in {
 
       val successResponse = ResidencyStatusSuccess(
         nino = "AB123456C",
@@ -206,21 +206,21 @@ class DesConnectorSpec
 
       when(mockRequestBuilder.execute(any[HttpReads[HttpResponse]], any())).thenReturn(expectedResponse)
 
-      val result = await(TestDesConnector.getResidencyStatus(individualDetails, userId))
+      val result = await(DesConnector.getResidencyStatus(individualDetails, userId))
       result.isLeft                       shouldBe true
       result.left.getOrElse("Get Failed") shouldBe ResidencyStatus("otherUKResident", None)
 
       verify(mockHttpClient, times(1)).post(any())(any())
     }
 
-    "handle unsuccessful response for bulk request when 429 is returned from des the first time around and CY and " +
+    "handle unsuccessful response for bulk request when 429 is returned from integrationPlatformRouter the first time around and CY and " +
       "CYPlusOne is present and bulk retry is true but retry enabled is false" in {
 
         given formatF: OFormat[ResidencyStatusFailure] = ResidencyStatusFormats.failureFormats
 
-        object TestDesConnector
+        object TestIntegrationPlatformConnector
             extends DesConnector(mockHttp, mockAuditService, appContext)(using ExecutionContext.global) {
-          override lazy val desBaseUrl                     = "http://localhost:9669"
+          override lazy val baseUrl                    = "http://localhost:9669"
 //          override val auditService: AuditService          = mockAuditService
           override lazy val allowNoNextYearStatus: Boolean = true
           override lazy val retryLimit: Int                = 3
@@ -252,7 +252,7 @@ class DesConnectorSpec
         when(mockRequestBuilder.execute(any[HttpReads[HttpResponse]], any()))
           .thenReturn(expectedErrorResponse, expectedSuccessResponse)
 
-        val result = await(TestDesConnector.getResidencyStatus(individualDetails, userId, isBulkRequest = true))
+        val result = await(TestIntegrationPlatformConnector.getResidencyStatus(individualDetails, userId, isBulkRequest = true))
 
         result.isRight                      shouldBe false
         result.left.getOrElse("Get Failed") shouldBe ResidencyStatus("otherUKResident", Some("scotResident"))
@@ -260,14 +260,14 @@ class DesConnectorSpec
         verify(mockHttpClient, times(2)).post(any())(any())
       }
 
-    "handle unsuccessful response for bulk request when 429 is returned from des the first time around and CY and " +
+    "handle unsuccessful response for bulk request when 429 is returned from integrationPlatformRouter the first time around and CY and " +
       "CYPlusOne is present and bulk retry is false and retry enabled is false" in {
 
         given formatF: OFormat[ResidencyStatusFailure] = ResidencyStatusFormats.failureFormats
 
         object TestDesConnector
             extends DesConnector(mockHttp, mockAuditService, appContext)(using ExecutionContext.global) {
-          override lazy val desBaseUrl                     = "http://localhost:9669"
+          override lazy val integrationPlatformUri                     = "http://localhost:9669"
 //          override val auditService: AuditService          = mockAuditService
           override lazy val allowNoNextYearStatus: Boolean = true
           override lazy val retryLimit: Int                = 3
@@ -295,10 +295,10 @@ class DesConnectorSpec
         verify(mockHttpClient, times(1)).post(any())(any())
       }
 
-    "handle successful response when 200 is returned from des and only CY is present and no next year status toggle is turned off" in {
+    "handle successful response when 200 is returned from integrationPlatformRouter and only CY is present and no next year status toggle is turned off" in {
       object TestDesConnector
           extends DesConnector(mockHttp, mockAuditService, appContext)(using ExecutionContext.global) {
-        override lazy val desBaseUrl                     = "http://localhost:9669"
+        override lazy val baseUrl: String = "http://localhost:9669" //desBaseUrl
 //        override val auditService: AuditService          = mockAuditService
         override lazy val allowNoNextYearStatus: Boolean = false
         override lazy val retryLimit: Int                = 3
@@ -327,7 +327,7 @@ class DesConnectorSpec
       verify(mockHttpClient, times(1)).post(any())(any())
     }
 
-    "handle failure response (no match) from des" in {
+    "handle failure response (no match) from integrationPlatformRouter" in {
       given formatF: OFormat[ResidencyStatusFailure] = ResidencyStatusFormats.failureFormats
       val errorResponse                              = ResidencyStatusFailure(
         "STATUS_UNAVAILABLE",
@@ -338,14 +338,14 @@ class DesConnectorSpec
 
       when(mockRequestBuilder.execute(any[HttpReads[HttpResponse]], any()))
         .thenReturn(Future.successful(HttpResponse(404, Json.toJson(errorResponse).toString())))
-      val result = await(TestDesConnector.getResidencyStatus(individualDetails, userId))
+      val result = await(DesConnector.getResidencyStatus(individualDetails, userId))
 
       result.isLeft                  shouldBe false
       result.getOrElse("Get Failed") shouldBe errorResponse
 
       verify(mockHttpClient, times(1)).post(any())(any())
     }
-    "handle forbidden response from des" in {
+    "handle forbidden response from integrationPlatformRouter" in {
 
       val errorResponse = ResidencyStatusFailure(
         appContext.matchingFailedStatus,
@@ -358,12 +358,12 @@ class DesConnectorSpec
       when(mockRequestBuilder.execute(any[HttpReads[HttpResponse]], any()))
         .thenReturn(Future.failed(UpstreamErrorResponse("STATUS_UNAVAILABLE", 403, 403)))
 
-      val result = await(TestDesConnector.getResidencyStatus(individualDetails, userId))
+      val result = await(DesConnector.getResidencyStatus(individualDetails, userId))
       println(result)
       result.isLeft                  shouldBe false
       result.getOrElse("Get Failed") shouldBe errorResponse
     }
-    "handle success response but the person is deceased from des" in {
+    "handle success response but the person is deceased from integrationPlatformRouter" in {
       val successResponse = ResidencyStatusSuccess(
         nino = "AB123456C",
         deathDate = Some("2017-12-25"),
@@ -381,7 +381,7 @@ class DesConnectorSpec
       val expectedResult =
         ResidencyStatusFailure("DECEASED", "Cannot provide a residency status for this pension scheme member.")
 
-      val result = await(TestDesConnector.getResidencyStatus(individualDetails, userId))
+      val result = await(DesConnector.getResidencyStatus(individualDetails, userId))
 
       result.isLeft                  shouldBe false
       result.getOrElse("Get Failed") shouldBe expectedResult
@@ -389,7 +389,7 @@ class DesConnectorSpec
       verify(mockHttpClient, times(1)).post(any())(any())
     }
 
-    "handle unexpected responses as 500 from des" in {
+    "handle unexpected responses as 500 from integrationPlatformRouter" in {
       given formatF: OFormat[ResidencyStatusFailure] = ResidencyStatusFormats.failureFormats
       val errorResponse                              = ResidencyStatusFailure("INTERNAL_SERVER_ERROR", "Internal server error.")
 
@@ -398,7 +398,7 @@ class DesConnectorSpec
       when(mockRequestBuilder.execute(any[HttpReads[HttpResponse]], any()))
         .thenReturn(Future.successful(HttpResponse(500, Json.toJson(errorResponse).toString())))
 
-      val result = await(TestDesConnector.getResidencyStatus(individualDetails, userId))
+      val result = await(DesConnector.getResidencyStatus(individualDetails, userId))
 
       result.isLeft                  shouldBe false
       result.getOrElse("Get Failed") shouldBe errorResponse
@@ -406,7 +406,7 @@ class DesConnectorSpec
       verify(mockHttpClient, times(3)).post(any())(any())
     }
 
-    "handle Service Unavailable (503) response from des" in {
+    "handle Service Unavailable (503) response from integrationPlatformRouter" in {
       val errorResponse = ResidencyStatusFailure("SERVICE_UNAVAILABLE", "Service unavailable")
 
       val individualDetails = IndividualDetails("AB123456C", "JOHN", "Lewis", LocalDate.parse("1990-02-21", formatter))
@@ -414,7 +414,7 @@ class DesConnectorSpec
       when(mockRequestBuilder.execute(any[HttpReads[HttpResponse]], any()))
         .thenReturn(Future.failed(UpstreamErrorResponse("SERVICE_UNAVAILABLE", 503, 503)))
 
-      val result = await(TestDesConnector.getResidencyStatus(individualDetails, userId))
+      val result = await(DesConnector.getResidencyStatus(individualDetails, userId))
 
       result.isLeft                  shouldBe false
       result.getOrElse("Get Failed") shouldBe errorResponse
@@ -422,7 +422,7 @@ class DesConnectorSpec
       verify(mockHttpClient, times(3)).post(any())(any())
     }
 
-    "handle bad request from des" in {
+    "handle bad request from integrationPlatformRouter" in {
       given formatF: OFormat[ResidencyStatusFailure] = ResidencyStatusFormats.failureFormats
       val expectedErrorResponse                      = ResidencyStatusFailure("INTERNAL_SERVER_ERROR", "Internal server error.")
       val errorResponse                              = ResidencyStatusFailure("DO_NOT_RE_PROCESS", "Internal server error.")
@@ -432,7 +432,7 @@ class DesConnectorSpec
       when(mockRequestBuilder.execute(any[HttpReads[HttpResponse]], any()))
         .thenReturn(Future.successful(HttpResponse(400, Json.toJson(errorResponse).toString())))
 
-      val result = await(TestDesConnector.getResidencyStatus(individualDetails, userId))
+      val result = await(DesConnector.getResidencyStatus(individualDetails, userId))
 
       result.isLeft                  shouldBe false
       result.getOrElse("Get Failed") shouldBe expectedErrorResponse
@@ -462,7 +462,7 @@ class DesConnectorSpec
           Future.successful(HttpResponse(200, Json.toJson(successResponse).toString()))
         )
 
-        val result = await(TestDesConnector.getResidencyStatus(individualDetails, userId))
+        val result = await(DesConnector.getResidencyStatus(individualDetails, userId))
 
         result.left.getOrElse("Get Failed") shouldBe ResidencyStatus("otherUKResident")
         result.isRight                      shouldBe false
@@ -482,7 +482,7 @@ class DesConnectorSpec
         when(mockRequestBuilder.execute(any[HttpReads[HttpResponse]], any()))
           .thenReturn(Future.successful(HttpResponse(429, Json.toJson(errorResponse).toString())))
 
-        val result = await(TestDesConnector.getResidencyStatus(individualDetails, userId))
+        val result = await(DesConnector.getResidencyStatus(individualDetails, userId))
         result.isLeft                  shouldBe false
         result.getOrElse("Get Failed") shouldBe errorResponse
 
@@ -495,19 +495,19 @@ class DesConnectorSpec
     "requestID is present in the headerCarrier" should {
       "return new ID pre-appending the requestID when the requestID matches the format(8-4-4-4)" in {
         val requestId = "abcd0000-dh12-fg34-ij56"
-        TestDesConnector.correlationId(using
+        DesConnector.correlationId(using
           HeaderCarrier(requestId = Some(RequestId(requestId)))
         ) shouldBe s"$requestId-${uuid.substring(24)}"
       }
 
       "return new ID when the requestID does not match the format(8-4-4-4)" in {
         val requestId = "1a2b-dh12-fg34-ij56"
-        TestDesConnector.correlationId(using HeaderCarrier(requestId = Some(RequestId(requestId)))) shouldBe uuid
+        DesConnector.correlationId(using HeaderCarrier(requestId = Some(RequestId(requestId)))) shouldBe uuid
       }
     }
 
     "requestID is not present in the headerCarrier should return a new ID" in {
-      TestDesConnector.correlationId(using HeaderCarrier()) shouldBe uuid
+      DesConnector.correlationId(using HeaderCarrier()) shouldBe uuid
     }
   }
 

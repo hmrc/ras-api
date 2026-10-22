@@ -32,7 +32,7 @@ import play.api.test.FakeRequest
 import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.mongo.cache.CacheItem
 import uk.gov.hmrc.rasapi.config.AppContext
-import uk.gov.hmrc.rasapi.connectors.{DesConnector, UpscanConnector}
+import uk.gov.hmrc.rasapi.connectors.{IntegrationPlatformConnector, IntegrationPlatformRouter, UpscanConnector}
 import uk.gov.hmrc.rasapi.helpers.ResidencyYearResolver
 import uk.gov.hmrc.rasapi.metrics.Metrics
 import uk.gov.hmrc.rasapi.models.*
@@ -61,15 +61,15 @@ class FileProcessingServiceUnitSpec
   val metrics: Metrics       = app.injector.instanceOf[Metrics]
 
   def buildService(
-    upscan: UpscanConnector = mock[UpscanConnector],
-    des: DesConnector = mock[DesConnector],
-    resolver: ResidencyYearResolver = mock[ResidencyYearResolver],
-    audit: AuditService = mock[AuditService],
-    sessionCache: RasFilesSessionService = mock[RasFilesSessionService],
-    fileRepo: RasFilesRepository = mock[RasFilesRepository]
+                    upscan: UpscanConnector = mock[UpscanConnector],
+                    integrationPlatformRouter: IntegrationPlatformRouter = mock[IntegrationPlatformRouter],
+                    resolver: ResidencyYearResolver = mock[ResidencyYearResolver],
+                    audit: AuditService = mock[AuditService],
+                    sessionCache: RasFilesSessionService = mock[RasFilesSessionService],
+                    fileRepo: RasFilesRepository = mock[RasFilesRepository]
   ): FileProcessingService = new FileProcessingService(
     upscan,
-    des,
+    integrationPlatformRouter,
     resolver,
     audit,
     sessionCache,

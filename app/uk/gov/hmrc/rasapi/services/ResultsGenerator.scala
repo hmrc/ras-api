@@ -21,7 +21,7 @@ import play.api.libs.json.{JsError, JsSuccess, Json}
 import play.api.mvc.{AnyContent, Request}
 import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.play.audit.http.connector.AuditResult
-import uk.gov.hmrc.rasapi.connectors.DesConnector
+import uk.gov.hmrc.rasapi.connectors.{IntegrationPlatformConnector, IntegrationPlatformRouter}
 import uk.gov.hmrc.rasapi.helpers.ResidencyYearResolver
 import uk.gov.hmrc.rasapi.models.*
 
@@ -33,7 +33,7 @@ import scala.util.{Failure, Success, Try}
 trait ResultsGenerator extends Logging {
   private val comma = ","
 
-  val desConnector: DesConnector
+  val integrationPlatformRouter: IntegrationPlatformRouter
   val residencyYearResolver: ResidencyYearResolver
   val auditService: AuditService
 
@@ -56,7 +56,7 @@ trait ResultsGenerator extends Logging {
       case Right(errors)       => s"$inputRow,${errors.mkString(comma)}"
       case Left(memberDetails) =>
         val result = Await.result(
-          desConnector.getResidencyStatus(memberDetails, userId, isBulkRequest = true),
+          integrationPlatformRouter.getResidencyStatus(memberDetails, userId, isBulkRequest = true),
           40.seconds
         )
 
@@ -112,7 +112,7 @@ trait ResultsGenerator extends Logging {
   private def updateResidencyResponse(residencyStatus: ResidencyStatus): ResidencyStatus =
 
     if (getCurrentDate.isBefore(LocalDate.of(2018, 4, 6)) && allowDefaultRUK) {
-      residencyStatus.copy(currentYearResidencyStatus = desConnector.otherUk)
+      residencyStatus.copy(currentYearResidencyStatus = IntegrationPlatformConnector.otherUk)
     } else {
       residencyStatus
     }

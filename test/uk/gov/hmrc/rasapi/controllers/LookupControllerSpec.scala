@@ -25,7 +25,7 @@ import org.scalatestplus.mockito.MockitoSugar
 import org.scalatestplus.play.guice.GuiceOneAppPerSuite
 import play.api.Application
 import play.api.inject.guice.GuiceApplicationBuilder
-import play.api.libs.functional.syntax.{unlift, *}
+import play.api.libs.functional.syntax.*
 import play.api.libs.json.{JsPath, Json, Writes}
 import play.api.mvc.{BodyParsers, ControllerComponents}
 import play.api.test.Helpers.*
@@ -34,7 +34,7 @@ import play.mvc.Http.HeaderNames
 import uk.gov.hmrc.auth.core.*
 import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.rasapi.config.AppContext
-import uk.gov.hmrc.rasapi.connectors.DesConnector
+import uk.gov.hmrc.rasapi.connectors.IntegrationPlatformRouter
 import uk.gov.hmrc.rasapi.controllers.lookupController.LookupController
 import uk.gov.hmrc.rasapi.helpers.ResidencyYearResolver
 import uk.gov.hmrc.rasapi.metrics.Metrics
@@ -58,7 +58,7 @@ class LookupControllerSpec
   val acceptHeader: (String, String)   = (HeaderNames.ACCEPT, "application/vnd.hmrc.2.0+json")
   val acceptHeaderV1: (String, String) = (HeaderNames.ACCEPT, "application/vnd.hmrc.1.0+json")
 
-  val mockDesConnector: DesConnector                   = mock[DesConnector]
+  val mockIntegrationPlatformRouter: IntegrationPlatformRouter = mock[IntegrationPlatformRouter]
   val mockAuditService: AuditService                   = mock[AuditService]
   val mockAuthConnector: AuthConnector                 = mock[AuthConnector]
   val mockResidencyYearResolver: ResidencyYearResolver = mock[ResidencyYearResolver]
@@ -118,7 +118,7 @@ class LookupControllerSpec
 
   object TestLookupController
       extends LookupController(
-        mockDesConnector,
+        mockIntegrationPlatformRouter,
         mockMetrics,
         mockAuditService,
         mockAuthConnector,
@@ -140,7 +140,7 @@ class LookupControllerSpec
 
   object TestLookupControllerFeb18
       extends LookupController(
-        mockDesConnector,
+        mockIntegrationPlatformRouter,
         mockMetrics,
         mockAuditService,
         mockAuthConnector,
@@ -161,7 +161,7 @@ class LookupControllerSpec
 
   object TestLookupControllerFeb19
       extends LookupController(
-        mockDesConnector,
+        mockIntegrationPlatformRouter,
         mockMetrics,
         mockAuditService,
         mockAuthConnector,
@@ -182,7 +182,7 @@ class LookupControllerSpec
 
   object TestLookupControllerVersion1
       extends LookupController(
-        mockDesConnector,
+        mockIntegrationPlatformRouter,
         mockMetrics,
         mockAuditService,
         mockAuthConnector,
@@ -203,9 +203,7 @@ class LookupControllerSpec
 
   before {
     reset(mockAuditService)
-    reset(mockDesConnector)
-    when(mockDesConnector.otherUk).thenReturn("otherUKResident")
-    when(mockDesConnector.scotRes).thenReturn("scotResident")
+    reset(mockIntegrationPlatformRouter)
   }
 
   "The lookup controller endpoint" should {
@@ -219,7 +217,7 @@ class LookupControllerSpec
 
         val residencyStatus = ResidencyStatus("scotResident", Some("otherUKResident"))
 
-        when(mockDesConnector.getResidencyStatus(any(), any(), any()))
+        when(mockIntegrationPlatformRouter.getResidencyStatus(any(), any(), any()))
           .thenReturn(Future.successful(Left(residencyStatus)))
 
         await(
@@ -256,7 +254,7 @@ class LookupControllerSpec
 
         val residencyStatus = ResidencyStatus("scotResident", Some("otherUKResident"))
 
-        when(mockDesConnector.getResidencyStatus(any(), any(), any()))
+        when(mockIntegrationPlatformRouter.getResidencyStatus(any(), any(), any()))
           .thenReturn(Future.successful(Left(residencyStatus)))
 
         await(
@@ -293,7 +291,7 @@ class LookupControllerSpec
 
         val residencyStatus = ResidencyStatus("otherUKResident", Some("otherUKResident"))
 
-        when(mockDesConnector.getResidencyStatus(any(), any(), any()))
+        when(mockIntegrationPlatformRouter.getResidencyStatus(any(), any(), any()))
           .thenReturn(Future.successful(Left(residencyStatus)))
 
         await(
@@ -326,7 +324,7 @@ class LookupControllerSpec
 
         when(mockResidencyYearResolver.isBetweenJanAndApril).thenReturn(false)
 
-        when(mockDesConnector.getResidencyStatus(any(), any(), any()))
+        when(mockIntegrationPlatformRouter.getResidencyStatus(any(), any(), any()))
           .thenReturn(Future.successful(Right(ResidencyStatusFailure(STATUS_DECEASED, "Individual is deceased"))))
 
         await(
@@ -363,7 +361,7 @@ class LookupControllerSpec
 
         val residencyStatusFailure = ResidencyStatusFailure("STATUS_UNAVAILABLE", "")
 
-        when(mockDesConnector.getResidencyStatus(any(), any(), any()))
+        when(mockIntegrationPlatformRouter.getResidencyStatus(any(), any(), any()))
           .thenReturn(Future.successful(Right(residencyStatusFailure)))
 
         await(
@@ -397,7 +395,7 @@ class LookupControllerSpec
 
         val residencyStatusFailure = ResidencyStatusFailure("INTERNAL_SERVER_ERROR", "")
 
-        when(mockDesConnector.getResidencyStatus(any(), any(), any()))
+        when(mockIntegrationPlatformRouter.getResidencyStatus(any(), any(), any()))
           .thenReturn(Future.successful(Right(residencyStatusFailure)))
 
         await(
@@ -438,7 +436,7 @@ class LookupControllerSpec
 
         val residencyStatus = ResidencyStatus("scotResident", Some("otherUKResident"))
 
-        when(mockDesConnector.getResidencyStatus(any(), any(), any()))
+        when(mockIntegrationPlatformRouter.getResidencyStatus(any(), any(), any()))
           .thenReturn(Future.successful(Left(residencyStatus)))
 
         val result = TestLookupControllerVersion1.getResidencyStatus
@@ -469,7 +467,7 @@ class LookupControllerSpec
                   }
                 """.stripMargin)
 
-          when(mockDesConnector.getResidencyStatus(any(), any(), any()))
+          when(mockIntegrationPlatformRouter.getResidencyStatus(any(), any(), any()))
             .thenReturn(Future.successful(Left(residencyStatus)))
 
           val result = TestLookupControllerFeb18.getResidencyStatus
@@ -671,7 +669,7 @@ class LookupControllerSpec
 
         val residencyStatusFailure = ResidencyStatusFailure("STATUS_UNAVAILABLE", "")
 
-        when(mockDesConnector.getResidencyStatus(any(), any(), any()))
+        when(mockIntegrationPlatformRouter.getResidencyStatus(any(), any(), any()))
           .thenReturn(Future.successful(Right(residencyStatusFailure)))
 
         val result = TestLookupController.getResidencyStatus
@@ -694,7 +692,7 @@ class LookupControllerSpec
 
         val residencyStatusFailure = ResidencyStatusFailure("TOO_MANY_REQUESTS", "")
 
-        when(mockDesConnector.getResidencyStatus(any(), any(), any()))
+        when(mockIntegrationPlatformRouter.getResidencyStatus(any(), any(), any()))
           .thenReturn(Future.successful(Right(residencyStatusFailure)))
 
         val result = TestLookupController.getResidencyStatus
@@ -723,7 +721,7 @@ class LookupControllerSpec
 
         val residencyStatusFailure = ResidencyStatusFailure("INTERNAL_SERVER_ERROR", "")
 
-        when(mockDesConnector.getResidencyStatus(any(), any(), any()))
+        when(mockIntegrationPlatformRouter.getResidencyStatus(any(), any(), any()))
           .thenReturn(Future.successful(Right(residencyStatusFailure)))
 
         val result = TestLookupController.getResidencyStatus
@@ -751,7 +749,7 @@ class LookupControllerSpec
 
         val residencyStatusFailure = ResidencyStatusFailure("SERVICE_UNAVAILABLE", "")
 
-        when(mockDesConnector.getResidencyStatus(any(), any(), any()))
+        when(mockIntegrationPlatformRouter.getResidencyStatus(any(), any(), any()))
           .thenReturn(Future.successful(Right(residencyStatusFailure)))
 
         val result = TestLookupController.getResidencyStatus

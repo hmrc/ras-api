@@ -26,7 +26,7 @@ import uk.gov.hmrc.auth.core.retrieve.v2.Retrievals.*
 import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
 import uk.gov.hmrc.rasapi.config.AppContext
-import uk.gov.hmrc.rasapi.connectors.DesConnector
+import uk.gov.hmrc.rasapi.connectors.{IntegrationPlatformConnector, IntegrationPlatformRouter}
 import uk.gov.hmrc.rasapi.controllers.*
 import uk.gov.hmrc.rasapi.controllers.{errorResponseWithErrorsWrites, errorResponseWrites}
 import uk.gov.hmrc.rasapi.helpers.ResidencyYearResolver
@@ -41,15 +41,15 @@ import scala.concurrent.{ExecutionContext, Future}
 import scala.util.{Failure, Success, Try}
 
 class LookupController @Inject() (
-  val desConnector: DesConnector,
-  val metrics: Metrics,
-  val auditService: AuditService,
-  val authConnector: AuthConnector,
-  val residencyYearResolver: ResidencyYearResolver,
-  val appContext: AppContext,
-  val errorConverter: ErrorConverter,
-  cc: ControllerComponents,
-  bodyParser: BodyParsers.Default
+                                   val integrationPlatformRouter: IntegrationPlatformRouter,
+                                   val metrics: Metrics,
+                                   val auditService: AuditService,
+                                   val authConnector: AuthConnector,
+                                   val residencyYearResolver: ResidencyYearResolver,
+                                   val appContext: AppContext,
+                                   val errorConverter: ErrorConverter,
+                                   cc: ControllerComponents,
+                                   bodyParser: BodyParsers.Default
 )(using ec: ExecutionContext)
     extends BackendController(cc) with SimpleHeaderValidator with AuthorisedFunctions with Logging {
 
@@ -92,7 +92,7 @@ class LookupController @Inject() (
         individualDetails =>
           // The Accept header is validated by validateAccept before this body runs, so apiVersion is always defined
           // here; the V2_0 fallback only guards the unreachable None case so a missing version never fails the request.
-          desConnector.getResidencyStatus(individualDetails, id).map {
+          integrationPlatformRouter.getResidencyStatus(individualDetails, id).map {
             case Left(residencyStatusResponse) =>
               val residencyStatus =
                 if (residencyYearResolver.isBetweenJanAndApril) {
@@ -218,7 +218,7 @@ class LookupController @Inject() (
   private def updateResidencyResponse(residencyStatus: ResidencyStatus): ResidencyStatus =
 
     if (getCurrentDate.isBefore(LocalDate.of(2018, 4, 6)) && allowDefaultRUK) {
-      residencyStatus.copy(currentYearResidencyStatus = desConnector.otherUk)
+      residencyStatus.copy(currentYearResidencyStatus = IntegrationPlatformConnector.otherUk)
     } else {
       residencyStatus
     }
