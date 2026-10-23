@@ -445,12 +445,15 @@ class DesConnectorSpec
               .withBody(Json.toJson(errorResponse).toString())
           )
       )
-      val result = await(TestDesConnector.getResidencyStatus(individualDetails, userId))
+      val result = await(wireMockDesConnector.getResidencyStatus(individualDetails, userId))
 
       result.isLeft                  shouldBe false
       result.getOrElse("Get Failed") shouldBe errorResponse
 
-      verify(mockHttpClient, times(1)).post(any())(any())
+      server.verify(
+        1,
+        postRequestedFor(urlEqualTo("/individuals/residency-status/"))
+      )
     }
     "handle forbidden response from des" in {
 
@@ -462,13 +465,25 @@ class DesConnectorSpec
       val individualDetails =
         IndividualDetails("AB123456C", "JOHN", "Lewis", LocalDate.parse("1990-02-21", formatter))
 
-      when(mockRequestBuilder.execute(any[HttpReads[HttpResponse]], any()))
-        .thenReturn(Future.failed(UpstreamErrorResponse("STATUS_UNAVAILABLE", 403, 403)))
+      server.stubFor(
+        post(urlEqualTo("/individuals/residency-status/"))
+          .willReturn(
+            aResponse()
+              .withStatus(403)
+              .withHeader("Content-Type", "application/json")
+              .withBody("""{"code":"STATUS_UNAVAILABLE"}""")
+          )
+      )
 
-      val result = await(TestDesConnector.getResidencyStatus(individualDetails, userId))
+      val result =
+        await(wireMockDesConnector.getResidencyStatus(individualDetails, userId))
       println(result)
       result.isLeft                  shouldBe false
       result.getOrElse("Get Failed") shouldBe errorResponse
+      server.verify(
+        1,
+        postRequestedFor(urlEqualTo("/individuals/residency-status/"))
+      )
     }
     "handle success response but the person is deceased from des" in {
       val successResponse = ResidencyStatusSuccess(
@@ -482,18 +497,28 @@ class DesConnectorSpec
 
       val individualDetails = IndividualDetails("AB123456C", "JOHN", "Lewis", LocalDate.parse("1990-02-21", formatter))
 
-      when(mockRequestBuilder.execute(any[HttpReads[HttpResponse]], any()))
-        .thenReturn(Future.successful(HttpResponse(200, Json.toJson(successResponse).toString())))
+      server.stubFor(
+        post(urlEqualTo("/individuals/residency-status/"))
+          .willReturn(
+            aResponse()
+              .withStatus(200)
+              .withHeader("Content-Type", "application/json")
+              .withBody(Json.toJson(successResponse).toString())
+          )
+      )
 
       val expectedResult =
         ResidencyStatusFailure("DECEASED", "Cannot provide a residency status for this pension scheme member.")
 
-      val result = await(TestDesConnector.getResidencyStatus(individualDetails, userId))
+      val result = await(wireMockDesConnector.getResidencyStatus(individualDetails, userId))
 
       result.isLeft                  shouldBe false
       result.getOrElse("Get Failed") shouldBe expectedResult
 
-      verify(mockHttpClient, times(1)).post(any())(any())
+      server.verify(
+        1,
+        postRequestedFor(urlEqualTo("/individuals/residency-status/"))
+      )
     }
 
     "handle unexpected responses as 500 from des" in {
