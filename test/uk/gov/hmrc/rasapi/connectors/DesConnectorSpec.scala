@@ -16,7 +16,8 @@
 
 package uk.gov.hmrc.rasapi.connectors
 
-import org.scalatest.BeforeAndAfter
+import com.github.tomakehurst.wiremock.client.WireMock.{aResponse, post, postRequestedFor, urlEqualTo}
+import com.github.tomakehurst.wiremock.stubbing.Scenario.STARTED
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpecLike
 import org.scalatestplus.mockito.MockitoSugar
@@ -29,22 +30,14 @@ import uk.gov.hmrc.play.bootstrap.http.HttpClientV2Provider
 import uk.gov.hmrc.rasapi.config.AppContext
 import uk.gov.hmrc.rasapi.models.*
 import uk.gov.hmrc.rasapi.services.AuditService
+import uk.gov.hmrc.rasapi.utils.WireMockHelper
 
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
-import scala.concurrent.{ExecutionContext, Future}
-import uk.gov.hmrc.rasapi.utils.WireMockHelper
-import com.github.tomakehurst.wiremock.client.WireMock.{aResponse, post, postRequestedFor, urlEqualTo}
-import com.github.tomakehurst.wiremock.stubbing.Scenario.STARTED
-import com.github.tomakehurst.wiremock.client.WireMock.equalTo
+import scala.concurrent.ExecutionContext
 
 class DesConnectorSpec
-    extends AnyWordSpecLike
-    with Matchers
-    with GuiceOneAppPerSuite
-    with BeforeAndAfter
-    with MockitoSugar
-    with WireMockHelper {
+    extends AnyWordSpecLike with Matchers with GuiceOneAppPerSuite with MockitoSugar with WireMockHelper {
 
   given hc: HeaderCarrier = HeaderCarrier()
 
