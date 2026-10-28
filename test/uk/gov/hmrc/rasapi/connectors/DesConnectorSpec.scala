@@ -16,7 +16,9 @@
 
 package uk.gov.hmrc.rasapi.connectors
 
-import com.github.tomakehurst.wiremock.client.WireMock.{aResponse, post, postRequestedFor, urlEqualTo}
+import com.github.tomakehurst.wiremock.client.WireMock.{
+  aResponse, containing, equalTo, equalToJson, post, postRequestedFor, urlEqualTo
+}
 import com.github.tomakehurst.wiremock.stubbing.Scenario.STARTED
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpecLike
@@ -114,6 +116,23 @@ class DesConnectorSpec
     """.stripMargin
   )
 
+  def verifyDesPost(
+    member: IndividualDetails,
+    expectedCount: Int = 1
+  ): Unit =
+    server.verify(
+      expectedCount,
+      postRequestedFor(urlEqualTo("/individuals/residency-status/"))
+        .withHeader("Environment", equalTo("DES HEADER"))
+        .withHeader("OriginatorId", equalTo("DA_RAS"))
+        .withHeader("Authorization", equalTo("Bearer DES AUTH TOKEN"))
+        .withHeader("Content-Type", containing("application/json"))
+        .withHeader("CorrelationId", equalTo(uuid))
+        .withRequestBody(
+          equalToJson(createJsonPayload(member).toString())
+        )
+    )
+
   "DESConnector getResidencyStatus with matching" should {
 
     "handle successful response when 200 is returned from des and CY and CYPlusOne is present" in {
@@ -144,10 +163,7 @@ class DesConnectorSpec
       result.isLeft                       shouldBe true
       result.left.getOrElse("Get Failed") shouldBe ResidencyStatus("otherUKResident", Some("scotResident"))
 
-      server.verify(
-        1,
-        postRequestedFor(urlEqualTo("/individuals/residency-status/"))
-      )
+      verifyDesPost(individualDetails)
     }
 
     "When the requested API version is V2.0" should {
@@ -179,10 +195,7 @@ class DesConnectorSpec
         val result = await(wireMockDesConnector.getResidencyStatus(individualDetails, userId))
         result shouldBe Left(ResidencyStatus("welshResident", Some("welshResident")))
 
-        server.verify(
-          1,
-          postRequestedFor(urlEqualTo("/individuals/residency-status/"))
-        )
+        verifyDesPost(individualDetails)
       }
 
       "handle successful response when 200 is returned from des where CY and CYPlusOne is present for a Scottish resident moving in Wales" in {
@@ -212,10 +225,7 @@ class DesConnectorSpec
         val result = await(wireMockDesConnector.getResidencyStatus(individualDetails, userId))
         result shouldBe Left(ResidencyStatus("welshResident", Some("scotResident")))
 
-        server.verify(
-          1,
-          postRequestedFor(urlEqualTo("/individuals/residency-status/"))
-        )
+        verifyDesPost(individualDetails)
       }
 
     }
@@ -247,10 +257,7 @@ class DesConnectorSpec
       result.isLeft                       shouldBe true
       result.left.getOrElse("Get Failed") shouldBe ResidencyStatus("otherUKResident", None)
 
-      server.verify(
-        1,
-        postRequestedFor(urlEqualTo("/individuals/residency-status/"))
-      )
+      verifyDesPost(individualDetails)
     }
 
     "handle unsuccessful response for bulk request when 429 is returned from des the first time around and CY and " +
@@ -269,6 +276,7 @@ class DesConnectorSpec
           override lazy val desAuthToken: String           = "DES AUTH TOKEN"
           override lazy val isRetryEnabled: Boolean        = false
           override lazy val isBulkRetryEnabled: Boolean    = true
+          override def generateNewUUID: String             = uuid
         }
 
         val errorResponse   = ResidencyStatusFailure("INTERNAL_SERVER_ERROR", "Internal server error.")
@@ -317,10 +325,7 @@ class DesConnectorSpec
         result.isRight                      shouldBe false
         result.left.getOrElse("Get Failed") shouldBe ResidencyStatus("otherUKResident", Some("scotResident"))
 
-        server.verify(
-          2,
-          postRequestedFor(urlEqualTo("/individuals/residency-status/"))
-        )
+        verifyDesPost(individualDetails, expectedCount = 2)
       }
 
     "handle unsuccessful response for bulk request when 429 is returned from des the first time around and CY and " +
@@ -339,6 +344,7 @@ class DesConnectorSpec
           override lazy val desAuthToken: String           = "DES AUTH TOKEN"
           override lazy val isRetryEnabled: Boolean        = false
           override lazy val isBulkRetryEnabled: Boolean    = false
+          override def generateNewUUID: String             = uuid
         }
 
         val errorResponse = ResidencyStatusFailure("TOO_MANY_REQUESTS", "Too Many Requests.")
@@ -360,10 +366,7 @@ class DesConnectorSpec
         result.isLeft                  shouldBe false
         result.getOrElse("Get Failed") shouldBe errorResponse
 
-        server.verify(
-          1,
-          postRequestedFor(urlEqualTo("/individuals/residency-status/"))
-        )
+        verifyDesPost(individualDetails)
       }
 
     "handle successful response when 200 is returned from des and only CY is present and no next year status toggle is turned off" in {
@@ -378,6 +381,7 @@ class DesConnectorSpec
         override lazy val desAuthToken: String           = "DES AUTH TOKEN"
         override lazy val isRetryEnabled: Boolean        = true
         override lazy val isBulkRetryEnabled: Boolean    = false
+        override def generateNewUUID: String             = uuid
       }
       val errorResponse     = ResidencyStatusFailure(TestDesConnector.error_InternalServerError, "Internal server error.")
       val successResponse   = ResidencyStatusSuccess(
@@ -402,10 +406,7 @@ class DesConnectorSpec
       val result = await(TestDesConnector.getResidencyStatus(individualDetails, userId))
       result.isLeft                  shouldBe false
       result.getOrElse("Get Failed") shouldBe errorResponse
-      server.verify(
-        1,
-        postRequestedFor(urlEqualTo("/individuals/residency-status/"))
-      )
+      verifyDesPost(individualDetails)
     }
 
     "handle failure response (no match) from des" in {
@@ -431,10 +432,7 @@ class DesConnectorSpec
       result.isLeft                  shouldBe false
       result.getOrElse("Get Failed") shouldBe errorResponse
 
-      server.verify(
-        1,
-        postRequestedFor(urlEqualTo("/individuals/residency-status/"))
-      )
+      verifyDesPost(individualDetails)
     }
     "handle forbidden response from des" in {
 
@@ -461,10 +459,7 @@ class DesConnectorSpec
       println(result)
       result.isLeft                  shouldBe false
       result.getOrElse("Get Failed") shouldBe errorResponse
-      server.verify(
-        1,
-        postRequestedFor(urlEqualTo("/individuals/residency-status/"))
-      )
+      verifyDesPost(individualDetails)
     }
     "handle success response but the person is deceased from des" in {
       val successResponse = ResidencyStatusSuccess(
@@ -496,10 +491,7 @@ class DesConnectorSpec
       result.isLeft                  shouldBe false
       result.getOrElse("Get Failed") shouldBe expectedResult
 
-      server.verify(
-        1,
-        postRequestedFor(urlEqualTo("/individuals/residency-status/"))
-      )
+      verifyDesPost(individualDetails)
     }
 
     "handle unexpected responses as 500 from des" in {
@@ -524,10 +516,7 @@ class DesConnectorSpec
       result.isLeft                  shouldBe false
       result.getOrElse("Get Failed") shouldBe errorResponse
 
-      server.verify(
-        3,
-        postRequestedFor(urlEqualTo("/individuals/residency-status/"))
-      )
+      verifyDesPost(individualDetails, expectedCount = 3)
     }
 
     "handle Service Unavailable (503) response from des" in {
@@ -550,10 +539,7 @@ class DesConnectorSpec
       result.isLeft                  shouldBe false
       result.getOrElse("Get Failed") shouldBe errorResponse
 
-      server.verify(
-        3,
-        postRequestedFor(urlEqualTo("/individuals/residency-status/"))
-      )
+      verifyDesPost(individualDetails, expectedCount = 3)
     }
 
     "handle bad request from des" in {
@@ -579,10 +565,7 @@ class DesConnectorSpec
       result.isLeft                  shouldBe false
       result.getOrElse("Get Failed") shouldBe expectedErrorResponse
 
-      server.verify(
-        1,
-        postRequestedFor(urlEqualTo("/individuals/residency-status/"))
-      )
+      verifyDesPost(individualDetails)
     }
 
     "Handle requests" when {
@@ -636,10 +619,7 @@ class DesConnectorSpec
         result.left.getOrElse("Get Failed") shouldBe ResidencyStatus("otherUKResident")
         result.isRight                      shouldBe false
 
-        server.verify(
-          2,
-          postRequestedFor(urlEqualTo("/individuals/residency-status/"))
-        )
+        verifyDesPost(individualDetails, expectedCount = 2)
       }
 
       "429 (Too Many Requests) has been returned 3 times" in {
@@ -664,10 +644,7 @@ class DesConnectorSpec
         result.isLeft                  shouldBe false
         result.getOrElse("Get Failed") shouldBe errorResponse
 
-        server.verify(
-          3,
-          postRequestedFor(urlEqualTo("/individuals/residency-status/"))
-        )
+        verifyDesPost(individualDetails, expectedCount = 3)
       }
     }
   }
