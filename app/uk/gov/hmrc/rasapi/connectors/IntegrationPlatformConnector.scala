@@ -17,13 +17,15 @@
 package uk.gov.hmrc.rasapi.connectors
 
 import play.api.Logging
-import play.api.libs.json.{JsObject, Json}
+import play.api.http.Status.*
+import play.api.libs.json.{JsError, JsObject, JsSuccess, Json, Reads}
 import uk.gov.hmrc.http.{HeaderCarrier, *}
 import uk.gov.hmrc.play.bootstrap.http.HttpClientV2Provider
 import uk.gov.hmrc.rasapi.config.AppContext
 import uk.gov.hmrc.rasapi.models.*
 import uk.gov.hmrc.rasapi.services.AuditService
 import play.api.libs.ws.JsonBodyWritables.writeableOf_JsValue
+import uk.gov.hmrc.rasapi.connectors.IntegrationPlatformConnector.*
 
 import java.time.Instant
 import java.time.format.DateTimeFormatter
@@ -39,13 +41,6 @@ trait IntegrationPlatformConnector @Inject()(
                                               auditService: AuditService,
                                               appContext: AppContext
                                             )(using ec: ExecutionContext) extends Logging {
-  val uk       = "Uk"
-  val scot     = "Scottish"
-  val scotRes  = "scotResident"
-  val welsh    = "Welsh"
-  val welshRes = "welshResident"
-  val otherUk  = "otherUKResident"
-
   def baseUrl: String
   def integrationPlatformUri: String
 
@@ -59,6 +54,8 @@ trait IntegrationPlatformConnector @Inject()(
                           isBulkRequest: Boolean = false
                         ): Future[Either[ResidencyStatus, ResidencyStatusFailure]]
 
+  def resolveFailureResponse(response :HttpResponse): ResidencyStatusFailure
+
   lazy val error_InternalServerError: String = appContext.internalServerErrorStatus
   lazy val error_Deceased: String            = appContext.deceasedStatus
   lazy val error_MatchingFailed: String      = appContext.matchingFailedStatus
@@ -66,12 +63,12 @@ trait IntegrationPlatformConnector @Inject()(
   lazy val error_ServiceUnavailable: String  = appContext.serviceUnavailableStatus
   lazy val allowNoNextYearStatus: Boolean    = appContext.allowNoNextYearStatus
   lazy val retryLimit: Int                   = appContext.requestRetryLimit
-  lazy val desUrlHeaderEnv: String           = appContext.desUrlHeaderEnv
-
   lazy val retryDelay: Int                   = appContext.retryDelay
   lazy val isRetryEnabled: Boolean           = appContext.retryEnabled
   lazy val isBulkRetryEnabled: Boolean       = appContext.bulkRetryEnabled
   lazy val error_TooManyRequests: String     = appContext.tooManyRequestsStatus
+  lazy val isHip5161Enabled: Boolean         = appContext.isHip5161Enabled
+  lazy val integrationPlatform: String       = if (isHip5161Enabled) "HIP" else "DES"
 
   lazy val nonRetryableErrors: Seq[String] = List(error_MatchingFailed, error_Deceased, error_DoNotReProcess)
 
@@ -94,7 +91,7 @@ trait IntegrationPlatformConnector @Inject()(
 
       if (retryCount > 1) {
         logger.warn(
-          s"[ResultsGenerator][getResultAndProcess] Did not receive a result from des, retry count: $retryCount for userId ($userId)."
+          s"[ResultsGenerator][getResultAndProcess] Did not receive a result from $integrationPlatform, retry count: $retryCount for userId ($userId)."
         )
       }
 
@@ -111,6 +108,20 @@ trait IntegrationPlatformConnector @Inject()(
     }
 
     getResultAndProcess(member)
+  }
+
+  private def get422ResponseCode( response :HttpResponse) = {
+    response.status match {
+      case 422 =>
+        response.json.validate[Hip422ErrorResponse] match
+          case JsSuccess(hip422ErrorResponse, _) =>
+            hip422ErrorResponse.failures.head.code match {
+              case Hip422ErrorCode.NotFound.value => true
+              case _ => false
+            }
+          case JsError(ex) => logger.error("")
+      case _ =>
+    }
   }
 
   private def sendResidencyStatusRequest(
@@ -131,10 +142,11 @@ trait IntegrationPlatformConnector @Inject()(
       .setHeader(desHeaders*)
       .withBody(payload)
       .execute[HttpResponse]
+
     result.map(response => resolveResponse(response, userId, member.nino)).recover {
       case _: BadRequestException              =>
         logger.error(
-          s"[IntegrationPlatformConnector][getResidencyStatus] Bad Request returned from des. The details sent were not " +
+          s"[IntegrationPlatformConnector][getResidencyStatus] Bad Request returned from $integrationPlatform. The details sent were not " +
             s"valid. userId ($userId)."
         )
         Right(ResidencyStatusFailure(error_DoNotReProcess, "Internal server error."))
@@ -156,25 +168,31 @@ trait IntegrationPlatformConnector @Inject()(
           )
         )
 
+//      case UpstreamErrorResponse(_, 422, _, _) =>  get422ResponseCode(response)
+        
+
       case UpstreamErrorResponse(_, 429, _, _)  =>
         logger.error(
           s"[IntegrationPlatformConnector][getResidencyStatus] Request could not be sent 429 (Too Many Requests) was sent " +
             s"from the HoD. userId ($userId)."
         )
         Right(ResidencyStatusFailure(error_TooManyRequests, "Too Many Requests."))
+
       case _: RequestTimeoutException           =>
         logger.error(s"[IntegrationPlatformConnector][getResidencyStatus] Request has timed out. userId ($userId).")
         Right(ResidencyStatusFailure(error_DoNotReProcess, "Internal server error."))
+
       case errorResponse: UpstreamErrorResponse =>
         if (errorResponse.statusCode == 503) {
           logger.error(s"[IntegrationPlatformConnector][getResidencyStatus] Service unavailable. userId ($userId).")
           Right(ResidencyStatusFailure(error_ServiceUnavailable, "Service unavailable"))
         } else {
           logger.error(
-            s"[IntegrationPlatformConnector][getResidencyStatus] ${errorResponse.statusCode} was returned from DES. userId ($userId)."
+            s"[IntegrationPlatformConnector][getResidencyStatus] ${errorResponse.statusCode} was returned from $integrationPlatform. userId ($userId)."
           )
           Right(ResidencyStatusFailure(error_InternalServerError, "Internal server error."))
         }
+
       case th: Throwable                        =>
         logger.error(
           s"[IntegrationPlatformConnector][getResidencyStatus] Caught error occurred when calling the HoD. userId ($userId).Exception message: ${th.getMessage}."
@@ -218,17 +236,19 @@ trait IntegrationPlatformConnector @Inject()(
               Left(ResidencyStatus(currentStatus, nextYearStatus))
             }
         }
-      case Failure(_)       =>
-        Try(httpResponse.json.as[ResidencyStatusFailure](ResidencyStatusFormats.failureFormats)) match {
-          case Success(data) =>
-            logger.debug(s"[IntegrationPlatformConnector][resolveResponse] DesFailureResponse from DES :$data")
-            Right(data)
-          case Failure(ex)   =>
-            logger.error(s"[IntegrationPlatformConnector][resolveResponse] Error from DES :${ex.getMessage}", ex)
-            Right(ResidencyStatusFailure(error_InternalServerError, "Internal server error."))
-        }
+      case Failure(_)       =>       Right(resolveFailureResponse(httpResponse))
     }
 
+  protected def resolveJsonResponse[A](httpResponse: HttpResponse)(implicit reads: Reads[A]): Either[ResidencyStatusFailure,A] = {
+    Try(httpResponse.json.as[A]) match {
+      case Success(data) =>
+        logger.debug(s"[IntegrationPlatformConnector][resolveJsonResponse] IntegrationPlatformFailureResponse from $integrationPlatform :$data")
+        Right(data)
+      case Failure(ex) =>
+        logger.error(s"[IntegrationPlatformConnector][resolveResponse] Error from $integrationPlatform :${ex.getMessage}", ex)
+        Left(ResidencyStatusFailure(error_InternalServerError, "Internal server error."))
+    }
+  }
 }
 
 object IntegrationPlatformConnector {
@@ -250,6 +270,14 @@ class DesConnector @Inject()(
   lazy val baseUrl: String = appContext.servicesConfig.baseUrl("des")
   lazy val integrationPlatformUri: String = s"$baseUrl/individuals/residency-status/"
   lazy val desAuthToken: String = appContext.desAuthToken
+  lazy val desUrlHeaderEnv: String = appContext.desUrlHeaderEnv
+
+  def resolveFailureResponse(httpResponse :HttpResponse): ResidencyStatusFailure = {
+    resolveJsonResponse[ResidencyStatusFailure](httpResponse)(ResidencyStatusFormats.failureFormats) match {
+      case Left(value) => value
+      case Right(value) => value
+    }
+  }
 
   def correlationId(using hc: HeaderCarrier): String = {
     val CorrelationIdPattern = """.*([A-Za-z0-9]{8}-[A-Za-z0-9]{4}-[A-Za-z0-9]{4}-[A-Za-z0-9]{4}).*""".r
@@ -285,6 +313,30 @@ class HipConnector @Inject()(
                               val appContext: AppContext
                             )(using ec: ExecutionContext)
   extends IntegrationPlatformConnector(httpPost, auditService, appContext) {
+
+  def resolveFailureResponse(httpResponse: HttpResponse): ResidencyStatusFailure = {
+    httpResponse.status match {
+      case BAD_REQUEST | SERVICE_UNAVAILABLE =>
+        resolveJsonResponse[HipErrorResource](httpResponse) match {
+          case Left(value) => value
+          case Right(value) => ResidencyStatusFailure(value.code, value.reason)
+        }
+      case FORBIDDEN =>
+        resolveJsonResponse[HipErrorResource](httpResponse) match {
+          case Left(value) => value
+          case Right(value) => ResidencyStatusFailure(value.code, value.reason)
+        }
+      case UNPROCESSABLE_ENTITY =>
+        resolveJsonResponse[HipErrorResource](httpResponse) match {
+          case Left(value) => value
+          case Right(value) => ResidencyStatusFailure(value.code, value.reason)
+        }
+      case _ =>
+
+    }
+
+  }
+
 
   lazy val baseUrl: String = appContext.servicesConfig.baseUrl("hip")
   lazy val integrationPlatformUri: String = s"$baseUrl/paye/person/regional-residency-status)"

@@ -48,7 +48,7 @@ class AppContextSpec extends AnyWordSpecLike with Matchers with GuiceOneAppPerSu
       appContext.resultsExpriyTime shouldBe 3600
     }
 
-    "expose allowNoNextYearStatus toggle from configuration" in {
+    "expose allowNoNextYearStatusP toggle from configuration" in {
       appContext.allowNoNextYearStatus shouldBe false
     }
 
