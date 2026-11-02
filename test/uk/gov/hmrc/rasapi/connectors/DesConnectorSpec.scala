@@ -37,6 +37,7 @@ import uk.gov.hmrc.rasapi.utils.WireMockHelper
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import scala.concurrent.ExecutionContext
+import com.github.tomakehurst.wiremock.http.Fault
 
 class DesConnectorSpec
     extends AnyWordSpecLike with Matchers with GuiceOneAppPerSuite with MockitoSugar with WireMockHelper {
@@ -458,6 +459,41 @@ class DesConnectorSpec
 
       verifyDesPost(individualDetails)
     }
+
+    "handle unexpected connection failure from des" in {
+
+      val connector = createDesConnector(retryEnabled = false)
+
+      val individualDetails =
+        IndividualDetails(
+          "AB123456C",
+          "JOHN",
+          "SMITH",
+          LocalDate.parse("1990-02-21", formatter)
+        )
+
+      server.stubFor(
+        post(urlEqualTo("/individuals/residency-status/"))
+          .willReturn(
+            aResponse()
+              .withFault(Fault.CONNECTION_RESET_BY_PEER)
+          )
+      )
+
+      val result = await(
+        connector.getResidencyStatus(individualDetails, userId)
+      )
+
+      result shouldBe Right(
+        ResidencyStatusFailure(
+          "INTERNAL_SERVER_ERROR",
+          "Internal server error."
+        )
+      )
+
+      verifyDesPost(individualDetails)
+    }
+
     "handle invalid JSON response from des" in {
 
       val individualDetails =
@@ -482,6 +518,39 @@ class DesConnectorSpec
       )
 
       verifyDesPost(individualDetails, expectedCount = 3)
+    }
+
+    "handle valid failure JSON returned with HTTP 200 from des" in {
+
+      given formatF: OFormat[ResidencyStatusFailure] =
+        ResidencyStatusFormats.failureFormats
+
+      val individualDetails =
+        IndividualDetails(
+          "AB123456C",
+          "JOHN",
+          "SMITH",
+          LocalDate.parse("1990-02-21", formatter)
+        )
+
+      val failureResponse =
+        ResidencyStatusFailure(
+          "STATUS_UNAVAILABLE",
+          "Cannot provide a residency status for this pension scheme member."
+        )
+
+      stubDesResponse(
+        200,
+        Json.toJson(failureResponse).toString()
+      )
+
+      val result = await(
+        wireMockDesConnector.getResidencyStatus(individualDetails, userId)
+      )
+
+      result shouldBe Right(failureResponse)
+
+      verifyDesPost(individualDetails)
     }
 
     "Handle requests" when {
