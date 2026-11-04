@@ -53,6 +53,8 @@ trait IntegrationPlatformConnectorSpec
   val servicesConfig: ServicesConfig = app.injector.instanceOf[ServicesConfig]
   val appContext: AppContext         = app.injector.instanceOf[AppContext]
 
+  lazy val integrationPlatform: String = if (isHip5161Enabled) "HIP" else "DES"
+
   before {
     reset(mockHttp)
     reset(mockHttpClient)
@@ -107,8 +109,7 @@ trait IntegrationPlatformConnectorSpec
     }
 
     def getResidencyStatus(individualDetails: IndividualDetails, userId: String): Future[Either[ResidencyStatus, ResidencyStatusFailure]] = {
-      getResidencyStatus(individualDetails, userId, isBulkRequest = false,
-        allowNoNextYearStatusP = true, isRetryEnabledP = true, isBulkRetryEnabledP = false)
+      getResidencyStatus(individualDetails, userId, isBulkRequest = false, allowNoNextYearStatusP = true, isRetryEnabledP = true, isBulkRetryEnabledP = false)
     }
 
     def getResidencyStatus(individualDetails: IndividualDetails, userId: String, isBulkRequest: Boolean,
@@ -161,7 +162,7 @@ trait IntegrationPlatformConnectorSpec
     """.stripMargin
   )
 
-  "DESConnector getResidencyStatus with matching" should {
+  s"$integrationPlatform Connector getResidencyStatus with matching" should {
 
     "handle successful response when 200 is returned from integrationPlatformRouter and CY and CYPlusOne is present" in {
 
@@ -308,7 +309,7 @@ trait IntegrationPlatformConnectorSpec
 
         given formatF: OFormat[ResidencyStatusFailure] = ResidencyStatusFormats.failureFormats
 
-        val errorResponse = ResidencyStatusFailure("INTERNAL_SERVER_ERROR", "Internal server error.")
+        val errorResponse = ResidencyStatusFailure("TOO_MANY_REQUESTS", "Too Many Requests.")
 
         val individualDetails                           =
           IndividualDetails("AB123456C", "JOHN", "SMITH", LocalDate.parse("1990-02-21", formatter))
@@ -471,7 +472,7 @@ trait IntegrationPlatformConnectorSpec
       "it cannot be processed the first time round" in {
 
         given formatF: OFormat[ResidencyStatusFailure] = ResidencyStatusFormats.failureFormats
-        val errorResponse                              = ResidencyStatusFailure("INTERNAL_SERVER_ERROR", "Internal server error.")
+        val errorResponse                              = ResidencyStatusFailure("TOO_MANY_REQUESTS", "Too Many Requests.")
         val successResponse                            = IntegrationPlatformConnector.makeSuccessResponse(
           nino = "AB123456C",
           deathDate = Some(""),
@@ -501,7 +502,7 @@ trait IntegrationPlatformConnectorSpec
 
         given formatF: OFormat[ResidencyStatusFailure] = ResidencyStatusFormats.failureFormats
 
-        val errorResponse = ResidencyStatusFailure("TOO_MANY_REQUESTS", "Too many requests received")
+        val errorResponse = ResidencyStatusFailure("TOO_MANY_REQUESTS", "Too Many Requests.")
 
         val individualDetails =
           IndividualDetails("AB123456C", "JOHN", "Lewis", LocalDate.parse("1990-02-21", formatter))
@@ -520,7 +521,7 @@ trait IntegrationPlatformConnectorSpec
 }
 
 class DesConnectorSpec extends IntegrationPlatformConnectorSpec {
-  val isHip5161Enabled: Boolean = false
+  def isHip5161Enabled: Boolean = false
 
   val testDesConnector: DesConnector = desConnector(allowNoNextYearStatusP = true, isRetryEnabledP = true, isBulkRetryEnabledP = false)
 
@@ -546,5 +547,5 @@ class DesConnectorSpec extends IntegrationPlatformConnectorSpec {
 }
 
 class HipConnectorSpec extends IntegrationPlatformConnectorSpec {
-  val isHip5161Enabled: Boolean = true
+  def isHip5161Enabled: Boolean = true
 }

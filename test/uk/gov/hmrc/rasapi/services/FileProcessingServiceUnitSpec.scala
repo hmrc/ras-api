@@ -32,7 +32,7 @@ import play.api.test.FakeRequest
 import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.mongo.cache.CacheItem
 import uk.gov.hmrc.rasapi.config.AppContext
-import uk.gov.hmrc.rasapi.connectors.{IntegrationPlatformConnector, IntegrationPlatformRouter, UpscanConnector}
+import uk.gov.hmrc.rasapi.connectors.{IntegrationPlatformRouter, UpscanConnector}
 import uk.gov.hmrc.rasapi.helpers.ResidencyYearResolver
 import uk.gov.hmrc.rasapi.metrics.Metrics
 import uk.gov.hmrc.rasapi.models.*

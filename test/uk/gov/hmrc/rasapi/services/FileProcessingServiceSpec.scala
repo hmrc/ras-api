@@ -17,7 +17,6 @@
 package uk.gov.hmrc.rasapi.services
 
 import org.apache.pekko.actor.ActorSystem
-import play.api.Logging
 import org.apache.pekko.stream.Materializer
 import org.mockito.ArgumentCaptor
 import org.mockito.ArgumentMatchers.{eq as Meq, *}
@@ -28,6 +27,7 @@ import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpecLike
 import org.scalatestplus.mockito.MockitoSugar
 import org.scalatestplus.play.guice.GuiceOneAppPerSuite
+import play.api.Logging
 import play.api.libs.json.{JsObject, Json}
 import play.api.mvc.AnyContentAsEmpty
 import play.api.test.FakeRequest
@@ -36,7 +36,7 @@ import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.mongo.cache.CacheItem
 import uk.gov.hmrc.mongo.test.DefaultPlayMongoRepositorySupport
 import uk.gov.hmrc.rasapi.config.AppContext
-import uk.gov.hmrc.rasapi.connectors.{IntegrationPlatformConnector, IntegrationPlatformRouter, UpscanConnector}
+import uk.gov.hmrc.rasapi.connectors.{IntegrationPlatformRouter, UpscanConnector}
 import uk.gov.hmrc.rasapi.helpers.ResidencyYearResolver
 import uk.gov.hmrc.rasapi.metrics.Metrics
 import uk.gov.hmrc.rasapi.models.*

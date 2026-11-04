@@ -25,7 +25,7 @@ import scala.concurrent.{ExecutionContext, Future}
 class IntegrationPlatformRouter @Inject() (
   context: AppContext,
   desConnector: DesConnector,
-  hipConnector: HipConnector)(using ec: ExecutionContext){
+  hipConnector: HipConnector){
 
   def getResidencyStatus(
                           member: IndividualDetails,
