@@ -41,15 +41,15 @@ import scala.concurrent.{ExecutionContext, Future}
 import scala.util.{Failure, Success, Try}
 
 class LookupController @Inject() (
-                                   val integrationPlatformRouter: IntegrationPlatformRouter,
-                                   val metrics: Metrics,
-                                   val auditService: AuditService,
-                                   val authConnector: AuthConnector,
-                                   val residencyYearResolver: ResidencyYearResolver,
-                                   val appContext: AppContext,
-                                   val errorConverter: ErrorConverter,
-                                   cc: ControllerComponents,
-                                   bodyParser: BodyParsers.Default
+  val integrationPlatformRouter: IntegrationPlatformRouter,
+  val metrics: Metrics,
+  val auditService: AuditService,
+  val authConnector: AuthConnector,
+  val residencyYearResolver: ResidencyYearResolver,
+  val appContext: AppContext,
+  val errorConverter: ErrorConverter,
+  cc: ControllerComponents,
+  bodyParser: BodyParsers.Default
 )(using ec: ExecutionContext)
     extends BackendController(cc) with SimpleHeaderValidator with AuthorisedFunctions with Logging {
 

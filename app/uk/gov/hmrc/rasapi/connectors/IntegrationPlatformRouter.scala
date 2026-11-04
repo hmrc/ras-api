@@ -25,17 +25,18 @@ import scala.concurrent.{ExecutionContext, Future}
 class IntegrationPlatformRouter @Inject() (
   context: AppContext,
   desConnector: DesConnector,
-  hipConnector: HipConnector){
+  hipConnector: HipConnector
+) {
 
   def getResidencyStatus(
-                          member: IndividualDetails,
-                          userId: String,
-                          isBulkRequest: Boolean = false
-                        ): Future[Either[ResidencyStatus, ResidencyStatusFailure]] = {
+    member: IndividualDetails,
+    userId: String,
+    isBulkRequest: Boolean = false
+  ): Future[Either[ResidencyStatus, ResidencyStatusFailure]] =
 
     if (context.isHip5161Enabled)
-      hipConnector.getResidencyStatus( member, userId, isBulkRequest )
+      hipConnector.getResidencyStatus(member, userId, isBulkRequest)
     else
-      desConnector.getResidencyStatus( member, userId, isBulkRequest)
-  }
+      desConnector.getResidencyStatus(member, userId, isBulkRequest)
+
 }

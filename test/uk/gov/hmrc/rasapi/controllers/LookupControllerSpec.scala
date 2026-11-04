@@ -59,14 +59,14 @@ class LookupControllerSpec
   val acceptHeaderV1: (String, String) = (HeaderNames.ACCEPT, "application/vnd.hmrc.1.0+json")
 
   val mockIntegrationPlatformRouter: IntegrationPlatformRouter = mock[IntegrationPlatformRouter]
-  val mockAuditService: AuditService                   = mock[AuditService]
-  val mockAuthConnector: AuthConnector                 = mock[AuthConnector]
-  val mockResidencyYearResolver: ResidencyYearResolver = mock[ResidencyYearResolver]
-  val mockMetrics: Metrics                             = app.injector.instanceOf[Metrics]
-  val appContext: AppContext                           = app.injector.instanceOf[AppContext]
-  val errorConverer: ErrorConverter                    = app.injector.instanceOf[ErrorConverter]
-  val mockCC: ControllerComponents                     = stubControllerComponents()
-  val mockParser: BodyParsers.Default                  = app.injector.instanceOf[BodyParsers.Default]
+  val mockAuditService: AuditService                           = mock[AuditService]
+  val mockAuthConnector: AuthConnector                         = mock[AuthConnector]
+  val mockResidencyYearResolver: ResidencyYearResolver         = mock[ResidencyYearResolver]
+  val mockMetrics: Metrics                                     = app.injector.instanceOf[Metrics]
+  val appContext: AppContext                                   = app.injector.instanceOf[AppContext]
+  val errorConverer: ErrorConverter                            = app.injector.instanceOf[ErrorConverter]
+  val mockCC: ControllerComponents                             = stubControllerComponents()
+  val mockParser: BodyParsers.Default                          = app.injector.instanceOf[BodyParsers.Default]
 
   val expectedNino: Nino = uk.gov.hmrc.rasapi.models.Nino("LE241131B")
 

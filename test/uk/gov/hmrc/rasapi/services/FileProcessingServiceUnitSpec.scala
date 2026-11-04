@@ -61,12 +61,12 @@ class FileProcessingServiceUnitSpec
   val metrics: Metrics       = app.injector.instanceOf[Metrics]
 
   def buildService(
-                    upscan: UpscanConnector = mock[UpscanConnector],
-                    integrationPlatformRouter: IntegrationPlatformRouter = mock[IntegrationPlatformRouter],
-                    resolver: ResidencyYearResolver = mock[ResidencyYearResolver],
-                    audit: AuditService = mock[AuditService],
-                    sessionCache: RasFilesSessionService = mock[RasFilesSessionService],
-                    fileRepo: RasFilesRepository = mock[RasFilesRepository]
+    upscan: UpscanConnector = mock[UpscanConnector],
+    integrationPlatformRouter: IntegrationPlatformRouter = mock[IntegrationPlatformRouter],
+    resolver: ResidencyYearResolver = mock[ResidencyYearResolver],
+    audit: AuditService = mock[AuditService],
+    sessionCache: RasFilesSessionService = mock[RasFilesSessionService],
+    fileRepo: RasFilesRepository = mock[RasFilesRepository]
   ): FileProcessingService = new FileProcessingService(
     upscan,
     integrationPlatformRouter,

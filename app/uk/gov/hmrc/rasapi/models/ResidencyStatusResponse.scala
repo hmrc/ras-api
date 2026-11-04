@@ -27,7 +27,7 @@ case class ResidencyStatusSuccess(
   deseasedIndicator: Option[Boolean],
   currentYearResidencyStatus: String,
   nextYearResidencyStatus: Option[String],
-  statusCheckTimeStamp:  Option[String] = None
+  statusCheckTimeStamp: Option[String] = None
 )
 
 case class ResidencyStatusFailure(code: String, reason: String)

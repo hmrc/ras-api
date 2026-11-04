@@ -36,11 +36,12 @@ import javax.inject.Inject
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.{Failure, Success, Try}
 
-trait IntegrationPlatformConnector @Inject()(
-                                              httpPost: HttpClientV2Provider,
-                                              auditService: AuditService,
-                                              appContext: AppContext
-                                            )(using ec: ExecutionContext) extends Logging {
+trait IntegrationPlatformConnector @Inject() (
+  httpPost: HttpClientV2Provider,
+  auditService: AuditService,
+  appContext: AppContext
+)(using ec: ExecutionContext)
+    extends Logging {
   def baseUrl: String
   def integrationPlatformUri: String
 
@@ -49,12 +50,12 @@ trait IntegrationPlatformConnector @Inject()(
   given rasHeaders: HeaderCarrier = HeaderCarrier()
 
   def getResidencyStatus(
-                          member: IndividualDetails,
-                          userId: String,
-                          isBulkRequest: Boolean = false
-                        ): Future[Either[ResidencyStatus, ResidencyStatusFailure]]
+    member: IndividualDetails,
+    userId: String,
+    isBulkRequest: Boolean = false
+  ): Future[Either[ResidencyStatus, ResidencyStatusFailure]]
 
-  def resolveFailureResponse(response :HttpResponse, t: Throwable): Either[ResidencyStatus, ResidencyStatusFailure]
+  def resolveFailureResponse(response: HttpResponse, t: Throwable): Either[ResidencyStatus, ResidencyStatusFailure]
 
   lazy val error_InternalServerError: String = appContext.internalServerErrorStatus
   lazy val error_Deceased: String            = appContext.deceasedStatus
@@ -133,16 +134,17 @@ trait IntegrationPlatformConnector @Inject()(
         uk.gov.hmrc.http library makes non-2XX responses produce a future failure rather than a success
         Consequently only 2XX responses are mapped to the resolveResponse method
      */
-    result.map(response => resolveResponse(response, userId, member.nino))
+    result
+      .map(response => resolveResponse(response, userId, member.nino))
       .recover {
-       
-        case _: BadRequestException =>
+
+        case _: BadRequestException              =>
           logger.error(
             s"[IntegrationPlatformConnector][getResidencyStatus] Bad Request returned from $integrationPlatform. The details sent were not " +
               s"valid. userId ($userId)."
           )
           Right(ResidencyStatusFailure(error_DoNotReProcess, "Internal server error."))
-        case _: NotFoundException =>
+        case _: NotFoundException                =>
           Right(
             ResidencyStatusFailure(
               error_MatchingFailed,
@@ -224,46 +226,54 @@ trait IntegrationPlatformConnector @Inject()(
               Left(ResidencyStatus(currentStatus, nextYearStatus))
             }
         }
-      case Failure(ex)       =>       resolveFailureResponse(httpResponse, ex)
+      case Failure(ex)      => resolveFailureResponse(httpResponse, ex)
     }
+
 }
 
 object IntegrationPlatformConnector {
-  val uk = "Uk"
-  val scot = "Scottish"
-  val scotRes = "scotResident"
-  val welsh = "Welsh"
+  val uk       = "Uk"
+  val scot     = "Scottish"
+  val scotRes  = "scotResident"
+  val welsh    = "Welsh"
   val welshRes = "welshResident"
-  val otherUk = "otherUKResident"
+  val otherUk  = "otherUKResident"
 }
 
-class DesConnector @Inject()(
-                              httpPost: HttpClientV2Provider,
-                              val auditService: AuditService,
-                              val appContext: AppContext
-                            )(using ec: ExecutionContext)
-  extends IntegrationPlatformConnector(httpPost, auditService, appContext) {
+class DesConnector @Inject() (
+  httpPost: HttpClientV2Provider,
+  val auditService: AuditService,
+  val appContext: AppContext
+)(using ec: ExecutionContext)
+    extends IntegrationPlatformConnector(httpPost, auditService, appContext) {
 
-  lazy val baseUrl: String = appContext.servicesConfig.baseUrl("des")
+  lazy val baseUrl: String                = appContext.servicesConfig.baseUrl("des")
   lazy val integrationPlatformUri: String = s"$baseUrl/individuals/residency-status/"
 
-  lazy val desAuthToken: String = appContext.desAuthToken
+  lazy val desAuthToken: String    = appContext.desAuthToken
   lazy val desUrlHeaderEnv: String = appContext.desUrlHeaderEnv
 
-  def resolveFailureResponse(httpResponse :HttpResponse, t: Throwable): Either[ResidencyStatus, ResidencyStatusFailure] = {
+  def resolveFailureResponse(
+    httpResponse: HttpResponse,
+    t: Throwable
+  ): Either[ResidencyStatus, ResidencyStatusFailure] =
     /*
        non-2XX responses produce a future failure so would not ordinarily map here.
        Rather tests that mock a future success for non-2XX responses will map here instead.
-    */
+     */
     Try(httpResponse.json.as[ResidencyStatusFailure](ResidencyStatusFormats.failureFormats)) match {
       case Success(data) =>
-        logger.debug(s"[IntegrationPlatformConnector][resolveJsonResponse] IntegrationPlatformFailureResponse from $integrationPlatform :$data")
+        logger.debug(
+          s"[IntegrationPlatformConnector][resolveJsonResponse] IntegrationPlatformFailureResponse from $integrationPlatform :$data"
+        )
         Right(data)
-      case Failure(ex) =>
-        logger.error(s"[IntegrationPlatformConnector][resolveResponse] Error from $integrationPlatform :${ex.getMessage}", ex)
+      case Failure(ex)   =>
+        logger.error(
+          s"[IntegrationPlatformConnector][resolveResponse] Error from $integrationPlatform :${ex.getMessage}",
+          ex
+        )
         Right(ResidencyStatusFailure(error_InternalServerError, "Internal server error."))
     }
-  }
 
   def correlationId(using hc: HeaderCarrier): String = {
     val CorrelationIdPattern = """.*([A-Za-z0-9]{8}-[A-Za-z0-9]{4}-[A-Za-z0-9]{4}-[A-Za-z0-9]{4}).*""".r
@@ -271,61 +281,65 @@ class DesConnector @Inject()(
       case Some(requestId) =>
         requestId.value match {
           case CorrelationIdPattern(prefix) => prefix + "-" + generateNewUUID.substring(24)
-          case _ => generateNewUUID
+          case _                            => generateNewUUID
         }
-      case _ => generateNewUUID
+      case _               => generateNewUUID
     }
   }
 
   private lazy val desHeaders = Seq(
-    "Environment" -> desUrlHeaderEnv,
-    "OriginatorId" -> "DA_RAS",
-    "Content-Type" -> "application/json",
+    "Environment"   -> desUrlHeaderEnv,
+    "OriginatorId"  -> "DA_RAS",
+    "Content-Type"  -> "application/json",
     "authorization" -> s"Bearer $desAuthToken",
     "CorrelationId" -> correlationId
   )
 
   def getResidencyStatus(
-                          member: IndividualDetails,
-                          userId: String,
-                          isBulkRequest: Boolean = false
-                        ): Future[Either[ResidencyStatus, ResidencyStatusFailure]] =
+    member: IndividualDetails,
+    userId: String,
+    isBulkRequest: Boolean = false
+  ): Future[Either[ResidencyStatus, ResidencyStatusFailure]] =
     getIPResidencyStatus(member, userId, desHeaders, isBulkRequest)
+
 }
 
-class HipConnector @Inject()(
-                              httpPost: HttpClientV2Provider,
-                              val auditService: AuditService,
-                              val appContext: AppContext
-                            )(using ec: ExecutionContext)
-  extends IntegrationPlatformConnector(httpPost, auditService, appContext) {
+class HipConnector @Inject() (
+  httpPost: HttpClientV2Provider,
+  val auditService: AuditService,
+  val appContext: AppContext
+)(using ec: ExecutionContext)
+    extends IntegrationPlatformConnector(httpPost, auditService, appContext) {
 
-  lazy val baseUrl: String = appContext.servicesConfig.baseUrl("hip")
+  lazy val baseUrl: String                = appContext.servicesConfig.baseUrl("hip")
   lazy val integrationPlatformUri: String = s"$baseUrl/paye/person/regional-residency-status)"
 
-  private lazy val clientId: String = appContext.servicesConfig.getString("microservice.services.hip.clientId")
+  private lazy val clientId: String     = appContext.servicesConfig.getString("microservice.services.hip.clientId")
   private lazy val clientSecret: String = appContext.servicesConfig.getString("microservice.services.hip.clientSecret")
-  private lazy val authSecret: String = Base64.getEncoder.encodeToString(s"$clientId:$clientSecret".getBytes("UTF-8"))
+  private lazy val authSecret: String   = Base64.getEncoder.encodeToString(s"$clientId:$clientSecret".getBytes("UTF-8"))
 
   private lazy val hipHeaders = Seq(
-    "Authorization" -> s"Basic $authSecret",
-    "CorrelationId" -> generateNewUUID,
-    "X-Receipt-Date" -> DateTimeFormatter.ISO_INSTANT.format(Instant.now().truncatedTo(ChronoUnit.SECONDS)),
+    "Authorization"         -> s"Basic $authSecret",
+    "CorrelationId"         -> generateNewUUID,
+    "X-Receipt-Date"        -> DateTimeFormatter.ISO_INSTANT.format(Instant.now().truncatedTo(ChronoUnit.SECONDS)),
     "X-Transmitting-System" -> "HIP"
   )
 
   def getResidencyStatus(
-                          member: IndividualDetails,
-                          userId: String,
-                          isBulkRequest: Boolean = false
-                        ): Future[Either[ResidencyStatus, ResidencyStatusFailure]] =
+    member: IndividualDetails,
+    userId: String,
+    isBulkRequest: Boolean = false
+  ): Future[Either[ResidencyStatus, ResidencyStatusFailure]] =
     getIPResidencyStatus(member, userId, hipHeaders, isBulkRequest)
 
-  def resolveFailureResponse(httpResponse: HttpResponse, t: Throwable): Either[ResidencyStatus, ResidencyStatusFailure] = {
+  def resolveFailureResponse(
+    httpResponse: HttpResponse,
+    t: Throwable
+  ): Either[ResidencyStatus, ResidencyStatusFailure] =
     /*
        As non-2XX responses produce a future failure.
        Any test that mocks a future success will throw a non-2XX exception here.
-    */
+     */
     httpResponse.status match {
       case BAD_REQUEST         => throw BadRequestException(t.getMessage)
       case FORBIDDEN           => throw UpstreamErrorResponse(t.getMessage, 403)
@@ -335,6 +349,5 @@ class HipConnector @Inject()(
       case SERVICE_UNAVAILABLE => throw UpstreamErrorResponse(t.getMessage, 503)
       case _                   => throw InternalServerException(t.getMessage)
     }
-  }
 
 }

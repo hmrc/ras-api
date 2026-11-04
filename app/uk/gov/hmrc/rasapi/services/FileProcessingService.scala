@@ -33,14 +33,14 @@ import scala.concurrent.ExecutionContext
 import scala.util.{Failure, Success, Try}
 
 class FileProcessingService @Inject() (
-                                        val fileUploadConnector: UpscanConnector,
-                                        val integrationPlatformRouter: IntegrationPlatformRouter,
-                                        val residencyYearResolver: ResidencyYearResolver,
-                                        val auditService: AuditService,
-                                        val sessionCacheService: RasFilesSessionService,
-                                        val fileRepo: RasFilesRepository,
-                                        val appContext: AppContext,
-                                        val metrics: Metrics
+  val fileUploadConnector: UpscanConnector,
+  val integrationPlatformRouter: IntegrationPlatformRouter,
+  val residencyYearResolver: ResidencyYearResolver,
+  val auditService: AuditService,
+  val sessionCacheService: RasFilesSessionService,
+  val fileRepo: RasFilesRepository,
+  val appContext: AppContext,
+  val metrics: Metrics
 )(using ec: ExecutionContext)
     extends RasFileReader with RasFileWriter with ResultsGenerator with Logging {
 

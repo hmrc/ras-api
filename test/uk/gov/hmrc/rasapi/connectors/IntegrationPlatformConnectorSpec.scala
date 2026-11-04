@@ -66,41 +66,59 @@ trait IntegrationPlatformConnectorSpec
 
   val uuid = "123e4567-e89b-42d3-a456-556642440000"
 
-  def desConnector(allowNoNextYearStatusP: Boolean, isRetryEnabledP: Boolean, isBulkRetryEnabledP: Boolean): DesConnector = {
+  def desConnector(
+    allowNoNextYearStatusP: Boolean,
+    isRetryEnabledP: Boolean,
+    isBulkRetryEnabledP: Boolean
+  ): DesConnector =
     new DesConnector(mockHttp, mockAuditService, appContext)(using ExecutionContext.global) {
-      override lazy val integrationPlatformUri = "http://localhost:9669"
+      override lazy val integrationPlatformUri         = "http://localhost:9669"
       override lazy val allowNoNextYearStatus: Boolean = allowNoNextYearStatusP
-      override lazy val retryLimit: Int = 3
-      override lazy val retryDelay: Int = 500
-      override lazy val desUrlHeaderEnv: String = "DES HEADER"
-      override lazy val desAuthToken: String = "DES AUTH TOKEN"
-      override lazy val isRetryEnabled: Boolean = isRetryEnabledP
-      override lazy val isBulkRetryEnabled: Boolean = isBulkRetryEnabledP
+      override lazy val retryLimit: Int                = 3
+      override lazy val retryDelay: Int                = 500
+      override lazy val desUrlHeaderEnv: String        = "DES HEADER"
+      override lazy val desAuthToken: String           = "DES AUTH TOKEN"
+      override lazy val isRetryEnabled: Boolean        = isRetryEnabledP
+      override lazy val isBulkRetryEnabled: Boolean    = isBulkRetryEnabledP
 
       override def generateNewUUID: String = uuid
     }
-  }
 
-  def hipConnector(allowNoNextYearStatusP: Boolean, isRetryEnabledP: Boolean, isBulkRetryEnabledP: Boolean): HipConnector = {
+  def hipConnector(
+    allowNoNextYearStatusP: Boolean,
+    isRetryEnabledP: Boolean,
+    isBulkRetryEnabledP: Boolean
+  ): HipConnector =
     new HipConnector(mockHttp, mockAuditService, appContext)(using ExecutionContext.global) {
-      override lazy val integrationPlatformUri = "http://localhost:9669"
+      override lazy val integrationPlatformUri         = "http://localhost:9669"
       override lazy val allowNoNextYearStatus: Boolean = allowNoNextYearStatusP
-      override lazy val retryLimit: Int = 3
-      override lazy val retryDelay: Int = 500
-      override lazy val isRetryEnabled: Boolean = isRetryEnabledP
-      override lazy val isBulkRetryEnabled: Boolean = isBulkRetryEnabledP
+      override lazy val retryLimit: Int                = 3
+      override lazy val retryDelay: Int                = 500
+      override lazy val isRetryEnabled: Boolean        = isRetryEnabledP
+      override lazy val isBulkRetryEnabled: Boolean    = isBulkRetryEnabledP
 
       override def generateNewUUID: String = uuid
     }
-  }
 
   object IntegrationPlatformConnector {
-    def makeSuccessResponse(nino: String, deathDate: Option[String], deathDateStatus: Option[String],
-                            deceasedIndicator: Option[Boolean], currentYearResidencyStatus: String,
-                            nextYearResidencyStatus: Option[String]): ResidencyStatusSuccess = {
 
-      val residencyStatusSuccess = ResidencyStatusSuccess(nino, deathDate, deathDateStatus, deceasedIndicator,
-        currentYearResidencyStatus, nextYearResidencyStatus)
+    def makeSuccessResponse(
+      nino: String,
+      deathDate: Option[String],
+      deathDateStatus: Option[String],
+      deceasedIndicator: Option[Boolean],
+      currentYearResidencyStatus: String,
+      nextYearResidencyStatus: Option[String]
+    ): ResidencyStatusSuccess = {
+
+      val residencyStatusSuccess = ResidencyStatusSuccess(
+        nino,
+        deathDate,
+        deathDateStatus,
+        deceasedIndicator,
+        currentYearResidencyStatus,
+        nextYearResidencyStatus
+      )
 
       if (isHip5161Enabled)
         residencyStatusSuccess.copy(statusCheckTimeStamp = Some("2027-08-24T14:15:22Z"))
@@ -108,26 +126,44 @@ trait IntegrationPlatformConnectorSpec
       residencyStatusSuccess
     }
 
-    def getResidencyStatus(individualDetails: IndividualDetails, userId: String): Future[Either[ResidencyStatus, ResidencyStatusFailure]] = {
-      getResidencyStatus(individualDetails, userId, isBulkRequest = false, allowNoNextYearStatusP = true, isRetryEnabledP = true, isBulkRetryEnabledP = false)
-    }
+    def getResidencyStatus(
+      individualDetails: IndividualDetails,
+      userId: String
+    ): Future[Either[ResidencyStatus, ResidencyStatusFailure]] =
+      getResidencyStatus(
+        individualDetails,
+        userId,
+        isBulkRequest = false,
+        allowNoNextYearStatusP = true,
+        isRetryEnabledP = true,
+        isBulkRetryEnabledP = false
+      )
 
-    def getResidencyStatus(individualDetails: IndividualDetails, userId: String, isBulkRequest: Boolean,
-                           allowNoNextYearStatusP: Boolean, isRetryEnabledP: Boolean, isBulkRetryEnabledP: Boolean): Future[Either[ResidencyStatus, ResidencyStatusFailure]] = {
+    def getResidencyStatus(
+      individualDetails: IndividualDetails,
+      userId: String,
+      isBulkRequest: Boolean,
+      allowNoNextYearStatusP: Boolean,
+      isRetryEnabledP: Boolean,
+      isBulkRetryEnabledP: Boolean
+    ): Future[Either[ResidencyStatus, ResidencyStatusFailure]] =
       if (isHip5161Enabled)
         hipConnector(allowNoNextYearStatusP, isRetryEnabledP, isBulkRetryEnabledP)
           .getResidencyStatus(individualDetails, userId, isBulkRequest)
       else
         desConnector(allowNoNextYearStatusP, isRetryEnabledP, isBulkRetryEnabledP)
           .getResidencyStatus(individualDetails, userId, isBulkRequest)
-    }
 
-    def error_InternalServerError(allowNoNextYearStatusP: Boolean, isRetryEnabledP: Boolean, isBulkRetryEnabledP: Boolean): String = {
+    def error_InternalServerError(
+      allowNoNextYearStatusP: Boolean,
+      isRetryEnabledP: Boolean,
+      isBulkRetryEnabledP: Boolean
+    ): String =
       if (isHip5161Enabled)
         hipConnector(allowNoNextYearStatusP, isRetryEnabledP, isBulkRetryEnabledP).error_InternalServerError
       else
         desConnector(allowNoNextYearStatusP, isRetryEnabledP, isBulkRetryEnabledP).error_InternalServerError
-    }
+
   }
 
   val formatter: DateTimeFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd")
@@ -294,8 +330,15 @@ trait IntegrationPlatformConnectorSpec
         when(mockRequestBuilder.execute(any[HttpReads[HttpResponse]], any()))
           .thenReturn(expectedErrorResponse, expectedSuccessResponse)
 
-        val result = await(IntegrationPlatformConnector.getResidencyStatus(individualDetails, userId,
-               isBulkRequest = true, allowNoNextYearStatusP = true, isRetryEnabledP = false, isBulkRetryEnabledP = true)
+        val result = await(
+          IntegrationPlatformConnector.getResidencyStatus(
+            individualDetails,
+            userId,
+            isBulkRequest = true,
+            allowNoNextYearStatusP = true,
+            isRetryEnabledP = false,
+            isBulkRetryEnabledP = true
+          )
         )
 
         result.isRight                      shouldBe false
@@ -318,8 +361,15 @@ trait IntegrationPlatformConnectorSpec
 
         when(mockRequestBuilder.execute(any[HttpReads[HttpResponse]], any())).thenReturn(expectedErrorResponse)
 
-        val result = await(IntegrationPlatformConnector.getResidencyStatus(individualDetails, userId,
-              isBulkRequest = true, allowNoNextYearStatusP = true, isRetryEnabledP = false, isBulkRetryEnabledP = false)
+        val result = await(
+          IntegrationPlatformConnector.getResidencyStatus(
+            individualDetails,
+            userId,
+            isBulkRequest = true,
+            allowNoNextYearStatusP = true,
+            isRetryEnabledP = false,
+            isBulkRetryEnabledP = false
+          )
         )
 
         result.isLeft                  shouldBe false
@@ -330,10 +380,15 @@ trait IntegrationPlatformConnectorSpec
 
     "handle successful response when 200 is returned from integrationPlatformRouter and only CY is present and no next year status toggle is turned off" in {
 
-      val errorResponse = ResidencyStatusFailure( 
+      val errorResponse = ResidencyStatusFailure(
         IntegrationPlatformConnector
-          .error_InternalServerError( allowNoNextYearStatusP = false, isRetryEnabledP = true, isBulkRetryEnabledP = false),
-        "Internal server error.")
+          .error_InternalServerError(
+            allowNoNextYearStatusP = false,
+            isRetryEnabledP = true,
+            isBulkRetryEnabledP = false
+          ),
+        "Internal server error."
+      )
 
       val successResponse   = IntegrationPlatformConnector.makeSuccessResponse(
         nino = "AB123456C",
@@ -347,8 +402,15 @@ trait IntegrationPlatformConnectorSpec
 
       when(mockRequestBuilder.execute(any[HttpReads[HttpResponse]], any()))
         .thenReturn(Future.successful(HttpResponse(200, Json.toJson(successResponse).toString())))
-      val result = await(IntegrationPlatformConnector.getResidencyStatus(individualDetails, userId,
-        isBulkRequest = false, allowNoNextYearStatusP = false, isRetryEnabledP = true, isBulkRetryEnabledP = false)
+      val result = await(
+        IntegrationPlatformConnector.getResidencyStatus(
+          individualDetails,
+          userId,
+          isBulkRequest = false,
+          allowNoNextYearStatusP = false,
+          isRetryEnabledP = true,
+          isBulkRetryEnabledP = false
+        )
       )
       result.isLeft                  shouldBe false
       result.getOrElse("Get Failed") shouldBe errorResponse
@@ -518,12 +580,14 @@ trait IntegrationPlatformConnectorSpec
       }
     }
   }
+
 }
 
 class DesConnectorSpec extends IntegrationPlatformConnectorSpec {
   def isHip5161Enabled: Boolean = false
 
-  val testDesConnector: DesConnector = desConnector(allowNoNextYearStatusP = true, isRetryEnabledP = true, isBulkRetryEnabledP = false)
+  val testDesConnector: DesConnector =
+    desConnector(allowNoNextYearStatusP = true, isRetryEnabledP = true, isBulkRetryEnabledP = false)
 
   "DESConnector correlationID" when {
     "requestID is present in the headerCarrier" should {
@@ -544,6 +608,7 @@ class DesConnectorSpec extends IntegrationPlatformConnectorSpec {
       testDesConnector.correlationId(using HeaderCarrier()) shouldBe uuid
     }
   }
+
 }
 
 class HipConnectorSpec extends IntegrationPlatformConnectorSpec {

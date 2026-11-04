@@ -75,11 +75,11 @@ class FileProcessingServiceSpec
   val mockUpscanConnector: UpscanConnector = mock[UpscanConnector]
 
   val mockIntegrationPlatformRouter: IntegrationPlatformRouter = mock[IntegrationPlatformRouter]
-  val mockSessionCache: RasFilesSessionService         = mock[RasFilesSessionService]
-  val mockResidencyYearResolver: ResidencyYearResolver = mock[ResidencyYearResolver]
-  val mockAuditService: AuditService                   = mock[AuditService]
-  val appContext: AppContext                           = app.injector.instanceOf[AppContext]
-  val metrics: Metrics                                 = app.injector.instanceOf[Metrics]
+  val mockSessionCache: RasFilesSessionService                 = mock[RasFilesSessionService]
+  val mockResidencyYearResolver: ResidencyYearResolver         = mock[ResidencyYearResolver]
+  val mockAuditService: AuditService                           = mock[AuditService]
+  val appContext: AppContext                                   = app.injector.instanceOf[AppContext]
+  val metrics: Metrics                                         = app.injector.instanceOf[Metrics]
 
   val STATUS_DECEASED: String                              = "DECEASED"
   val STATUS_MATCHING_FAILED: String                       = "STATUS_UNAVAILABLE"
@@ -127,7 +127,7 @@ class FileProcessingServiceSpec
   val userId: String        = "A1234567"
   val fileId: String        = "file-id-1234"
   private val newLineRegexp = "(\\r|\\n)"
-  
+
   before {
     reset(mockUpscanConnector)
     reset(mockIntegrationPlatformRouter)
@@ -618,7 +618,7 @@ class FileProcessingServiceSpec
 
         when(mockUpscanConnector.getUpscanFile(any(), any(), any()))
           .thenReturn(Future.successful(Some(new FileInputStream(testFilePath.toFile))))
-        
+
         val expectedResultsFile =
           "National Insurance number,First name,Last name,Date of birth,2017 to 2018 residency status,2018 to 2019 residency status" +
             s"LE241131B,Jim,Jimson,1990-02-21,$STATUS_FILE_PROCESSING_INTERNAL_SERVER_ERROR" +

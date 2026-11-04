@@ -29,16 +29,16 @@ class ResultsGeneratorSpec extends AnyWordSpecLike with Matchers with MockitoSug
 
   class FailingParseResultsGenerator extends ResultsGenerator {
     val integrationPlatformRouter: IntegrationPlatformRouter = mock[IntegrationPlatformRouter]
-    val residencyYearResolver: ResidencyYearResolver  = mock[ResidencyYearResolver]
-    val auditService: AuditService                    = mock[AuditService]
-    def getCurrentDate: LocalDate                     = LocalDate.now()
-    val allowDefaultRUK: Boolean                      = false
-    val DECEASED: String                              = ""
-    val MATCHING_FAILED: String                       = ""
-    val INTERNAL_SERVER_ERROR: String                 = ""
-    val SERVICE_UNAVAILABLE: String                   = ""
-    val FILE_PROCESSING_MATCHING_FAILED: String       = ""
-    val FILE_PROCESSING_INTERNAL_SERVER_ERROR: String = ""
+    val residencyYearResolver: ResidencyYearResolver         = mock[ResidencyYearResolver]
+    val auditService: AuditService                           = mock[AuditService]
+    def getCurrentDate: LocalDate                            = LocalDate.now()
+    val allowDefaultRUK: Boolean                             = false
+    val DECEASED: String                                     = ""
+    val MATCHING_FAILED: String                              = ""
+    val INTERNAL_SERVER_ERROR: String                        = ""
+    val SERVICE_UNAVAILABLE: String                          = ""
+    val FILE_PROCESSING_MATCHING_FAILED: String              = ""
+    val FILE_PROCESSING_INTERNAL_SERVER_ERROR: String        = ""
 
     override def parseString(inputRow: String): RawMemberDetails = null
   }
