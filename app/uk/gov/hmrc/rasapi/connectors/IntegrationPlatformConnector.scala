@@ -321,6 +321,7 @@ class HipConnector @Inject() (
   private lazy val hipHeaders = Seq(
     "Authorization"         -> s"Basic $authSecret",
     "CorrelationId"         -> generateNewUUID,
+    "OriginatorId"          -> "DA_RAS",
     "X-Receipt-Date"        -> DateTimeFormatter.ISO_INSTANT.format(Instant.now().truncatedTo(ChronoUnit.SECONDS)),
     "X-Transmitting-System" -> "HIP"
   )
