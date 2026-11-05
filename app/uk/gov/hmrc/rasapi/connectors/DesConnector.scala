@@ -172,9 +172,6 @@ class DesConnector @Inject() (
             s"from the HoD. userId ($userId)."
         )
         Right(ResidencyStatusFailure(error_TooManyRequests, "Too Many Requests."))
-      case _: RequestTimeoutException           =>
-        logger.error(s"[DesConnector][getResidencyStatus] Request has timed out. userId ($userId).")
-        Right(ResidencyStatusFailure(error_DoNotReProcess, "Internal server error."))
       case errorResponse: UpstreamErrorResponse =>
         if (errorResponse.statusCode == 503) {
           logger.error(s"[DesConnector][getResidencyStatus] Service unavailable. userId ($userId).")
