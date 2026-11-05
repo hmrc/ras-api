@@ -38,9 +38,26 @@ import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import scala.concurrent.ExecutionContext
 import com.github.tomakehurst.wiremock.http.Fault
+import play.api.Application
+import play.api.inject.guice.GuiceApplicationBuilder
+import org.scalatest.concurrent.Eventually
+import org.scalatest.time.{Millis, Seconds, Span}
 
 class DesConnectorSpec
-    extends AnyWordSpecLike with Matchers with GuiceOneAppPerSuite with MockitoSugar with WireMockHelper {
+    extends AnyWordSpecLike
+    with Matchers
+    with GuiceOneAppPerSuite
+    with MockitoSugar
+    with WireMockHelper
+    with Eventually {
+
+  override def fakeApplication(): Application =
+    new GuiceApplicationBuilder()
+      .configure(
+        "play.ws.timeout.request" -> "1s",
+        "play.ws.timeout.idle"    -> "1s"
+      )
+      .build()
 
   given hc: HeaderCarrier = HeaderCarrier()
 
@@ -458,6 +475,47 @@ class DesConnectorSpec
       result.getOrElse("Get Failed") shouldBe expectedErrorResponse
 
       verifyDesPost(individualDetails)
+    }
+
+    "handle GatewayTimeoutException when DES request times out" in {
+
+      val individualDetails =
+        IndividualDetails(
+          "AB123456C",
+          "JOHN",
+          "Lewis",
+          LocalDate.parse("1990-02-21", formatter)
+        )
+
+      server.stubFor(
+        post(urlEqualTo("/individuals/residency-status/"))
+          .willReturn(
+            aResponse()
+              .withStatus(200)
+              .withFixedDelay(4000)
+          )
+      )
+
+      val result = await(
+        wireMockDesConnector.getResidencyStatus(
+          individualDetails,
+          userId
+        )
+      )
+
+      result shouldBe Right(
+        ResidencyStatusFailure(
+          "INTERNAL_SERVER_ERROR",
+          "Internal server error."
+        )
+      )
+
+      eventually(
+        timeout(Span(8, Seconds)),
+        interval(Span(200, Millis))
+      ) {
+        verifyDesPost(individualDetails, expectedCount = 1)
+      }
     }
 
     "handle unexpected connection failure from des" in {
