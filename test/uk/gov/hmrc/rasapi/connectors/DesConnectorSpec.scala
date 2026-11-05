@@ -16,6 +16,7 @@
 
 package uk.gov.hmrc.rasapi.connectors
 
+import org.mockito.ArgumentCaptor
 import org.mockito.ArgumentMatchers.*
 import org.mockito.Mockito.{reset, times, verify, when}
 import org.scalatest.BeforeAndAfter
@@ -32,13 +33,22 @@ import uk.gov.hmrc.play.bootstrap.http.HttpClientV2Provider
 import uk.gov.hmrc.rasapi.config.AppContext
 import uk.gov.hmrc.rasapi.models.*
 import uk.gov.hmrc.rasapi.services.AuditService
+import uk.gov.hmrc.play.bootstrap.tools.LogCapturing
+import ch.qos.logback.classic.Level
+import ch.qos.logback.classic.spi.ILoggingEvent
 
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import scala.concurrent.{ExecutionContext, Future}
+import scala.jdk.CollectionConverters.*
 
 class DesConnectorSpec
-    extends AnyWordSpecLike with Matchers with GuiceOneAppPerSuite with BeforeAndAfter with MockitoSugar {
+    extends AnyWordSpecLike
+    with Matchers
+    with GuiceOneAppPerSuite
+    with BeforeAndAfter
+    with MockitoSugar
+    with LogCapturing {
 
   given hc: HeaderCarrier = HeaderCarrier()
 
@@ -73,6 +83,8 @@ class DesConnectorSpec
     override lazy val isBulkRetryEnabled: Boolean    = false
 
     override def generateNewUUID: String = uuid
+
+    def loggerForTest: play.api.Logger = logger
   }
 
   val formatter: DateTimeFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd")
@@ -487,6 +499,71 @@ class DesConnectorSpec
         result.getOrElse("Get Failed") shouldBe errorResponse
 
         verify(mockHttpClient, times(3)).post(any())(any())
+      }
+    }
+  }
+
+  "DESConnector getResidencyStatus correlationId propagation" should {
+    "derive the CorrelationId header sent to DES from the request ID in the supplied HeaderCarrier" in {
+      reset(mockRequestBuilder)
+      when(mockRequestBuilder.setHeader(any())).thenReturn(mockRequestBuilder)
+      when(mockRequestBuilder.withBody(any[JsObject])(any(), any(), any())).thenReturn(mockRequestBuilder)
+
+      val requestId                      = "abcd0000-dh12-fg34-ij56"
+      val hcWithRequestId: HeaderCarrier = HeaderCarrier(requestId = Some(RequestId(requestId)))
+
+      val successResponse = ResidencyStatusSuccess(
+        nino = "AB123456C",
+        deathDate = Some(""),
+        deathDateStatus = Some(""),
+        deseasedIndicator = Some(false),
+        currentYearResidencyStatus = "Uk",
+        nextYearResidencyStatus = Some("Scottish")
+      )
+
+      val individualDetails = IndividualDetails("AB123456C", "JOHN", "SMITH", LocalDate.parse("1990-02-21", formatter))
+
+      when(mockRequestBuilder.execute(any[HttpReads[HttpResponse]], any()))
+        .thenReturn(Future.successful(HttpResponse(200, Json.toJson(successResponse).toString())))
+
+      await(TestDesConnector.getResidencyStatus(individualDetails, userId)(using hcWithRequestId))
+
+      val headersCaptor: ArgumentCaptor[(String, String)] =
+        ArgumentCaptor.forClass(classOf[(String, String)])
+      verify(mockRequestBuilder).setHeader(headersCaptor.capture())
+
+      // Mockito captures the Scala varargs as a single Seq value, so flatten before asserting.
+      val capturedHeaders: Seq[(String, String)] =
+        headersCaptor.getAllValues.asScala.toList.asInstanceOf[Seq[Any]].flatMap {
+          case seq: Seq[?]        => seq.map(_.asInstanceOf[(String, String)])
+          case pair: Tuple2[?, ?] => Seq(pair.asInstanceOf[(String, String)])
+          case _                  => Nil
+        }
+
+      capturedHeaders should contain("CorrelationId" -> s"$requestId-${uuid.substring(24)}")
+    }
+  }
+
+  def logMessagesWithLevel(logs: List[ILoggingEvent]): List[(Level, String)] =
+    logs.map(event => event.getLevel -> event.getMessage)
+
+  "DESConnector logging" should {
+    "log the correlation id at ERROR level when a DES call fails" in {
+      val requestId                        = "abcd6789-dh12-fg34-ij56"
+      val expectedCorrId                   = s"$requestId-${uuid.substring(24)}"
+      given hcWithRequestId: HeaderCarrier = HeaderCarrier(requestId = Some(RequestId(requestId)))
+
+      val individualDetails = IndividualDetails("AB123456C", "JOHN", "Lewis", LocalDate.parse("1990-02-21", formatter))
+
+      when(mockRequestBuilder.execute(any[HttpReads[HttpResponse]], any()))
+        .thenReturn(Future.failed(UpstreamErrorResponse("forbidden", 403, 403)))
+
+      withCaptureOfLoggingFrom(TestDesConnector.loggerForTest) { logs =>
+        await(TestDesConnector.getResidencyStatus(individualDetails, userId)(using hcWithRequestId))
+
+        logMessagesWithLevel(logs) shouldBe List(
+          Level.ERROR -> s"[DesConnector][getResidencyStatus] Cannot provide a residency status for this pension scheme member for userId ($userId) correlationId ($expectedCorrId)."
+        )
       }
     }
   }

@@ -219,7 +219,7 @@ class LookupControllerSpec
 
         val residencyStatus = ResidencyStatus("scotResident", Some("otherUKResident"))
 
-        when(mockDesConnector.getResidencyStatus(any(), any(), any()))
+        when(mockDesConnector.getResidencyStatus(any(), any(), any())(using any[HeaderCarrier]))
           .thenReturn(Future.successful(Left(residencyStatus)))
 
         await(
@@ -256,7 +256,7 @@ class LookupControllerSpec
 
         val residencyStatus = ResidencyStatus("scotResident", Some("otherUKResident"))
 
-        when(mockDesConnector.getResidencyStatus(any(), any(), any()))
+        when(mockDesConnector.getResidencyStatus(any(), any(), any())(using any[HeaderCarrier]))
           .thenReturn(Future.successful(Left(residencyStatus)))
 
         await(
@@ -293,7 +293,7 @@ class LookupControllerSpec
 
         val residencyStatus = ResidencyStatus("otherUKResident", Some("otherUKResident"))
 
-        when(mockDesConnector.getResidencyStatus(any(), any(), any()))
+        when(mockDesConnector.getResidencyStatus(any(), any(), any())(using any[HeaderCarrier]))
           .thenReturn(Future.successful(Left(residencyStatus)))
 
         await(
@@ -326,7 +326,7 @@ class LookupControllerSpec
 
         when(mockResidencyYearResolver.isBetweenJanAndApril).thenReturn(false)
 
-        when(mockDesConnector.getResidencyStatus(any(), any(), any()))
+        when(mockDesConnector.getResidencyStatus(any(), any(), any())(using any[HeaderCarrier]))
           .thenReturn(Future.successful(Right(ResidencyStatusFailure(STATUS_DECEASED, "Individual is deceased"))))
 
         await(
@@ -363,7 +363,7 @@ class LookupControllerSpec
 
         val residencyStatusFailure = ResidencyStatusFailure("STATUS_UNAVAILABLE", "")
 
-        when(mockDesConnector.getResidencyStatus(any(), any(), any()))
+        when(mockDesConnector.getResidencyStatus(any(), any(), any())(using any[HeaderCarrier]))
           .thenReturn(Future.successful(Right(residencyStatusFailure)))
 
         await(
@@ -397,7 +397,7 @@ class LookupControllerSpec
 
         val residencyStatusFailure = ResidencyStatusFailure("INTERNAL_SERVER_ERROR", "")
 
-        when(mockDesConnector.getResidencyStatus(any(), any(), any()))
+        when(mockDesConnector.getResidencyStatus(any(), any(), any())(using any[HeaderCarrier]))
           .thenReturn(Future.successful(Right(residencyStatusFailure)))
 
         await(
@@ -438,7 +438,7 @@ class LookupControllerSpec
 
         val residencyStatus = ResidencyStatus("scotResident", Some("otherUKResident"))
 
-        when(mockDesConnector.getResidencyStatus(any(), any(), any()))
+        when(mockDesConnector.getResidencyStatus(any(), any(), any())(using any[HeaderCarrier]))
           .thenReturn(Future.successful(Left(residencyStatus)))
 
         val result = TestLookupControllerVersion1.getResidencyStatus
@@ -469,7 +469,7 @@ class LookupControllerSpec
                   }
                 """.stripMargin)
 
-          when(mockDesConnector.getResidencyStatus(any(), any(), any()))
+          when(mockDesConnector.getResidencyStatus(any(), any(), any())(using any[HeaderCarrier]))
             .thenReturn(Future.successful(Left(residencyStatus)))
 
           val result = TestLookupControllerFeb18.getResidencyStatus
@@ -671,7 +671,7 @@ class LookupControllerSpec
 
         val residencyStatusFailure = ResidencyStatusFailure("STATUS_UNAVAILABLE", "")
 
-        when(mockDesConnector.getResidencyStatus(any(), any(), any()))
+        when(mockDesConnector.getResidencyStatus(any(), any(), any())(using any[HeaderCarrier]))
           .thenReturn(Future.successful(Right(residencyStatusFailure)))
 
         val result = TestLookupController.getResidencyStatus
@@ -694,7 +694,7 @@ class LookupControllerSpec
 
         val residencyStatusFailure = ResidencyStatusFailure("TOO_MANY_REQUESTS", "")
 
-        when(mockDesConnector.getResidencyStatus(any(), any(), any()))
+        when(mockDesConnector.getResidencyStatus(any(), any(), any())(using any[HeaderCarrier]))
           .thenReturn(Future.successful(Right(residencyStatusFailure)))
 
         val result = TestLookupController.getResidencyStatus
@@ -723,7 +723,7 @@ class LookupControllerSpec
 
         val residencyStatusFailure = ResidencyStatusFailure("INTERNAL_SERVER_ERROR", "")
 
-        when(mockDesConnector.getResidencyStatus(any(), any(), any()))
+        when(mockDesConnector.getResidencyStatus(any(), any(), any())(using any[HeaderCarrier]))
           .thenReturn(Future.successful(Right(residencyStatusFailure)))
 
         val result = TestLookupController.getResidencyStatus
@@ -751,7 +751,7 @@ class LookupControllerSpec
 
         val residencyStatusFailure = ResidencyStatusFailure("SERVICE_UNAVAILABLE", "")
 
-        when(mockDesConnector.getResidencyStatus(any(), any(), any()))
+        when(mockDesConnector.getResidencyStatus(any(), any(), any())(using any[HeaderCarrier]))
           .thenReturn(Future.successful(Right(residencyStatusFailure)))
 
         val result = TestLookupController.getResidencyStatus
