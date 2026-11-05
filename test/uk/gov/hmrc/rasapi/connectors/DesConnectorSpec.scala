@@ -33,6 +33,7 @@ import uk.gov.hmrc.play.bootstrap.http.HttpClientV2Provider
 import uk.gov.hmrc.rasapi.config.AppContext
 import uk.gov.hmrc.rasapi.models.*
 import uk.gov.hmrc.rasapi.services.AuditService
+import uk.gov.hmrc.play.bootstrap.tools.LogCapturing
 
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
@@ -40,7 +41,12 @@ import scala.concurrent.{ExecutionContext, Future}
 import scala.jdk.CollectionConverters.*
 
 class DesConnectorSpec
-    extends AnyWordSpecLike with Matchers with GuiceOneAppPerSuite with BeforeAndAfter with MockitoSugar {
+    extends AnyWordSpecLike
+    with Matchers
+    with GuiceOneAppPerSuite
+    with BeforeAndAfter
+    with MockitoSugar
+    with LogCapturing {
 
   given hc: HeaderCarrier = HeaderCarrier()
 
@@ -75,6 +81,8 @@ class DesConnectorSpec
     override lazy val isBulkRetryEnabled: Boolean    = false
 
     override def generateNewUUID: String = uuid
+
+    def loggerForTest: play.api.Logger = logger
   }
 
   val formatter: DateTimeFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd")
@@ -531,6 +539,28 @@ class DesConnectorSpec
         }
 
       capturedHeaders should contain("CorrelationId" -> s"$requestId-${uuid.substring(24)}")
+    }
+  }
+
+  "DESConnector logging" should {
+    "include the derived correlation id in the error log when a DES call fails" in {
+      val requestId                        = "abcd6789-dh12-fg34-ij56"
+      val expectedCorrId                   = s"$requestId-${uuid.substring(24)}"
+      given hcWithRequestId: HeaderCarrier = HeaderCarrier(requestId = Some(RequestId(requestId)))
+
+      val individualDetails = IndividualDetails("AB123456C", "JOHN", "Lewis", LocalDate.parse("1990-02-21", formatter))
+
+      when(mockRequestBuilder.execute(any[HttpReads[HttpResponse]], any()))
+        .thenReturn(Future.failed(UpstreamErrorResponse("forbidden", 403, 403)))
+
+      withCaptureOfLoggingFrom(TestDesConnector.loggerForTest) { logs =>
+        await(TestDesConnector.getResidencyStatus(individualDetails, userId)(using hcWithRequestId))
+
+        logs.map(_.getMessage).exists(_.contains(s"correlationId ($expectedCorrId)")) shouldBe true
+        logs
+          .map(_.getMessage)
+          .head                                                                       shouldBe s"[DesConnector][getResidencyStatus] Cannot provide a residency status for this pension scheme member for userId ($userId) correlationId ($expectedCorrId)."
+      }
     }
   }
 
