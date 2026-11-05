@@ -200,7 +200,7 @@ trait IntegrationPlatformConnector @Inject() (
 
     Try(httpResponse.json.as[ResidencyStatusSuccess](ResidencyStatusFormats.successFormats)) match {
       case Success(payload) =>
-        payload.deseasedIndicator match {
+        payload.deceasedIndicator match {
           case Some(true) =>
             Right(
               ResidencyStatusFailure(
@@ -314,14 +314,15 @@ class HipConnector @Inject() (
   lazy val baseUrl: String                = appContext.servicesConfig.baseUrl("hip")
   lazy val integrationPlatformUri: String = s"$baseUrl/paye/person/regional-residency-status)"
 
-  private lazy val clientId: String     = appContext.servicesConfig.getString("microservice.services.hip.clientId")
-  private lazy val clientSecret: String = appContext.servicesConfig.getString("microservice.services.hip.clientSecret")
-  private lazy val authSecret: String   = Base64.getEncoder.encodeToString(s"$clientId:$clientSecret".getBytes("UTF-8"))
+  private lazy val clientId: String      = appContext.servicesConfig.getString("microservice.services.hip.clientId")
+  private lazy val clientSecret: String  = appContext.servicesConfig.getString("microservice.services.hip.clientSecret")
+  private lazy val authSecret: String    = Base64.getEncoder.encodeToString(s"$clientId:$clientSecret".getBytes("UTF-8"))
+  private lazy val hipOriginator: String = appContext.servicesConfig.getString("microservice.services.hip.originatorId")
 
   private lazy val hipHeaders = Seq(
     "Authorization"         -> s"Basic $authSecret",
-    "CorrelationId"         -> generateNewUUID,
-    "OriginatorId"          -> "DA_RAS",
+    "correlationId"         -> generateNewUUID,
+    "gov-uk-originator-id"  -> hipOriginator,
     "X-Receipt-Date"        -> DateTimeFormatter.ISO_INSTANT.format(Instant.now().truncatedTo(ChronoUnit.SECONDS)),
     "X-Transmitting-System" -> "HIP"
   )
