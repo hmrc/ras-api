@@ -314,9 +314,9 @@ class HipConnector @Inject() (
   lazy val baseUrl: String                = appContext.servicesConfig.baseUrl("hip")
   lazy val integrationPlatformUri: String = s"$baseUrl/paye/person/regional-residency-status)"
 
-  private lazy val clientId: String      = appContext.servicesConfig.getString("microservice.services.hip.clientId")
+  private lazy val clientID: String      = appContext.servicesConfig.getString("microservice.services.hip.clientID")
   private lazy val clientSecret: String  = appContext.servicesConfig.getString("microservice.services.hip.clientSecret")
-  private lazy val authSecret: String    = Base64.getEncoder.encodeToString(s"$clientId:$clientSecret".getBytes("UTF-8"))
+  private lazy val authSecret: String    = Base64.getEncoder.encodeToString(s"$clientID:$clientSecret".getBytes("UTF-8"))
   private lazy val hipOriginator: String = appContext.servicesConfig.getString("microservice.services.hip.originatorId")
 
   private lazy val hipHeaders = Seq(
