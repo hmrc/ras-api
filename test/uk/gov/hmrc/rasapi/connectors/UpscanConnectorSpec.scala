@@ -16,82 +16,91 @@
 
 package uk.gov.hmrc.rasapi.connectors
 
-import org.apache.pekko.stream.scaladsl.Source
-import org.apache.pekko.util.ByteString
-import org.mockito.ArgumentMatchers.*
-import org.mockito.Mockito.*
-import org.mockito.invocation.InvocationOnMock
-import org.mockito.stubbing.Answer
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpecLike
-import org.scalatestplus.mockito.MockitoSugar
+
 import org.scalatestplus.play.guice.GuiceOneAppPerSuite
-import play.api.libs.ws.WSResponse
+
 import play.api.test.Helpers.{await, defaultAwaitTimeout}
-import uk.gov.hmrc.http.{HeaderCarrier, RequestTimeoutException}
-import uk.gov.hmrc.rasapi.config.{AppContext, WSHttp}
-import uk.gov.hmrc.rasapi.models.FileMetadata
 
 import java.io.{BufferedReader, InputStreamReader}
-import scala.concurrent.ExecutionContext.Implicits.global
-import scala.concurrent.{ExecutionContext, Future}
-import scala.language.postfixOps
 
-class UpscanConnectorSpec extends AnyWordSpecLike with Matchers with GuiceOneAppPerSuite with MockitoSugar {
+import uk.gov.hmrc.rasapi.utils.WireMockHelper
+import com.github.tomakehurst.wiremock.client.WireMock.{aResponse, get, getRequestedFor, urlEqualTo}
+import com.github.tomakehurst.wiremock.http.Fault
 
-  given hc: HeaderCarrier = HeaderCarrier()
+class UpscanConnectorSpec extends AnyWordSpecLike with Matchers with GuiceOneAppPerSuite with WireMockHelper {
 
-  val mockWsHttp: WSHttp         = mock[WSHttp]
-  val appContext: AppContext     = app.injector.instanceOf[AppContext]
-  val wsResponseMock: WSResponse = mock[WSResponse]
+  lazy val connector: UpscanConnector = app.injector.instanceOf[UpscanConnector]
 
-  val bodyAsSource: Source[ByteString, _] = Source(Seq(ByteString("Test"), ByteString("\r\n"), ByteString("Passed")))
-  val headers                             = Map("CONTENT_TYPE" -> Seq("application/octet-stream"))
+  val reference: String = "0b215e97-11d4-4006-91db-c067e74fc653"
 
-  private def createMockResponse(bodyAsSource: Source[ByteString, _], headers: Map[String, Seq[String]]): WSResponse = {
-    when(wsResponseMock.status).thenReturn(200)
-    when(wsResponseMock.bodyAsSource).thenAnswer(
-      new Answer[Source[ByteString, _]] {
-        override def answer(invocation: InvocationOnMock): Source[ByteString, _] = bodyAsSource
-      }
-    )
-    when(wsResponseMock.headers).thenReturn(headers)
-    wsResponseMock
-  }
-
-  object TestConnector extends UpscanConnector(mockWsHttp, appContext)
-
-  val reference: String          = "0b215e97-11d4-4006-91db-c067e74fc653"
-  val fileId: String             = "file-id-1"
-  val userId: String             = "A1234567"
-  val originalFileName: String   = "origFileName"
-  val dateCreated: String        = "2018-01-01T00:00:00Z"
-  val fileMetadata: FileMetadata = FileMetadata(fileId, Some(originalFileName), Some(dateCreated))
+  val userId: String = "A1234567"
 
   "getUpscanFile" should {
 
-    val wsResponse: WSResponse = createMockResponse(bodyAsSource, headers)
+    "return a streamed response from Upscan service" in {
 
-    "return an StreamedResponse from Upscan service" in {
-      when(mockWsHttp.buildRequestWithStream(any())).thenReturn(Future.successful(wsResponse))
+      server.stubFor(
+        get(urlEqualTo("/download"))
+          .willReturn(
+            aResponse()
+              .withStatus(200)
+              .withHeader("Content-Type", "application/octet-stream")
+              .withBody("Test\r\nPassed")
+          )
+      )
 
-      val result = await(TestConnector.getUpscanFile(reference, fileId, userId))
-      val reader = new BufferedReader(new InputStreamReader(result.get))
+      val downloadUrl =
+        s"http://localhost:${server.port()}/download"
 
-      (Iterator continually reader.readLine takeWhile (_ != null) toList) should contain theSameElementsAs List(
-        "Test",
-        "Passed"
+      val result =
+        await(connector.getUpscanFile(downloadUrl, reference, userId))
+
+      val reader =
+        new BufferedReader(new InputStreamReader(result.get))
+
+      try {
+        val lines = Iterator
+          .continually(reader.readLine())
+          .takeWhile(_ != null)
+          .toList
+
+        lines shouldBe List("Test", "Passed")
+      } finally reader.close()
+
+      server.verify(
+        1,
+        getRequestedFor(urlEqualTo("/download"))
       )
     }
-    "return a RuntimeException when Upscan throws error" in {
-      when(mockWsHttp.buildRequestWithStream(any())).thenReturn(Future.failed(new RequestTimeoutException("")))
+
+    "return a RuntimeException when Upscan connection fails" in {
+
+      server.stubFor(
+        get(urlEqualTo("/download"))
+          .willReturn(
+            aResponse()
+              .withFault(Fault.CONNECTION_RESET_BY_PEER)
+          )
+      )
+
+      val downloadUrl =
+        s"http://localhost:${server.port()}/download"
 
       val exception = intercept[RuntimeException] {
-        await(TestConnector.getUpscanFile(reference, fileId, userId))
+        await(connector.getUpscanFile(downloadUrl, reference, userId))
       }
 
-      exception.getMessage.contains("Error Streaming file from Upscan service") shouldBe true
+      exception.getMessage shouldBe
+        "Error Streaming file from Upscan service"
+
+      server.verify(
+        1,
+        getRequestedFor(urlEqualTo("/download"))
+      )
     }
+
   }
 
 }
