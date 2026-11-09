@@ -25,7 +25,7 @@ import org.scalatestplus.mockito.MockitoSugar
 import org.scalatestplus.play.guice.GuiceOneAppPerSuite
 import play.api.Application
 import play.api.inject.guice.GuiceApplicationBuilder
-import play.api.libs.functional.syntax.{unlift, *}
+import play.api.libs.functional.syntax.*
 import play.api.libs.json.{JsPath, Json, Writes}
 import play.api.mvc.{BodyParsers, ControllerComponents}
 import play.api.test.Helpers.*
@@ -34,7 +34,7 @@ import play.mvc.Http.HeaderNames
 import uk.gov.hmrc.auth.core.*
 import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.rasapi.config.AppContext
-import uk.gov.hmrc.rasapi.connectors.DesConnector
+import uk.gov.hmrc.rasapi.connectors.IntegrationPlatformConnector
 import uk.gov.hmrc.rasapi.controllers.lookupController.LookupController
 import uk.gov.hmrc.rasapi.helpers.ResidencyYearResolver
 import uk.gov.hmrc.rasapi.metrics.Metrics
@@ -58,7 +58,7 @@ class LookupControllerSpec
   val acceptHeader: (String, String)   = (HeaderNames.ACCEPT, "application/vnd.hmrc.2.0+json")
   val acceptHeaderV1: (String, String) = (HeaderNames.ACCEPT, "application/vnd.hmrc.1.0+json")
 
-  val mockDesConnector: DesConnector                   = mock[DesConnector]
+  val mockDesConnector: IntegrationPlatformConnector   = mock[IntegrationPlatformConnector]
   val mockAuditService: AuditService                   = mock[AuditService]
   val mockAuthConnector: AuthConnector                 = mock[AuthConnector]
   val mockResidencyYearResolver: ResidencyYearResolver = mock[ResidencyYearResolver]

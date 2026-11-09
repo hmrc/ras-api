@@ -29,7 +29,7 @@ import javax.inject.Inject
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.{Failure, Success, Try}
 
-class DesConnector @Inject() (
+class IntegrationPlatformConnector @Inject() (
   httpPost: HttpClientV2Provider,
   val auditService: AuditService,
   val appContext: AppContext

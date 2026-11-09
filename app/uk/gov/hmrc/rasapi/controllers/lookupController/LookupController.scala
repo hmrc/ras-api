@@ -26,7 +26,7 @@ import uk.gov.hmrc.auth.core.retrieve.v2.Retrievals.*
 import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
 import uk.gov.hmrc.rasapi.config.AppContext
-import uk.gov.hmrc.rasapi.connectors.DesConnector
+import uk.gov.hmrc.rasapi.connectors.IntegrationPlatformConnector
 import uk.gov.hmrc.rasapi.controllers.*
 import uk.gov.hmrc.rasapi.controllers.{errorResponseWithErrorsWrites, errorResponseWrites}
 import uk.gov.hmrc.rasapi.helpers.ResidencyYearResolver
@@ -41,7 +41,7 @@ import scala.concurrent.{ExecutionContext, Future}
 import scala.util.{Failure, Success, Try}
 
 class LookupController @Inject() (
-  val desConnector: DesConnector,
+  val desConnector: IntegrationPlatformConnector,
   val metrics: Metrics,
   val auditService: AuditService,
   val authConnector: AuthConnector,

@@ -21,7 +21,7 @@ import play.api.libs.json.{JsError, JsSuccess, Json}
 import play.api.mvc.{AnyContent, Request}
 import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.play.audit.http.connector.AuditResult
-import uk.gov.hmrc.rasapi.connectors.DesConnector
+import uk.gov.hmrc.rasapi.connectors.IntegrationPlatformConnector
 import uk.gov.hmrc.rasapi.helpers.ResidencyYearResolver
 import uk.gov.hmrc.rasapi.models.*
 
@@ -33,7 +33,7 @@ import scala.util.{Failure, Success, Try}
 trait ResultsGenerator extends Logging {
   private val comma = ","
 
-  val desConnector: DesConnector
+  val desConnector: IntegrationPlatformConnector
   val residencyYearResolver: ResidencyYearResolver
   val auditService: AuditService
 

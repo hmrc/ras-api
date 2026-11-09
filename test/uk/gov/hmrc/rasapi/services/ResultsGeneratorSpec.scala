@@ -19,7 +19,7 @@ package uk.gov.hmrc.rasapi.services
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpecLike
 import org.scalatestplus.mockito.MockitoSugar
-import uk.gov.hmrc.rasapi.connectors.DesConnector
+import uk.gov.hmrc.rasapi.connectors.IntegrationPlatformConnector
 import uk.gov.hmrc.rasapi.helpers.ResidencyYearResolver
 import uk.gov.hmrc.rasapi.models.{IndividualDetails, RawMemberDetails}
 
@@ -28,7 +28,7 @@ import java.time.LocalDate
 class ResultsGeneratorSpec extends AnyWordSpecLike with Matchers with MockitoSugar {
 
   class FailingParseResultsGenerator extends ResultsGenerator {
-    val desConnector: DesConnector                    = mock[DesConnector]
+    val desConnector: IntegrationPlatformConnector    = mock[IntegrationPlatformConnector]
     val residencyYearResolver: ResidencyYearResolver  = mock[ResidencyYearResolver]
     val auditService: AuditService                    = mock[AuditService]
     def getCurrentDate: LocalDate                     = LocalDate.now()

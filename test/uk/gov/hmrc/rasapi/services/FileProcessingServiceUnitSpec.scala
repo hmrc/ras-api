@@ -32,7 +32,7 @@ import play.api.test.FakeRequest
 import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.mongo.cache.CacheItem
 import uk.gov.hmrc.rasapi.config.AppContext
-import uk.gov.hmrc.rasapi.connectors.{DesConnector, UpscanConnector}
+import uk.gov.hmrc.rasapi.connectors.{IntegrationPlatformConnector, UpscanConnector}
 import uk.gov.hmrc.rasapi.helpers.ResidencyYearResolver
 import uk.gov.hmrc.rasapi.metrics.Metrics
 import uk.gov.hmrc.rasapi.models.*
@@ -62,7 +62,7 @@ class FileProcessingServiceUnitSpec
 
   def buildService(
     upscan: UpscanConnector = mock[UpscanConnector],
-    des: DesConnector = mock[DesConnector],
+    des: IntegrationPlatformConnector = mock[IntegrationPlatformConnector],
     resolver: ResidencyYearResolver = mock[ResidencyYearResolver],
     audit: AuditService = mock[AuditService],
     sessionCache: RasFilesSessionService = mock[RasFilesSessionService],

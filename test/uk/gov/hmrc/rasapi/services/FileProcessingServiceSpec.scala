@@ -36,7 +36,7 @@ import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.mongo.cache.CacheItem
 import uk.gov.hmrc.mongo.test.DefaultPlayMongoRepositorySupport
 import uk.gov.hmrc.rasapi.config.AppContext
-import uk.gov.hmrc.rasapi.connectors.{DesConnector, UpscanConnector}
+import uk.gov.hmrc.rasapi.connectors.{IntegrationPlatformConnector, UpscanConnector}
 import uk.gov.hmrc.rasapi.helpers.ResidencyYearResolver
 import uk.gov.hmrc.rasapi.metrics.Metrics
 import uk.gov.hmrc.rasapi.models.*
@@ -74,7 +74,7 @@ class FileProcessingServiceSpec
 
   val mockUpscanConnector: UpscanConnector = mock[UpscanConnector]
 
-  val mockDesConnector: DesConnector                   = mock[DesConnector]
+  val mockDesConnector: IntegrationPlatformConnector   = mock[IntegrationPlatformConnector]
   val mockSessionCache: RasFilesSessionService         = mock[RasFilesSessionService]
   val mockResidencyYearResolver: ResidencyYearResolver = mock[ResidencyYearResolver]
   val mockAuditService: AuditService                   = mock[AuditService]

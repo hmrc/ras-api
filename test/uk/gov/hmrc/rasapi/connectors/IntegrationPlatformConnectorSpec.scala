@@ -43,7 +43,7 @@ import play.api.inject.guice.GuiceApplicationBuilder
 import org.scalatest.concurrent.Eventually
 import org.scalatest.time.{Millis, Seconds, Span}
 
-class DesConnectorSpec
+class IntegrationPlatformConnectorSpec
     extends AnyWordSpecLike
     with Matchers
     with GuiceOneAppPerSuite
@@ -72,15 +72,15 @@ class DesConnectorSpec
 
   val uuid = "123e4567-e89b-42d3-a456-556642440000"
 
-  lazy val wireMockDesConnector: DesConnector =
+  lazy val wireMockDesConnector: IntegrationPlatformConnector =
     createDesConnector()
 
   def createDesConnector(
     allowNoNextYearStatusEnabled: Boolean = true,
     retryEnabled: Boolean = true,
     bulkRetryEnabled: Boolean = false
-  ): DesConnector =
-    new DesConnector(realHttp, mockAuditService, appContext)(using ExecutionContext.global) {
+  ): IntegrationPlatformConnector =
+    new IntegrationPlatformConnector(realHttp, mockAuditService, appContext)(using ExecutionContext.global) {
 
       override lazy val desBaseUrl: String =
         s"http://localhost:${server.port()}"
