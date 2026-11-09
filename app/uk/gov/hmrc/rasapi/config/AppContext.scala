@@ -31,6 +31,7 @@ class AppContext @Inject() (val servicesConfig: ServicesConfig) {
   lazy val allowDefaultRUK: Boolean                   = servicesConfig.getBoolean("toggle-feature.allow-default-ruk")
   lazy val retryEnabled: Boolean                      = servicesConfig.getBoolean("toggle-feature.retry-enabled")
   lazy val bulkRetryEnabled: Boolean                  = servicesConfig.getBoolean("toggle-feature.bulk-retry-enabled")
+  lazy val isHip5161Enabled: Boolean                  = servicesConfig.getBoolean("toggle-feature.hip.api-5161")
   lazy val requestRetryLimit: Int                     = servicesConfig.getInt("request-retry-limit")
   lazy val retryDelay: Int                            = servicesConfig.getInt("retry-delay")
   lazy val deceasedStatus: String                     = servicesConfig.getString("status.deceased")

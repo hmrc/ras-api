@@ -20,10 +20,10 @@ import play.api.Logging
 import play.api.mvc.{AnyContent, Request}
 import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.rasapi.config.AppContext
-import uk.gov.hmrc.rasapi.connectors.{IntegrationPlatformConnector, UpscanConnector}
+import uk.gov.hmrc.rasapi.connectors.{IntegrationPlatformRouter, UpscanConnector}
 import uk.gov.hmrc.rasapi.helpers.ResidencyYearResolver
 import uk.gov.hmrc.rasapi.metrics.Metrics
-import uk.gov.hmrc.rasapi.models.{ApiVersion, ResultsFileMetaData, UpscanCallbackData}
+import uk.gov.hmrc.rasapi.models.{ResultsFileMetaData, UpscanCallbackData}
 import uk.gov.hmrc.rasapi.repository.RasFilesRepository
 
 import java.nio.file.Path
@@ -34,7 +34,7 @@ import scala.util.{Failure, Success, Try}
 
 class FileProcessingService @Inject() (
   val fileUploadConnector: UpscanConnector,
-  val desConnector: IntegrationPlatformConnector,
+  val integrationPlatformRouter: IntegrationPlatformRouter,
   val residencyYearResolver: ResidencyYearResolver,
   val auditService: AuditService,
   val sessionCacheService: RasFilesSessionService,
