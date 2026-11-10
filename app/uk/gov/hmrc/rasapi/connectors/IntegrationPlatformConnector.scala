@@ -312,7 +312,7 @@ class HipConnector @Inject() (
     extends IntegrationPlatformConnector(httpPost, auditService, appContext) {
 
   lazy val baseUrl: String                = appContext.servicesConfig.baseUrl("hip")
-  lazy val integrationPlatformUri: String = s"$baseUrl/paye/person/regional-residency-status)"
+  lazy val integrationPlatformUri: String = s"$baseUrl/paye/person/regional-residency-status"
 
   private lazy val clientID: String      = appContext.servicesConfig.getString("microservice.services.hip.clientID")
   private lazy val clientSecret: String  = appContext.servicesConfig.getString("microservice.services.hip.clientSecret")
@@ -321,6 +321,7 @@ class HipConnector @Inject() (
 
   private lazy val hipHeaders = Seq(
     "Authorization"         -> s"Basic $authSecret",
+    "Content-Type"          -> "application/json",
     "correlationId"         -> generateNewUUID,
     "gov-uk-originator-id"  -> hipOriginator,
     "X-Receipt-Date"        -> DateTimeFormatter.ISO_INSTANT.format(Instant.now().truncatedTo(ChronoUnit.SECONDS)),

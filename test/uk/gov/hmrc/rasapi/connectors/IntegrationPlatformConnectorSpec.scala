@@ -16,21 +16,20 @@
 
 package uk.gov.hmrc.rasapi.connectors
 
-import com.github.tomakehurst.wiremock.client.WireMock.{
-  aResponse, containing, equalTo, equalToJson, post, postRequestedFor, urlEqualTo
-}
-
-import org.mockito.ArgumentMatchers.{any => mAny}
-import org.mockito.Mockito.{reset, times, verify, when}
-import org.scalatest.BeforeAndAfter
+import com.github.tomakehurst.wiremock.client.WireMock.*
+import com.github.tomakehurst.wiremock.http.Fault
+import com.github.tomakehurst.wiremock.stubbing.Scenario.STARTED
+import org.scalatest.concurrent.Eventually
 import org.scalatest.matchers.should.Matchers
+import org.scalatest.time.{Millis, Seconds, Span}
 import org.scalatest.wordspec.AnyWordSpecLike
 import org.scalatestplus.mockito.MockitoSugar
 import org.scalatestplus.play.guice.GuiceOneAppPerSuite
-import play.api.libs.json.{JsObject, JsValue, Json, OFormat}
+import play.api.Application
+import play.api.inject.guice.GuiceApplicationBuilder
+import play.api.libs.json.{JsValue, Json, OFormat}
 import play.api.test.Helpers.{await, defaultAwaitTimeout}
 import uk.gov.hmrc.http.*
-import uk.gov.hmrc.http.client.{HttpClientV2, RequestBuilder}
 import uk.gov.hmrc.play.bootstrap.config.ServicesConfig
 import uk.gov.hmrc.play.bootstrap.http.HttpClientV2Provider
 import uk.gov.hmrc.rasapi.config.AppContext
@@ -40,12 +39,7 @@ import uk.gov.hmrc.rasapi.utils.WireMockHelper
 
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
-import scala.concurrent.{ExecutionContext, Future}
-import com.github.tomakehurst.wiremock.http.Fault
-import play.api.Application
-import play.api.inject.guice.GuiceApplicationBuilder
-import org.scalatest.concurrent.Eventually
-import org.scalatest.time.{Millis, Seconds, Span}
+import scala.concurrent.ExecutionContext
 
 trait IntegrationPlatformConnectorSpec
     extends AnyWordSpecLike
@@ -53,16 +47,22 @@ trait IntegrationPlatformConnectorSpec
     with GuiceOneAppPerSuite
     with MockitoSugar
     with WireMockHelper
-    with BeforeAndAfter
     with Eventually {
+
+  override def fakeApplication(): Application =
+    new GuiceApplicationBuilder()
+      .configure(
+        "play.ws.timeout.request" -> "1s",
+        "play.ws.timeout.idle"    -> "1s"
+      )
+      .build()
 
   def isHip5161Enabled: Boolean
 
+  def integrationPlatformPath: String
+
   given hc: HeaderCarrier = HeaderCarrier()
 
-  val mockHttp: HttpClientV2Provider            = mock[HttpClientV2Provider]
-  val mockHttpClient: HttpClientV2              = mock[HttpClientV2]
-  val mockRequestBuilder: RequestBuilder        = mock[RequestBuilder]
   val mockAuditService: AuditService            = mock[AuditService]
   given format: OFormat[ResidencyStatusSuccess] = ResidencyStatusFormats.successFormats
 
@@ -72,15 +72,6 @@ trait IntegrationPlatformConnectorSpec
   lazy val integrationPlatform: String = if (isHip5161Enabled) "HIP" else "DES"
 
   lazy val realHttp: HttpClientV2Provider = app.injector.instanceOf[HttpClientV2Provider]
-
-  before {
-    reset(mockHttp)
-    reset(mockHttpClient)
-    when(mockHttp.get()).thenReturn(mockHttpClient)
-    when(mockHttpClient.post(mAny())(mAny())).thenReturn(mockRequestBuilder)
-    when(mockRequestBuilder.setHeader(mAny())).thenReturn(mockRequestBuilder)
-    when(mockRequestBuilder.withBody(mAny[JsObject])(mAny(), mAny(), mAny())).thenReturn(mockRequestBuilder)
-  }
 
   val uuid = "123e4567-e89b-42d3-a456-556642440000"
 
@@ -166,16 +157,13 @@ trait IntegrationPlatformConnectorSpec
 
       val individualDetails = IndividualDetails("AB123456C", "JOHN", "SMITH", LocalDate.parse("1990-02-21", formatter))
 
-      val expectedResponse: Future[HttpResponse] =
-        Future.successful(HttpResponse(200, Json.toJson(successResponse).toString()))
-
-      when(mockRequestBuilder.execute(mAny[HttpReads[HttpResponse]], mAny())).thenReturn(expectedResponse)
+      stubIntegrationPlatformResponse(200, Json.toJson(successResponse).toString())
 
       val result = await(integrationPlatformConnector.getResidencyStatus(individualDetails, userId))
       result.isLeft                       shouldBe true
       result.left.getOrElse("Get Failed") shouldBe ResidencyStatus("otherUKResident", Some("scotResident"))
 
-      verify(mockHttpClient, times(1)).post(mAny())(mAny())
+      verifyIntegrationPlatformPost(individualDetails)
     }
 
     "When the requested API version is V2.0" should {
@@ -194,15 +182,12 @@ trait IntegrationPlatformConnectorSpec
         val individualDetails =
           IndividualDetails("AB123456C", "JACK", "OSCAR", LocalDate.parse("1962-07-07", formatter))
 
-        val expectedResponse: Future[HttpResponse] =
-          Future.successful(HttpResponse(200, Json.toJson(successResponse).toString()))
-
-        when(mockRequestBuilder.execute(mAny[HttpReads[HttpResponse]], mAny())).thenReturn(expectedResponse)
+        stubIntegrationPlatformResponse(200, Json.toJson(successResponse).toString())
 
         val result = await(integrationPlatformConnector.getResidencyStatus(individualDetails, userId))
         result shouldBe Left(ResidencyStatus("welshResident", Some("welshResident")))
 
-        verify(mockHttpClient, times(1)).post(mAny())(mAny())
+        verifyIntegrationPlatformPost(individualDetails)
       }
 
       "handle successful response when 200 is returned from integrationPlatformRouter where CY and CYPlusOne is present for a Scottish resident moving in Wales" in {
@@ -219,15 +204,12 @@ trait IntegrationPlatformConnectorSpec
         val individualDetails =
           IndividualDetails("SG123480", "HELEN", "SMITH", LocalDate.parse("1975-02-18", formatter))
 
-        val expectedResponse: Future[HttpResponse] =
-          Future.successful(HttpResponse(200, Json.toJson(successResponse).toString()))
-
-        when(mockRequestBuilder.execute(mAny[HttpReads[HttpResponse]], mAny())).thenReturn(expectedResponse)
+        stubIntegrationPlatformResponse(200, Json.toJson(successResponse).toString())
 
         val result = await(integrationPlatformConnector.getResidencyStatus(individualDetails, userId))
         result shouldBe Left(ResidencyStatus("welshResident", Some("scotResident")))
 
-        verify(mockHttpClient, times(1)).post(mAny())(mAny())
+        verifyIntegrationPlatformPost(individualDetails)
       }
 
     }
@@ -245,16 +227,13 @@ trait IntegrationPlatformConnectorSpec
 
       val individualDetails = IndividualDetails("AB123456C", "JOHN", "SMITH", LocalDate.parse("1990-02-21", formatter))
 
-      val expectedResponse: Future[HttpResponse] =
-        Future.successful(HttpResponse(200, Json.toJson(successResponse).toString()))
-
-      when(mockRequestBuilder.execute(mAny[HttpReads[HttpResponse]], mAny())).thenReturn(expectedResponse)
+      stubIntegrationPlatformResponse(200, Json.toJson(successResponse).toString())
 
       val result = await(integrationPlatformConnector.getResidencyStatus(individualDetails, userId))
       result.isLeft                       shouldBe true
       result.left.getOrElse("Get Failed") shouldBe ResidencyStatus("otherUKResident", None)
 
-      verify(mockHttpClient, times(1)).post(mAny())(mAny())
+      verifyIntegrationPlatformPost(individualDetails)
     }
 
     "handle unsuccessful response for bulk request when 429 is returned from integrationPlatformRouter the first time around and CY and " +
@@ -275,13 +254,32 @@ trait IntegrationPlatformConnectorSpec
         val individualDetails =
           IndividualDetails("AB123456C", "JOHN", "SMITH", LocalDate.parse("1990-02-21", formatter))
 
-        val expectedSuccessResponse: Future[HttpResponse] =
-          Future.successful(HttpResponse(200, Json.toJson(successResponse).toString()))
-        val expectedErrorResponse: Future[HttpResponse]   =
-          Future.successful(HttpResponse(429, Json.toJson(errorResponse).toString()))
+        val scenarioName = "bulk-retry-429-then-success"
 
-        when(mockRequestBuilder.execute(mAny[HttpReads[HttpResponse]], mAny()))
-          .thenReturn(expectedErrorResponse, expectedSuccessResponse)
+        server.stubFor(
+          post(urlEqualTo(integrationPlatformPath))
+            .inScenario(scenarioName)
+            .whenScenarioStateIs(STARTED)
+            .willReturn(
+              aResponse()
+                .withStatus(429)
+                .withHeader("Content-Type", "application/json")
+                .withBody(Json.toJson(errorResponse).toString())
+            )
+            .willSetStateTo("Second Request")
+        )
+
+        server.stubFor(
+          post(urlEqualTo(integrationPlatformPath))
+            .inScenario(scenarioName)
+            .whenScenarioStateIs("Second Request")
+            .willReturn(
+              aResponse()
+                .withStatus(200)
+                .withHeader("Content-Type", "application/json")
+                .withBody(Json.toJson(successResponse).toString())
+            )
+        )
 
         val result =
           await(integrationPlatformConnector.getResidencyStatus(individualDetails, userId, isBulkRequest = true))
@@ -289,7 +287,7 @@ trait IntegrationPlatformConnectorSpec
         result.isRight                      shouldBe false
         result.left.getOrElse("Get Failed") shouldBe ResidencyStatus("otherUKResident", Some("scotResident"))
 
-        verify(mockHttpClient, times(2)).post(mAny())(mAny())
+        verifyIntegrationPlatformPost(individualDetails, expectedCount = 2)
       }
 
     "handle unsuccessful response for bulk request when 429 is returned from integrationPlatformRouter the first time around and CY and " +
@@ -299,28 +297,27 @@ trait IntegrationPlatformConnectorSpec
 
         val errorResponse = ResidencyStatusFailure("TOO_MANY_REQUESTS", "Too Many Requests.")
 
-        val individualDetails                           =
+        val individualDetails =
           IndividualDetails("AB123456C", "JOHN", "SMITH", LocalDate.parse("1990-02-21", formatter))
-        val expectedErrorResponse: Future[HttpResponse] =
-          Future.successful(HttpResponse(429, Json.toJson(errorResponse).toString()))
-
-        when(mockRequestBuilder.execute(mAny[HttpReads[HttpResponse]], mAny())).thenReturn(expectedErrorResponse)
+        stubIntegrationPlatformResponse(429, Json.toJson(errorResponse).toString())
 
         val connector = createIntegrationPlatformConnector(retryEnabled = false)
-        val result    =
-          await(connector.getResidencyStatus(individualDetails, userId))
+
+        val result = await(connector.getResidencyStatus(individualDetails, userId, isBulkRequest = true))
         result.isLeft                  shouldBe false
         result.getOrElse("Get Failed") shouldBe errorResponse
 
-        verify(mockHttpClient, times(1)).post(mAny())(mAny())
+        verifyIntegrationPlatformPost(individualDetails)
       }
 
     "handle successful response when 200 is returned from integrationPlatformRouter and only CY is present and no next year status toggle is turned off" in {
 
+      given formatF: OFormat[ResidencyStatusFailure] = ResidencyStatusFormats.failureFormats
+
       val errorResponse =
         ResidencyStatusFailure(integrationPlatformConnector.error_InternalServerError, "Internal server error.")
 
-      val successResponse   = makeSuccessResponse(
+      val successResponse = makeSuccessResponse(
         nino = "AB123456C",
         deathDate = Some(""),
         deathDateStatus = Some(""),
@@ -328,16 +325,16 @@ trait IntegrationPlatformConnectorSpec
         currentYearResidencyStatus = "Uk",
         nextYearResidencyStatus = None
       )
+
       val individualDetails = IndividualDetails("AB123456C", "JOHN", "SMITH", LocalDate.parse("1990-02-21", formatter))
 
-      when(mockRequestBuilder.execute(mAny[HttpReads[HttpResponse]], mAny()))
-        .thenReturn(Future.successful(HttpResponse(200, Json.toJson(successResponse).toString())))
+      stubIntegrationPlatformResponse(200, Json.toJson(successResponse).toString())
 
       val connector = createIntegrationPlatformConnector(allowNoNextYearStatusEnabled = false)
       val result    = await(connector.getResidencyStatus(individualDetails, userId))
       result.isLeft                  shouldBe false
       result.getOrElse("Get Failed") shouldBe errorResponse
-      verify(mockHttpClient, times(1)).post(mAny())(mAny())
+      verifyIntegrationPlatformPost(individualDetails)
     }
 
     "handle failure response (no match) from integrationPlatformRouter" in {
@@ -349,14 +346,13 @@ trait IntegrationPlatformConnectorSpec
 
       val individualDetails = IndividualDetails("AB123456C", "JOHN", "Lewis", LocalDate.parse("1990-02-21", formatter))
 
-      when(mockRequestBuilder.execute(mAny[HttpReads[HttpResponse]], mAny()))
-        .thenReturn(Future.successful(HttpResponse(404, Json.toJson(errorResponse).toString())))
+      stubIntegrationPlatformResponse(404, Json.toJson(errorResponse).toString())
       val result = await(integrationPlatformConnector.getResidencyStatus(individualDetails, userId))
 
       result.isLeft                  shouldBe false
       result.getOrElse("Get Failed") shouldBe errorResponse
 
-      verify(mockHttpClient, times(1)).post(mAny())(mAny())
+      verifyIntegrationPlatformPost(individualDetails)
     }
     "handle forbidden response from integrationPlatformRouter" in {
 
@@ -368,13 +364,13 @@ trait IntegrationPlatformConnectorSpec
       val individualDetails =
         IndividualDetails("AB123456C", "JOHN", "Lewis", LocalDate.parse("1990-02-21", formatter))
 
-      when(mockRequestBuilder.execute(mAny[HttpReads[HttpResponse]], mAny()))
-        .thenReturn(Future.failed(UpstreamErrorResponse("STATUS_UNAVAILABLE", 403, 403)))
+      stubIntegrationPlatformResponse(403, """{"code":"STATUS_UNAVAILABLE"}""")
 
       val result = await(integrationPlatformConnector.getResidencyStatus(individualDetails, userId))
       println(result)
       result.isLeft                  shouldBe false
       result.getOrElse("Get Failed") shouldBe errorResponse
+      verifyIntegrationPlatformPost(individualDetails)
     }
     "handle success response but the person is deceased from integrationPlatformRouter" in {
       val successResponse = makeSuccessResponse(
@@ -388,8 +384,7 @@ trait IntegrationPlatformConnectorSpec
 
       val individualDetails = IndividualDetails("AB123456C", "JOHN", "Lewis", LocalDate.parse("1990-02-21", formatter))
 
-      when(mockRequestBuilder.execute(mAny[HttpReads[HttpResponse]], mAny()))
-        .thenReturn(Future.successful(HttpResponse(200, Json.toJson(successResponse).toString())))
+      stubIntegrationPlatformResponse(200, Json.toJson(successResponse).toString())
 
       val expectedResult =
         ResidencyStatusFailure("DECEASED", "Cannot provide a residency status for this pension scheme member.")
@@ -399,24 +394,24 @@ trait IntegrationPlatformConnectorSpec
       result.isLeft                  shouldBe false
       result.getOrElse("Get Failed") shouldBe expectedResult
 
-      verify(mockHttpClient, times(1)).post(mAny())(mAny())
+      verifyIntegrationPlatformPost(individualDetails)
     }
 
     "handle unexpected responses as 500 from integrationPlatformRouter" in {
       given formatF: OFormat[ResidencyStatusFailure] = ResidencyStatusFormats.failureFormats
-      val errorResponse                              = ResidencyStatusFailure("INTERNAL_SERVER_ERROR", "Internal server error.")
+
+      val errorResponse = ResidencyStatusFailure("INTERNAL_SERVER_ERROR", "Internal server error.")
 
       val individualDetails = IndividualDetails("AB123456C", "JOHN", "Lewis", LocalDate.parse("1990-02-21", formatter))
 
-      when(mockRequestBuilder.execute(mAny[HttpReads[HttpResponse]], mAny()))
-        .thenReturn(Future.successful(HttpResponse(500, Json.toJson(errorResponse).toString())))
+      stubIntegrationPlatformResponse(500, Json.toJson(errorResponse).toString())
 
       val result = await(integrationPlatformConnector.getResidencyStatus(individualDetails, userId))
 
       result.isLeft                  shouldBe false
       result.getOrElse("Get Failed") shouldBe errorResponse
 
-      verify(mockHttpClient, times(3)).post(mAny())(mAny())
+      verifyIntegrationPlatformPost(individualDetails, expectedCount = 3)
     }
 
     "handle Service Unavailable (503) response from integrationPlatformRouter" in {
@@ -424,33 +419,89 @@ trait IntegrationPlatformConnectorSpec
 
       val individualDetails = IndividualDetails("AB123456C", "JOHN", "Lewis", LocalDate.parse("1990-02-21", formatter))
 
-      when(mockRequestBuilder.execute(mAny[HttpReads[HttpResponse]], mAny()))
-        .thenReturn(Future.failed(UpstreamErrorResponse("SERVICE_UNAVAILABLE", 503, 503)))
+      stubIntegrationPlatformResponse(503)
 
       val result = await(integrationPlatformConnector.getResidencyStatus(individualDetails, userId))
 
       result.isLeft                  shouldBe false
       result.getOrElse("Get Failed") shouldBe errorResponse
 
-      verify(mockHttpClient, times(3)).post(mAny())(mAny())
+      verifyIntegrationPlatformPost(individualDetails, expectedCount = 3)
     }
 
     "handle bad request from integrationPlatformRouter" in {
       given formatF: OFormat[ResidencyStatusFailure] = ResidencyStatusFormats.failureFormats
-      val expectedErrorResponse                      = ResidencyStatusFailure("INTERNAL_SERVER_ERROR", "Internal server error.")
-      val errorResponse                              = ResidencyStatusFailure("DO_NOT_RE_PROCESS", "Internal server error.")
+
+      val expectedErrorResponse = ResidencyStatusFailure("INTERNAL_SERVER_ERROR", "Internal server error.")
+      val errorResponse         = ResidencyStatusFailure("DO_NOT_RE_PROCESS", "Internal server error.")
 
       val individualDetails = IndividualDetails("AB123456C", "JOHN", "Lewis", LocalDate.parse("1990-02-21", formatter))
 
-      when(mockRequestBuilder.execute(mAny[HttpReads[HttpResponse]], mAny()))
-        .thenReturn(Future.successful(HttpResponse(400, Json.toJson(errorResponse).toString())))
+      stubIntegrationPlatformResponse(400, Json.toJson(errorResponse).toString())
 
       val result = await(integrationPlatformConnector.getResidencyStatus(individualDetails, userId))
 
       result.isLeft                  shouldBe false
       result.getOrElse("Get Failed") shouldBe expectedErrorResponse
 
-      verify(mockHttpClient, times(1)).post(mAny())(mAny())
+      verifyIntegrationPlatformPost(individualDetails)
+    }
+
+    s"handle GatewayTimeoutException when $integrationPlatform request times out" in {
+
+      val individualDetails = IndividualDetails("AB123456C", "JOHN", "Lewis", LocalDate.parse("1990-02-21", formatter))
+
+      server.stubFor(
+        post(urlEqualTo(integrationPlatformPath))
+          .willReturn(
+            aResponse()
+              .withStatus(200)
+              .withFixedDelay(4000)
+          )
+      )
+
+      val result = await(integrationPlatformConnector.getResidencyStatus(individualDetails, userId))
+
+      result shouldBe Right(ResidencyStatusFailure("INTERNAL_SERVER_ERROR", "Internal server error."))
+
+      eventually(
+        timeout(Span(8, Seconds)),
+        interval(Span(200, Millis))
+      ) {
+        verifyIntegrationPlatformPost(individualDetails)
+      }
+    }
+
+    s"handle unexpected connection failure from $integrationPlatform" in {
+
+      val connector = createIntegrationPlatformConnector(retryEnabled = false)
+
+      val individualDetails = IndividualDetails("AB123456C", "JOHN", "SMITH", LocalDate.parse("1990-02-21", formatter))
+
+      server.stubFor(
+        post(urlEqualTo(integrationPlatformPath))
+          .willReturn(
+            aResponse()
+              .withFault(Fault.CONNECTION_RESET_BY_PEER)
+          )
+      )
+
+      val result = await(connector.getResidencyStatus(individualDetails, userId))
+
+      result shouldBe Right(ResidencyStatusFailure("INTERNAL_SERVER_ERROR", "Internal server error."))
+      verifyIntegrationPlatformPost(individualDetails)
+    }
+
+    s"handle invalid JSON response from $integrationPlatform" in {
+
+      val individualDetails = IndividualDetails("AB123456C", "JOHN", "SMITH", LocalDate.parse("1990-02-21", formatter))
+
+      stubIntegrationPlatformResponse(200, "invalid json")
+
+      val result = await(integrationPlatformConnector.getResidencyStatus(individualDetails, userId))
+
+      result shouldBe Right(ResidencyStatusFailure("INTERNAL_SERVER_ERROR", "Internal server error."))
+      verifyIntegrationPlatformPost(individualDetails, expectedCount = 3)
     }
 
     "Handle requests" when {
@@ -470,9 +521,31 @@ trait IntegrationPlatformConnectorSpec
         val individualDetails =
           IndividualDetails("AB123456C", "JOHN", "Lewis", LocalDate.parse("1990-02-21", formatter))
 
-        when(mockRequestBuilder.execute(mAny[HttpReads[HttpResponse]], mAny())).thenReturn(
-          Future.successful(HttpResponse(429, Json.toJson(errorResponse).toString())),
-          Future.successful(HttpResponse(200, Json.toJson(successResponse).toString()))
+        val scenarioName = "retry-429-then-success"
+
+        server.stubFor(
+          post(urlEqualTo(integrationPlatformPath))
+            .inScenario(scenarioName)
+            .whenScenarioStateIs(STARTED)
+            .willReturn(
+              aResponse()
+                .withStatus(429)
+                .withHeader("Content-Type", "application/json")
+                .withBody(Json.toJson(errorResponse).toString())
+            )
+            .willSetStateTo("Second Request")
+        )
+
+        server.stubFor(
+          post(urlEqualTo(integrationPlatformPath))
+            .inScenario(scenarioName)
+            .whenScenarioStateIs("Second Request")
+            .willReturn(
+              aResponse()
+                .withStatus(200)
+                .withHeader("Content-Type", "application/json")
+                .withBody(Json.toJson(successResponse).toString())
+            )
         )
 
         val result = await(integrationPlatformConnector.getResidencyStatus(individualDetails, userId))
@@ -480,26 +553,23 @@ trait IntegrationPlatformConnectorSpec
         result.left.getOrElse("Get Failed") shouldBe ResidencyStatus("otherUKResident")
         result.isRight                      shouldBe false
 
-        verify(mockHttpClient, times(2)).post(mAny())(mAny())
+        verifyIntegrationPlatformPost(individualDetails, expectedCount = 2)
       }
 
       "429 (Too Many Requests) has been returned 3 times" in {
-
-        given formatF: OFormat[ResidencyStatusFailure] = ResidencyStatusFormats.failureFormats
 
         val errorResponse = ResidencyStatusFailure("TOO_MANY_REQUESTS", "Too Many Requests.")
 
         val individualDetails =
           IndividualDetails("AB123456C", "JOHN", "Lewis", LocalDate.parse("1990-02-21", formatter))
 
-        when(mockRequestBuilder.execute(mAny[HttpReads[HttpResponse]], mAny()))
-          .thenReturn(Future.successful(HttpResponse(429, Json.toJson(errorResponse).toString())))
+        stubIntegrationPlatformResponse(429)
 
         val result = await(integrationPlatformConnector.getResidencyStatus(individualDetails, userId))
         result.isLeft                  shouldBe false
         result.getOrElse("Get Failed") shouldBe errorResponse
 
-        verify(mockHttpClient, times(3)).post(mAny())(mAny())
+        verifyIntegrationPlatformPost(individualDetails, expectedCount = 3)
       }
     }
   }
@@ -509,13 +579,16 @@ trait IntegrationPlatformConnectorSpec
 class DesConnectorSpec extends IntegrationPlatformConnectorSpec {
   def isHip5161Enabled: Boolean = false
 
+  val integrationPlatformPath: String = "/individuals/residency-status/"
+
   def createIntegrationPlatformConnector(
     allowNoNextYearStatusEnabled: Boolean,
     retryEnabled: Boolean,
     bulkRetryEnabled: Boolean
   ): DesConnector =
-    new DesConnector(mockHttp, mockAuditService, appContext)(using ExecutionContext.global) {
-      override lazy val integrationPlatformUri         = s"http://localhost:${server.port()}"
+    new DesConnector(realHttp, mockAuditService, appContext)(using ExecutionContext.global) {
+      override lazy val baseUrl = s"http://localhost:${server.port()}"
+
       override lazy val allowNoNextYearStatus: Boolean = allowNoNextYearStatusEnabled
 
       override lazy val retryLimit: Int = 3
@@ -536,7 +609,7 @@ class DesConnectorSpec extends IntegrationPlatformConnectorSpec {
   ): Unit =
     server.verify(
       expectedCount,
-      postRequestedFor(urlEqualTo("/individuals/residency-status/"))
+      postRequestedFor(urlEqualTo(integrationPlatformPath))
         .withHeader("Environment", equalTo("DES HEADER"))
         .withHeader("OriginatorId", equalTo("DA_RAS"))
         .withHeader("Authorization", equalTo("Bearer DES AUTH TOKEN"))
@@ -552,7 +625,7 @@ class DesConnectorSpec extends IntegrationPlatformConnectorSpec {
     body: String = ""
   ): Unit =
     server.stubFor(
-      post(urlEqualTo("/individuals/residency-status/"))
+      post(urlEqualTo(integrationPlatformPath))
         .willReturn(
           aResponse()
             .withStatus(status)
@@ -561,15 +634,36 @@ class DesConnectorSpec extends IntegrationPlatformConnectorSpec {
         )
     )
 
-  val testDesConnector: DesConnector =
-    createIntegrationPlatformConnector(
-      allowNoNextYearStatusEnabled = true,
-      retryEnabled = true,
-      bulkRetryEnabled = false
-    )
+  val testDesConnector: DesConnector = createIntegrationPlatformConnector()
 
-  "DESConnector correlationID" when {
-    "requestID is present in the headerCarrier" should {
+  "DES Connector integration" when {
+
+    "having an http response with mismatched status or future" should {
+
+      s"handle 'valid' failure JSON returned with HTTP 200 from DES" in {
+        given formatF: OFormat[ResidencyStatusFailure] =
+          ResidencyStatusFormats.failureFormats
+
+        val individualDetails =
+          IndividualDetails("AB123456C", "JOHN", "SMITH", LocalDate.parse("1990-02-21", formatter))
+
+        val failureResponse =
+          ResidencyStatusFailure(
+            "STATUS_UNAVAILABLE",
+            "Cannot provide a residency status for this pension scheme member."
+          )
+
+        stubIntegrationPlatformResponse(200, Json.toJson(failureResponse).toString())
+
+        val result = await(integrationPlatformConnector.getResidencyStatus(individualDetails, userId))
+
+        result shouldBe Right(failureResponse)
+        verifyIntegrationPlatformPost(individualDetails)
+      }
+    }
+
+    "Producing correlationID and the requestID is present in the headerCarrier" should {
+
       "return new ID pre-appending the requestID when the requestID matches the format(8-4-4-4)" in {
         val requestId = "abcd0000-dh12-fg34-ij56"
         testDesConnector.correlationId(using
@@ -581,10 +675,10 @@ class DesConnectorSpec extends IntegrationPlatformConnectorSpec {
         val requestId = "1a2b-dh12-fg34-ij56"
         testDesConnector.correlationId(using HeaderCarrier(requestId = Some(RequestId(requestId)))) shouldBe uuid
       }
-    }
 
-    "requestID is not present in the headerCarrier should return a new ID" in {
-      testDesConnector.correlationId(using HeaderCarrier()) shouldBe uuid
+      "requestID is not present in the headerCarrier should return a new ID" in {
+        testDesConnector.correlationId(using HeaderCarrier()) shouldBe uuid
+      }
     }
   }
 
@@ -593,13 +687,15 @@ class DesConnectorSpec extends IntegrationPlatformConnectorSpec {
 class HipConnectorSpec extends IntegrationPlatformConnectorSpec {
   def isHip5161Enabled: Boolean = true
 
+  val integrationPlatformPath: String = "/paye/person/regional-residency-status"
+
   def createIntegrationPlatformConnector(
     allowNoNextYearStatusEnabled: Boolean,
     retryEnabled: Boolean,
     bulkRetryEnabled: Boolean
   ): HipConnector =
-    new HipConnector(mockHttp, mockAuditService, appContext)(using ExecutionContext.global) {
-      override lazy val integrationPlatformUri = s"http://localhost:${server.port()}"
+    new HipConnector(realHttp, mockAuditService, appContext)(using ExecutionContext.global) {
+      override lazy val baseUrl = s"http://localhost:${server.port()}"
 
       override lazy val allowNoNextYearStatus: Boolean = allowNoNextYearStatusEnabled
 
@@ -612,18 +708,21 @@ class HipConnectorSpec extends IntegrationPlatformConnectorSpec {
       override def generateNewUUID: String = uuid
     }
 
+  lazy val hipOriginator: String = appContext.servicesConfig.getString("microservice.services.hip.originatorId")
+
   def verifyIntegrationPlatformPost(
     member: IndividualDetails,
     expectedCount: Int = 1
   ): Unit =
     server.verify(
       expectedCount,
-      postRequestedFor(urlEqualTo("/individuals/residency-status/"))
-        .withHeader("Environment", equalTo("DES HEADER"))
-        .withHeader("OriginatorId", equalTo("DA_RAS"))
-        .withHeader("Authorization", equalTo("Bearer DES AUTH TOKEN"))
+      postRequestedFor(urlEqualTo(integrationPlatformPath))
+        .withHeader("Authorization", matching("Basic .+"))
         .withHeader("Content-Type", containing("application/json"))
-        .withHeader("CorrelationId", equalTo(uuid))
+        .withHeader("correlationId", equalTo(uuid))
+        .withHeader("gov-uk-originator-id", equalTo(hipOriginator))
+        .withHeader("X-Receipt-Date", matching(".+"))
+        .withHeader("X-Transmitting-System", equalTo("HIP"))
         .withRequestBody(
           equalToJson(createJsonPayload(member).toString())
         )
@@ -634,7 +733,7 @@ class HipConnectorSpec extends IntegrationPlatformConnectorSpec {
     body: String = ""
   ): Unit =
     server.stubFor(
-      post(urlEqualTo("/individuals/residency-status/"))
+      post(urlEqualTo(integrationPlatformPath))
         .willReturn(
           aResponse()
             .withStatus(status)
@@ -642,5 +741,36 @@ class HipConnectorSpec extends IntegrationPlatformConnectorSpec {
             .withBody(body)
         )
     )
+
+  /*
+    Fold this back into the main set of tests in the trait when DES is removed
+   */
+  "HIP Connector integration" when {
+    "having an http response with mismatched status or future" should {
+      s"handle failure JSON returned with HTTP 200 as an Internal Server Error" in {
+
+        given formatF: OFormat[ResidencyStatusFailure] =
+          ResidencyStatusFormats.failureFormats
+
+        val individualDetails =
+          IndividualDetails("AB123456C", "JOHN", "SMITH", LocalDate.parse("1990-02-21", formatter))
+
+        val failureResponse =
+          ResidencyStatusFailure(
+            "STATUS_UNAVAILABLE",
+            "Cannot provide a residency status for this pension scheme member."
+          )
+
+        val errorResponse = ResidencyStatusFailure("INTERNAL_SERVER_ERROR", "Internal server error.")
+
+        stubIntegrationPlatformResponse(200, Json.toJson(failureResponse).toString())
+
+        val result = await(integrationPlatformConnector.getResidencyStatus(individualDetails, userId))
+
+        result shouldBe Right(errorResponse)
+        verifyIntegrationPlatformPost(individualDetails, expectedCount = 3)
+      }
+    }
+  }
 
 }
