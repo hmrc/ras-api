@@ -24,7 +24,7 @@ case class ResidencyStatusSuccess(
   nino: String,
   deathDate: Option[String],
   deathDateStatus: Option[String],
-  deceasedIndicator: Option[Boolean],
+  deseasedIndicator: Option[Boolean],
   currentYearResidencyStatus: String,
   nextYearResidencyStatus: Option[String],
   statusCheckTimeStamp: Option[String] = None
