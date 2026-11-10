@@ -168,7 +168,7 @@ class FileProcessingServiceSpec
           override val SERVICE_UNAVAILABLE: String                   = STATUS_SERVICE_UNAVAILABLE
         }
 
-        when(mockUpscanConnector.getUpscanFile(any(), any(), any()))
+        when(mockUpscanConnector.getUpscanFile(any(), any(), any())(using any[HeaderCarrier]))
           .thenReturn(Future.successful(Some(new FileInputStream(testFilePath.toFile))))
 
         when(mockDesConnector.otherUk).thenReturn("otherUKResident")
@@ -262,7 +262,7 @@ class FileProcessingServiceSpec
           override val SERVICE_UNAVAILABLE: String                   = STATUS_SERVICE_UNAVAILABLE
         }
 
-        when(mockUpscanConnector.getUpscanFile(any(), any(), any()))
+        when(mockUpscanConnector.getUpscanFile(any(), any(), any())(using any[HeaderCarrier]))
           .thenReturn(Future.successful(Some(new FileInputStream(testFilePath.toFile))))
 
         when(mockDesConnector.otherUk).thenReturn("otherUKResident")
@@ -355,7 +355,7 @@ class FileProcessingServiceSpec
           override val SERVICE_UNAVAILABLE: String                   = STATUS_SERVICE_UNAVAILABLE
         }
 
-        when(mockUpscanConnector.getUpscanFile(any(), any(), any()))
+        when(mockUpscanConnector.getUpscanFile(any(), any(), any())(using any[HeaderCarrier]))
           .thenReturn(Future.successful(Some(new FileInputStream(testFilePath.toFile))))
 
         when(mockDesConnector.otherUk).thenReturn("otherUKResident")
@@ -447,7 +447,7 @@ class FileProcessingServiceSpec
           override val SERVICE_UNAVAILABLE: String                   = STATUS_SERVICE_UNAVAILABLE
         }
 
-        when(mockUpscanConnector.getUpscanFile(any(), any(), any()))
+        when(mockUpscanConnector.getUpscanFile(any(), any(), any())(using any[HeaderCarrier]))
           .thenReturn(Future.successful(Some(new FileInputStream(testFilePath.toFile))))
 
         when(mockDesConnector.otherUk).thenReturn("otherUKResident")
@@ -543,7 +543,7 @@ class FileProcessingServiceSpec
           override val SERVICE_UNAVAILABLE: String                   = STATUS_SERVICE_UNAVAILABLE
         }
 
-        when(mockUpscanConnector.getUpscanFile(any(), any(), any()))
+        when(mockUpscanConnector.getUpscanFile(any(), any(), any())(using any[HeaderCarrier]))
           .thenReturn(Future.successful(Some(new FileInputStream(testFilePath.toFile))))
 
         when(mockDesConnector.otherUk).thenReturn("otherUKResident")
@@ -636,7 +636,7 @@ class FileProcessingServiceSpec
           override val SERVICE_UNAVAILABLE: String                   = STATUS_SERVICE_UNAVAILABLE
         }
 
-        when(mockUpscanConnector.getUpscanFile(any(), any(), any()))
+        when(mockUpscanConnector.getUpscanFile(any(), any(), any())(using any[HeaderCarrier]))
           .thenReturn(Future.successful(Some(new FileInputStream(testFilePath.toFile))))
 
         when(mockDesConnector.otherUk).thenReturn("otherUKResident")
@@ -719,7 +719,8 @@ class FileProcessingServiceSpec
         val row1        = "Johné,Smithè,AB123456C,1990-02-21".getBytes(StandardCharsets.ISO_8859_1)
         val inputStream = new ByteArrayInputStream(row1)
 
-        when(mockUpscanConnector.getUpscanFile(any(), any(), any())).thenReturn(Future.successful(Some(inputStream)))
+        when(mockUpscanConnector.getUpscanFile(any(), any(), any())(using any[HeaderCarrier]))
+          .thenReturn(Future.successful(Some(inputStream)))
 
         val result = await(SUT.readFile(reference, fileId, userId))
 
@@ -930,7 +931,7 @@ class FileProcessingServiceSpec
 
         val testFilePath = getTestFilePath
 
-        when(mockUpscanConnector.getUpscanFile(any(), any(), any()))
+        when(mockUpscanConnector.getUpscanFile(any(), any(), any())(using any[HeaderCarrier]))
           .thenReturn(Future.successful(Some(new FileInputStream(testFilePath.toFile))))
 
         val expectedResultsFile =

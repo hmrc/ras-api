@@ -134,6 +134,15 @@ class DesConnector @Inject() (
     * available, the tracing headers sent (stripping out the bearer token), and the processing path at which the event
     * occurred so that missing mandatory data, invalid responses, timeouts and other failures are all recorded.
     */
+  private def truncateRequestHeaders(desHeaders: Seq[(String, String)]): Map[String, String] = {
+    val allowedHeaderNames = Set("Environment", "OriginatorId", "CorrelationId")
+
+    desHeaders.collect {
+      case (headerName, headerValue) if allowedHeaderNames.contains(headerName) =>
+        s"requestHeader_$headerName" -> headerValue
+    }.toMap
+  }
+
   private def auditDesResidencyStatusRequest(
     userId: String,
     nino: NINO,
@@ -163,7 +172,7 @@ class DesConnector @Inject() (
       failureCategory.map("failureCategory" -> _) ++
       responseCode.map("responseCode" -> _) ++
       errorDetail.map("errorDetail" -> _) ++
-      desHeaders
+      truncateRequestHeaders(desHeaders)
 
     auditService.audit(
       auditType = DES_CALL_AUDIT_TYPE,
@@ -369,7 +378,7 @@ class DesConnector @Inject() (
 
     Try(httpResponse.json.as[ResidencyStatusSuccess](ResidencyStatusFormats.successFormats)) match {
       case Success(payload) =>
-        payload.deseasedIndicator match {
+        payload.deceasedIndicator match {
           case Some(true) =>
             auditDesResidencyStatusRequest(
               userId,
