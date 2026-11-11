@@ -17,7 +17,7 @@
 package uk.gov.hmrc.rasapi.connectors
 
 import play.api.Logging
-import play.api.libs.json.{JsObject, Json, Reads}
+import play.api.libs.json.{JsObject, JsValue, Json, Reads, __}
 import play.api.libs.ws.JsonBodyWritables.writeableOf_JsValue
 import uk.gov.hmrc.http.{HeaderCarrier, *}
 import uk.gov.hmrc.play.bootstrap.http.HttpClientV2Provider
@@ -42,12 +42,11 @@ trait IntegrationPlatformConnector @Inject() (
   appContext: AppContext
 )(using ec: ExecutionContext)
     extends Logging {
+
   def baseUrl: String
   def integrationPlatformUri: String
-
+  def createPayload(individualDetails: IndividualDetails, userId: String): JsValue
   def generateNewUUID: String = randomUUID.toString
-
-  given rasHeaders: HeaderCarrier = HeaderCarrier()
 
   def getResidencyStatus(
     member: IndividualDetails,
@@ -56,6 +55,8 @@ trait IntegrationPlatformConnector @Inject() (
   ): Future[Either[ResidencyStatus, ResidencyStatusFailure]]
 
   def resolveFailureResponse(response: HttpResponse, t: Throwable): Either[ResidencyStatus, ResidencyStatusFailure]
+
+  given rasHeaders: HeaderCarrier = HeaderCarrier()
 
   lazy val error_InternalServerError: String = appContext.internalServerErrorStatus
   lazy val error_Deceased: String            = appContext.deceasedStatus
@@ -115,19 +116,14 @@ trait IntegrationPlatformConnector @Inject() (
     uri: String,
     member: IndividualDetails,
     userId: String,
-    desHeaders: Seq[(String, String)]
+    integrationPlatformHeaders: Seq[(String, String)]
   )(using rasHeaders: HeaderCarrier): Future[Either[ResidencyStatus, ResidencyStatusFailure]] = {
 
-    val payload = Json.toJson(
-      Json
-        .toJson[IndividualDetails](member)
-        .as[JsObject] + ("pensionSchemeOrganisationID" -> Json.toJson(userId))
-    )
-    val result  = httpPost
+    val result = httpPost
       .get()
       .post(url"$uri")
-      .setHeader(desHeaders*)
-      .withBody(payload)
+      .setHeader(integrationPlatformHeaders*)
+      .withBody(createPayload(member, userId))
       .execute[HttpResponse]
 
     /*
@@ -253,6 +249,13 @@ class DesConnector @Inject() (
   lazy val desAuthToken: String    = appContext.desAuthToken
   lazy val desUrlHeaderEnv: String = appContext.desUrlHeaderEnv
 
+  def createPayload(individualDetails: IndividualDetails, userId: String): JsValue =
+    Json.toJson(
+      Json
+        .toJson[IndividualDetails](individualDetails)
+        .as[JsObject] + ("pensionSchemeOrganisationID" -> Json.toJson(userId))
+    )
+
   def resolveFailureResponse(
     httpResponse: HttpResponse,
     t: Throwable
@@ -327,6 +330,31 @@ class HipConnector @Inject() (
     "X-Receipt-Date"        -> DateTimeFormatter.ISO_INSTANT.format(Instant.now().truncatedTo(ChronoUnit.SECONDS)),
     "X-Transmitting-System" -> "HIP"
   )
+
+  def createPayload(individualDetails: IndividualDetails, userId: String): JsValue = {
+    import play.api.libs.json._
+
+    val jsResult = Json
+      .toJson[IndividualDetails](individualDetails)
+      .transform {
+        val renameMap = Map(
+          "nino"      -> "identifier",
+          "firstName" -> "firstForename",
+          "lastName"  -> "surname",
+          "dob"       -> "dateOfBirth"
+        )
+        Reads {
+          case JsObject(fields) =>
+            val updatedFields = fields.map { case (key, value) =>
+              renameMap.getOrElse(key, key) -> value
+            }
+            JsSuccess(JsObject(updatedFields))
+          case other            =>
+            JsError(s"Expected JsObject, got $other")
+        }
+      }
+    jsResult.get
+  }
 
   def getResidencyStatus(
     member: IndividualDetails,

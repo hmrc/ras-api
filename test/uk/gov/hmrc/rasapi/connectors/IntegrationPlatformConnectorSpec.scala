@@ -103,18 +103,7 @@ trait IntegrationPlatformConnectorSpec
     """.stripMargin
   )
 
-  def createJsonPayload(individualDetails: IndividualDetails): JsValue = Json.parse(
-    s"""
-       |{
-       |  "nino": "${individualDetails.nino}",
-       |  "firstName": "${individualDetails.firstName}",
-       |  "lastName": "${individualDetails.lastName}",
-       |  "dob": "${individualDetails.dateOfBirth.format(formatter)}",
-       |  "pensionSchemeOrganisationID": "$userId"
-       |}
-    """.stripMargin
-  )
-
+  def createJsonPayload(individualDetails: IndividualDetails): JsValue
   def verifyIntegrationPlatformPost(member: IndividualDetails, expectedCount: Int = 1): Unit
   def stubIntegrationPlatformResponse(status: Int, body: String = ""): Unit
 
@@ -125,22 +114,14 @@ trait IntegrationPlatformConnectorSpec
     deceasedIndicator: Option[Boolean],
     currentYearResidencyStatus: String,
     nextYearResidencyStatus: Option[String]
-  ): ResidencyStatusSuccess = {
-
-    val residencyStatusSuccess = ResidencyStatusSuccess(
-      nino,
-      deathDate,
-      deathDateStatus,
-      deceasedIndicator,
-      currentYearResidencyStatus,
-      nextYearResidencyStatus
-    )
-
-    if (isHip5161Enabled)
-      residencyStatusSuccess.copy(statusCheckTimeStamp = Some("2027-08-24T14:15:22Z"))
-
-    residencyStatusSuccess
-  }
+  ): ResidencyStatusSuccess = ResidencyStatusSuccess(
+    nino,
+    deathDate,
+    deathDateStatus,
+    deceasedIndicator,
+    currentYearResidencyStatus,
+    nextYearResidencyStatus
+  )
 
   s"$integrationPlatform Connector getResidencyStatus with matching" should {
 
@@ -581,6 +562,18 @@ class DesConnectorSpec extends IntegrationPlatformConnectorSpec {
 
   val integrationPlatformPath: String = "/individuals/residency-status/"
 
+  def createJsonPayload(individualDetails: IndividualDetails): JsValue = Json.parse(
+    s"""
+       |{
+       |  "nino": "${individualDetails.nino}",
+       |  "firstName": "${individualDetails.firstName}",
+       |  "lastName": "${individualDetails.lastName}",
+       |  "dob": "${individualDetails.dateOfBirth.format(formatter)}",
+       |  "pensionSchemeOrganisationID": "$userId"
+       |}
+      """.stripMargin
+  )
+
   def createIntegrationPlatformConnector(
     allowNoNextYearStatusEnabled: Boolean,
     retryEnabled: Boolean,
@@ -688,6 +681,36 @@ class HipConnectorSpec extends IntegrationPlatformConnectorSpec {
   def isHip5161Enabled: Boolean = true
 
   val integrationPlatformPath: String = "/paye/person/regional-residency-status"
+
+  def createJsonPayload(individualDetails: IndividualDetails): JsValue = Json.parse(
+    s"""
+       |{
+       |  "identifier": "${individualDetails.nino}",
+       |  "firstForename": "${individualDetails.firstName}",
+       |  "surname": "${individualDetails.lastName}",
+       |  "dateOfBirth": "${individualDetails.dateOfBirth.format(formatter)}"
+       |}
+      """.stripMargin
+  )
+
+  override def makeSuccessResponse(
+    nino: String,
+    deathDate: Option[String],
+    deathDateStatus: Option[String],
+    deceasedIndicator: Option[Boolean],
+    currentYearResidencyStatus: String,
+    nextYearResidencyStatus: Option[String]
+  ): ResidencyStatusSuccess =
+    super
+      .makeSuccessResponse(
+        nino,
+        deathDate,
+        deathDateStatus,
+        deceasedIndicator,
+        currentYearResidencyStatus,
+        nextYearResidencyStatus
+      )
+      .copy(statusCheckTimeStamp = Some("2027-08-24T14:15:22Z"))
 
   def createIntegrationPlatformConnector(
     allowNoNextYearStatusEnabled: Boolean,
