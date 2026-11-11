@@ -20,8 +20,7 @@ import controllers.Assets
 import play.api.mvc.{Action, AnyContent, ControllerComponents}
 import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
 import uk.gov.hmrc.rasapi.config.AppContext
-import uk.gov.hmrc.rasapi.views.txt
-
+import uk.gov.hmrc.rasapi.views._
 import javax.inject.Inject
 
 class Documentation @Inject() (

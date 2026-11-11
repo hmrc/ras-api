@@ -285,7 +285,7 @@ class DesConnector @Inject() (
           processingPath = recoverPath
         )
         Right(ResidencyStatusFailure(error_TooManyRequests, "Too Many Requests."))
-      case _: RequestTimeoutException           =>
+      case _: GatewayTimeoutException           =>
         logger.error(
           s"[DesConnector][getResidencyStatus] Request has timed out. userId ($userId) correlationId ($corrId)."
         )
