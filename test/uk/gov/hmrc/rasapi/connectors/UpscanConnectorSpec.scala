@@ -16,186 +16,157 @@
 
 package uk.gov.hmrc.rasapi.connectors
 
-import ch.qos.logback.classic.Level
-import ch.qos.logback.classic.spi.ILoggingEvent
-import org.apache.pekko.stream.scaladsl.Source
-import org.apache.pekko.util.ByteString
-import org.mockito.ArgumentCaptor
-import org.mockito.ArgumentMatchers.*
-import org.mockito.Mockito.*
-import org.mockito.invocation.InvocationOnMock
-import org.mockito.stubbing.Answer
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpecLike
-import org.scalatestplus.mockito.MockitoSugar
 import org.scalatestplus.play.guice.GuiceOneAppPerSuite
-import play.api.libs.ws.WSResponse
 import play.api.test.Helpers.{await, defaultAwaitTimeout}
-import uk.gov.hmrc.http.{HeaderCarrier, RequestId, RequestTimeoutException}
-import uk.gov.hmrc.play.bootstrap.tools.LogCapturing
-import uk.gov.hmrc.rasapi.config.{AppContext, WSHttp}
-import uk.gov.hmrc.rasapi.models.FileMetadata
-import uk.gov.hmrc.rasapi.services.AuditService
 
 import java.io.{BufferedReader, InputStreamReader}
-import scala.concurrent.ExecutionContext.Implicits.global
-import scala.concurrent.{ExecutionContext, Future}
-import scala.jdk.CollectionConverters.*
-import scala.language.postfixOps
+import uk.gov.hmrc.rasapi.utils.WireMockHelper
+import com.github.tomakehurst.wiremock.client.WireMock.{aResponse, get, getRequestedFor, urlEqualTo}
+import com.github.tomakehurst.wiremock.http.Fault
+import ch.qos.logback.classic.Level
+import play.api.Logger
+import uk.gov.hmrc.http.{HeaderCarrier, RequestId}
+import uk.gov.hmrc.play.bootstrap.tools.LogCapturing
 
 class UpscanConnectorSpec
-    extends AnyWordSpecLike with Matchers with GuiceOneAppPerSuite with MockitoSugar with LogCapturing {
+    extends AnyWordSpecLike with Matchers with GuiceOneAppPerSuite with WireMockHelper with LogCapturing {
+  given hc: HeaderCarrier             = HeaderCarrier()
+  lazy val connector: UpscanConnector = app.injector.instanceOf[UpscanConnector]
 
-  given hc: HeaderCarrier = HeaderCarrier()
+  val reference: String = "0b215e97-11d4-4006-91db-c067e74fc653"
 
-  val mockWsHttp: WSHttp             = mock[WSHttp]
-  val mockAuditService: AuditService = mock[AuditService]
-  val appContext: AppContext         = app.injector.instanceOf[AppContext]
-  val wsResponseMock: WSResponse     = mock[WSResponse]
+  val userId: String = "A1234567"
 
-  val bodyAsSource: Source[ByteString, _] = Source(Seq(ByteString("Test"), ByteString("\r\n"), ByteString("Passed")))
-  val headers                             = Map("CONTENT_TYPE" -> Seq("application/octet-stream"))
-
-  private def createMockResponse(bodyAsSource: Source[ByteString, _], headers: Map[String, Seq[String]]): WSResponse = {
-    when(wsResponseMock.status).thenReturn(200)
-    when(wsResponseMock.bodyAsSource).thenAnswer(
-      new Answer[Source[ByteString, _]] {
-        override def answer(invocation: InvocationOnMock): Source[ByteString, _] = bodyAsSource
-      }
-    )
-    when(wsResponseMock.headers).thenReturn(headers)
-    wsResponseMock
-  }
-
-  val uuid = "123e4567-e89b-42d3-a456-556642440000"
-
-  object TestConnector extends UpscanConnector(mockWsHttp, mockAuditService, appContext) {
-    override def generateNewUUID: String = uuid
-
-    def loggerForTest: play.api.Logger = logger
-  }
-
-  val requestId                      = "abcd6789-dh12-fg34-ij56"
-  val expectedCorrId                 = s"$requestId-${uuid.substring(24)}"
-  val hcWithRequestId: HeaderCarrier = HeaderCarrier(requestId = Some(RequestId(requestId)))
-
-  def logMessagesWithLevel(logs: List[ILoggingEvent]): List[(Level, String)] =
-    logs.map(event => event.getLevel -> event.getMessage)
-
-  def upscanAudit(): Map[String, String] = {
-    val typeCaptor                                      = ArgumentCaptor.forClass(classOf[String])
-    val pathCaptor                                      = ArgumentCaptor.forClass(classOf[String])
-    val dataCaptor: ArgumentCaptor[Map[String, String]] = ArgumentCaptor.forClass(classOf[Map[String, String]])
-    verify(mockAuditService, atLeastOnce())
-      .audit(typeCaptor.capture(), pathCaptor.capture(), dataCaptor.capture())(using any[HeaderCarrier])
-    dataCaptor.getAllValues.asScala.toList.last
-  }
-
-  val reference: String          = "0b215e97-11d4-4006-91db-c067e74fc653"
-  val fileId: String             = "file-id-1"
-  val userId: String             = "A1234567"
-  val originalFileName: String   = "origFileName"
-  val dateCreated: String        = "2018-01-01T00:00:00Z"
-  val fileMetadata: FileMetadata = FileMetadata(fileId, Some(originalFileName), Some(dateCreated))
+  // Capturing from a Logger named after the connector class targets the same underlying
+  // logback logger that the connector's `Logging` trait writes to (`Logger(getClass)`).
+  val connectorLogger: Logger = Logger(classOf[UpscanConnector])
 
   "getUpscanFile" should {
 
-    val wsResponse: WSResponse = createMockResponse(bodyAsSource, headers)
+    "return a streamed response from Upscan service" in {
 
-    "return an StreamedResponse from Upscan service" in {
-      when(mockWsHttp.buildRequestWithStream(any())).thenReturn(Future.successful(wsResponse))
+      server.stubFor(
+        get(urlEqualTo("/download"))
+          .willReturn(
+            aResponse()
+              .withStatus(200)
+              .withHeader("Content-Type", "application/octet-stream")
+              .withBody("Test\r\nPassed")
+          )
+      )
 
-      val result = await(TestConnector.getUpscanFile(reference, fileId, userId))
-      val reader = new BufferedReader(new InputStreamReader(result.get))
+      val downloadUrl =
+        s"http://localhost:${server.port()}/download"
 
-      (Iterator continually reader.readLine takeWhile (_ != null) toList) should contain theSameElementsAs List(
-        "Test",
-        "Passed"
+      val result =
+        await(connector.getUpscanFile(downloadUrl, reference, userId))
+
+      val reader =
+        new BufferedReader(new InputStreamReader(result.get))
+
+      try {
+        val lines = Iterator
+          .continually(reader.readLine())
+          .takeWhile(_ != null)
+          .toList
+
+        lines shouldBe List("Test", "Passed")
+      } finally reader.close()
+
+      server.verify(
+        1,
+        getRequestedFor(urlEqualTo("/download"))
       )
     }
-    "return a RuntimeException when Upscan throws error" in {
-      when(mockWsHttp.buildRequestWithStream(any())).thenReturn(Future.failed(new RequestTimeoutException("")))
+
+    "return a RuntimeException when Upscan connection fails" in {
+
+      server.stubFor(
+        get(urlEqualTo("/download"))
+          .willReturn(
+            aResponse()
+              .withFault(Fault.CONNECTION_RESET_BY_PEER)
+          )
+      )
+
+      val downloadUrl =
+        s"http://localhost:${server.port()}/download"
 
       val exception = intercept[RuntimeException] {
-        await(TestConnector.getUpscanFile(reference, fileId, userId))
+        await(connector.getUpscanFile(downloadUrl, reference, userId))
       }
 
-      exception.getMessage.contains("Error Streaming file from Upscan service") shouldBe true
+      exception.getMessage shouldBe
+        "Error Streaming file from Upscan service"
+
+      server.verify(
+        1,
+        getRequestedFor(urlEqualTo("/download"))
+      )
     }
+
   }
 
-  "UpscanConnector logging" should {
+  "getUpscanFile logging" should {
 
-    "log the correlation id at INFO level when retrieving a file" in {
-      // Arrange
-      val wsResponse = createMockResponse(bodyAsSource, headers)
-      when(mockWsHttp.buildRequestWithStream(any())).thenReturn(Future.successful(wsResponse))
+    "log at ERROR level including userId and correlationId when streaming fails" in {
 
-      withCaptureOfLoggingFrom(TestConnector.loggerForTest) { logs =>
-        // Act
-        await(TestConnector.getUpscanFile(reference, fileId, userId)(using hcWithRequestId))
+      server.stubFor(
+        get(urlEqualTo("/download"))
+          .willReturn(
+            aResponse()
+              .withFault(Fault.CONNECTION_RESET_BY_PEER)
+          )
+      )
 
-        // Assert
-        logMessagesWithLevel(logs) should contain(
-          Level.INFO -> s"[UpscanConnector][getUpscanFile] Trying to retrieve file from Upscan: $fileId for userId ($userId) correlationId ($expectedCorrId)."
+      val requestId: String                = "abcd0000-dh12-fg34-ij56"
+      given hcWithRequestId: HeaderCarrier =
+        HeaderCarrier(requestId = Some(RequestId(requestId)))
+
+      val downloadUrl =
+        s"http://localhost:${server.port()}/download"
+
+      withCaptureOfLoggingFrom(connectorLogger) { logs =>
+        intercept[RuntimeException] {
+          await(connector.getUpscanFile(downloadUrl, reference, userId))
+        }
+
+        val errorLogs = logs.filter(_.getLevel == Level.ERROR)
+
+        errorLogs                          should have size 1
+        errorLogs.head.getFormattedMessage should startWith(
+          s"[UpscanConnector][getUpscanFile] Exception thrown while retrieving file / converting to InputStream for userId ($userId) correlationId ($requestId-"
         )
       }
     }
 
-    "log the correlation id at ERROR level when retrieval fails" in {
-      // Arrange
-      when(mockWsHttp.buildRequestWithStream(any())).thenReturn(Future.failed(new RequestTimeoutException("timed out")))
+    "not log at ERROR level when the file is streamed successfully" in {
 
-      withCaptureOfLoggingFrom(TestConnector.loggerForTest) { logs =>
-        // Act
-        intercept[RuntimeException](
-          await(TestConnector.getUpscanFile(reference, fileId, userId)(using hcWithRequestId))
-        )
+      server.stubFor(
+        get(urlEqualTo("/download"))
+          .willReturn(
+            aResponse()
+              .withStatus(200)
+              .withHeader("Content-Type", "application/octet-stream")
+              .withBody("Test\r\nPassed")
+          )
+      )
 
-        // Assert
-        logMessagesWithLevel(logs)
-          .collect { case (Level.ERROR, message) => message }
-          .exists(_.contains(s"correlationId ($expectedCorrId)")) shouldBe true
+      val downloadUrl =
+        s"http://localhost:${server.port()}/download"
+
+      withCaptureOfLoggingFrom(connectorLogger) { logs =>
+        val result =
+          await(connector.getUpscanFile(downloadUrl, reference, userId))
+
+        result.foreach(_.close())
+
+        logs.count(_.getLevel == Level.ERROR) shouldBe 0
       }
     }
-  }
 
-  "UpscanConnector auditing" should {
-
-    "audit a successful file retrieval with correlation id, user id and outcome" in {
-      // Arrange
-      reset(mockAuditService)
-      val wsResponse = createMockResponse(bodyAsSource, headers)
-      when(mockWsHttp.buildRequestWithStream(any())).thenReturn(Future.successful(wsResponse))
-
-      // Act
-      await(TestConnector.getUpscanFile(reference, fileId, userId)(using hcWithRequestId))
-
-      // Assert
-      val detail = upscanAudit()
-      detail("downstreamService") shouldBe "UPSCAN"
-      detail("outcome")           shouldBe "SUCCESS"
-      detail("userIdentifier")    shouldBe userId
-      detail("fileReference")     shouldBe fileId
-      detail("correlationId")     shouldBe expectedCorrId
-      detail("processingPath")    shouldBe "UpscanConnector.getUpscanFile"
-    }
-
-    "audit a failed file retrieval with failure category, error detail and 'recover' processing path" in {
-      // Arrange
-      reset(mockAuditService)
-      when(mockWsHttp.buildRequestWithStream(any())).thenReturn(Future.failed(new RequestTimeoutException("timed out")))
-
-      // Act
-      intercept[RuntimeException](await(TestConnector.getUpscanFile(reference, fileId, userId)(using hcWithRequestId)))
-
-      // Assert
-      val detail = upscanAudit()
-      detail("outcome")         shouldBe "FAILURE"
-      detail("failureCategory") shouldBe "STREAMING_ERROR"
-      detail("errorDetail")     shouldBe "timed out"
-      detail("processingPath")    should endWith("recover")
-    }
   }
 
 }

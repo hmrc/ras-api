@@ -46,6 +46,46 @@ class ErrorConverterSpec
       errorConverter.convert(errors) shouldBe
         List(ErrorValidation("INVALID_DATE", "Date is invalid", Some("")))
     }
+    "convert an invalid format" in {
+      val errors = Seq((JsPath(), Seq(JsonValidationError("INVALID_FORMAT"))))
+
+      new ErrorConverter().convert(errors) shouldBe
+        List(ErrorValidation("INVALID_FORMAT", "Invalid format has been used", Some("")))
+    }
+    "convert a MISSING_FIELD error" in {
+      val errors = Seq((JsPath(), Seq(JsonValidationError("MISSING_FIELD"))))
+
+      new ErrorConverter().convert(errors) shouldBe
+        List(ErrorValidation("MISSING_FIELD", "This field is required", Some("")))
+    }
+    "convert a Play error.path.missing error to MISSING_FIELD" in {
+      val errors = Seq((JsPath(), Seq(JsonValidationError("error.path.missing"))))
+
+      new ErrorConverter().convert(errors) shouldBe
+        List(ErrorValidation("MISSING_FIELD", "This field is required", Some("")))
+    }
+    "preserve the JSON path of the error" in {
+      val errors = Seq(((JsPath() \ "nino"), Seq(JsonValidationError("INVALID_FORMAT"))))
+
+      new ErrorConverter().convert(errors) shouldBe
+        List(ErrorValidation("INVALID_FORMAT", "Invalid format has been used", Some("/nino")))
+    }
+    "convert multiple errors into multiple ErrorValidations" in {
+      val errors = Seq(
+        (JsPath() \ "nino", Seq(JsonValidationError("INVALID_FORMAT"))),
+        (JsPath() \ "dateOfBirth", Seq(JsonValidationError("INVALID_DATE")))
+      )
+
+      new ErrorConverter().convert(errors) shouldBe List(
+        ErrorValidation("INVALID_FORMAT", "Invalid format has been used", Some("/nino")),
+        ErrorValidation("INVALID_DATE", "Date is invalid", Some("/dateOfBirth"))
+      )
+    }
+    "throw a MatchError for an unrecognised validation message" in {
+      val errors = Seq((JsPath(), Seq(JsonValidationError("SOMETHING_UNKNOWN"))))
+
+      a[MatchError] should be thrownBy new ErrorConverter().convert(errors)
+    }
   }
 
 }

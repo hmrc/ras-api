@@ -18,13 +18,7 @@ package uk.gov.hmrc.rasapi.connectors
 
 import ch.qos.logback.classic.Level
 import com.github.tomakehurst.wiremock.client.WireMock.{
-  aResponse,
-  containing,
-  equalTo,
-  equalToJson,
-  post,
-  postRequestedFor,
-  urlEqualTo
+  aResponse, containing, equalTo, equalToJson, post, postRequestedFor, urlEqualTo
 }
 import com.github.tomakehurst.wiremock.stubbing.Scenario.STARTED
 import org.scalatest.matchers.should.Matchers
@@ -46,34 +40,31 @@ import java.time.format.DateTimeFormatter
 import scala.concurrent.{ExecutionContext, Future}
 
 class DesConnectorSpec
-    extends AnyWordSpecLike
-    with Matchers
-    with GuiceOneAppPerSuite
-    with WireMockHelper
-    with LogCapturing {
+    extends AnyWordSpecLike with Matchers with GuiceOneAppPerSuite with WireMockHelper with LogCapturing {
 
-  given hc: HeaderCarrier = HeaderCarrier()
+  given hc: HeaderCarrier                       = HeaderCarrier()
   given format: OFormat[ResidencyStatusSuccess] = ResidencyStatusFormats.successFormats
 
-  val uuid = "123e4567-e89b-42d3-a456-556642440000"
-  val userId = "A123456"
+  val uuid                         = "123e4567-e89b-42d3-a456-556642440000"
+  val userId                       = "A123456"
   val formatter: DateTimeFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd")
 
-  val servicesConfig: ServicesConfig = app.injector.instanceOf[ServicesConfig]
-  val appContext: AppContext = app.injector.instanceOf[AppContext]
+  val servicesConfig: ServicesConfig      = app.injector.instanceOf[ServicesConfig]
+  val appContext: AppContext              = app.injector.instanceOf[AppContext]
   lazy val realHttp: HttpClientV2Provider = app.injector.instanceOf[HttpClientV2Provider]
 
-  object TestDesConnector extends DesConnector(realHttp, app.injector.instanceOf[AuditService], appContext)(using ExecutionContext.global) {
-    override lazy val desBaseUrl: String = s"http://localhost:${server.port()}"
+  object TestDesConnector
+      extends DesConnector(realHttp, app.injector.instanceOf[AuditService], appContext)(using ExecutionContext.global) {
+    override lazy val desBaseUrl: String             = s"http://localhost:${server.port()}"
     override lazy val allowNoNextYearStatus: Boolean = true
-    override lazy val retryLimit: Int = 3
-    override lazy val retryDelay: Int = 500
-    override lazy val desUrlHeaderEnv: String = "DES HEADER"
-    override lazy val desAuthToken: String = "DES AUTH TOKEN"
-    override lazy val isRetryEnabled: Boolean = true
-    override lazy val isBulkRetryEnabled: Boolean = false
-    override def generateNewUUID: String = uuid
-    def loggerForTest: play.api.Logger = logger
+    override lazy val retryLimit: Int                = 3
+    override lazy val retryDelay: Int                = 500
+    override lazy val desUrlHeaderEnv: String        = "DES HEADER"
+    override lazy val desAuthToken: String           = "DES AUTH TOKEN"
+    override lazy val isRetryEnabled: Boolean        = true
+    override lazy val isBulkRetryEnabled: Boolean    = false
+    override def generateNewUUID: String             = uuid
+    def loggerForTest: play.api.Logger               = logger
   }
 
   def createJsonPayload(individualDetails: IndividualDetails): JsValue = Json.parse(
@@ -129,15 +120,15 @@ class DesConnectorSpec
       stubDesResponse(200, Json.toJson(successResponse).toString())
 
       val result = await(TestDesConnector.getResidencyStatus(individualDetails, userId))
-      result.isLeft shouldBe true
+      result.isLeft                       shouldBe true
       result.left.getOrElse("Get Failed") shouldBe ResidencyStatus("otherUKResident", Some("scotResident"))
       verifyDesPost(individualDetails)
     }
 
     "handle retryable 429 responses and then succeed" in {
       given formatF: OFormat[ResidencyStatusFailure] = ResidencyStatusFormats.failureFormats
-      val errorResponse = ResidencyStatusFailure("TOO_MANY_REQUESTS", "Too Many Requests.")
-      val successResponse = ResidencyStatusSuccess(
+      val errorResponse                              = ResidencyStatusFailure("TOO_MANY_REQUESTS", "Too Many Requests.")
+      val successResponse                            = ResidencyStatusSuccess(
         nino = "AB123456C",
         deathDate = Some(""),
         deathDateStatus = Some(""),
@@ -147,8 +138,8 @@ class DesConnectorSpec
       )
 
       val individualDetails = IndividualDetails("AB123456C", "JOHN", "SMITH", LocalDate.parse("1990-02-21", formatter))
-      val scenarioName = "retry-429-success"
-      val desUrl = "/individuals/residency-status/"
+      val scenarioName      = "retry-429-success"
+      val desUrl            = "/individuals/residency-status/"
 
       server.stubFor(
         post(urlEqualTo(desUrl))
@@ -176,7 +167,7 @@ class DesConnectorSpec
       )
 
       val result = await(TestDesConnector.getResidencyStatus(individualDetails, userId, isBulkRequest = true))
-      result.isRight shouldBe false
+      result.isRight                      shouldBe false
       result.left.getOrElse("Get Failed") shouldBe ResidencyStatus("otherUKResident", Some("scotResident"))
       verifyDesPost(individualDetails, expectedCount = 2)
     }
@@ -186,7 +177,9 @@ class DesConnectorSpec
     "requestID is present in the headerCarrier" should {
       "return new ID pre-appending the requestID when the requestID matches the format(8-4-4-4)" in {
         val requestId = "abcd0000-dh12-fg34-ij56"
-        TestDesConnector.correlationId(using HeaderCarrier(requestId = Some(RequestId(requestId)))) shouldBe s"$requestId-${uuid.substring(24)}"
+        TestDesConnector.correlationId(using
+          HeaderCarrier(requestId = Some(RequestId(requestId)))
+        ) shouldBe s"$requestId-${uuid.substring(24)}"
       }
 
       "return new ID when the requestID does not match the format(8-4-4-4)" in {
@@ -202,9 +195,9 @@ class DesConnectorSpec
 
   "DESConnector getResidencyStatus correlationId propagation" should {
     "derive the CorrelationId header sent to DES from the request ID in the supplied HeaderCarrier" in {
-      val requestId = "abcd0000-dh12-fg34-ij56"
+      val requestId                      = "abcd0000-dh12-fg34-ij56"
       val hcWithRequestId: HeaderCarrier = HeaderCarrier(requestId = Some(RequestId(requestId)))
-      val successResponse = ResidencyStatusSuccess(
+      val successResponse                = ResidencyStatusSuccess(
         nino = "AB123456C",
         deathDate = Some(""),
         deathDateStatus = Some(""),
@@ -229,8 +222,8 @@ class DesConnectorSpec
   "DESConnector logging" should {
     "log the correlation id at ERROR level when a DES call fails" in {
       val individualDetails = IndividualDetails("AB123456C", "JOHN", "SMITH", LocalDate.parse("1990-02-21", formatter))
-      val requestId = "abcd6789-dh12-fg34-ij56"
-      val expectedCorrId = s"$requestId-${uuid.substring(24)}"
+      val requestId         = "abcd6789-dh12-fg34-ij56"
+      val expectedCorrId    = s"$requestId-${uuid.substring(24)}"
 
       server.stubFor(
         post(urlEqualTo("/individuals/residency-status/"))
@@ -240,11 +233,19 @@ class DesConnectorSpec
       )
 
       withCaptureOfLoggingFrom(TestDesConnector.loggerForTest) { logs =>
-        await(TestDesConnector.getResidencyStatus(individualDetails, userId)(using HeaderCarrier(requestId = Some(RequestId(requestId)))))
+        await(
+          TestDesConnector.getResidencyStatus(individualDetails, userId)(using
+            HeaderCarrier(requestId = Some(RequestId(requestId)))
+          )
+        )
         logs.map(event => event.getLevel -> event.getMessage) should contain(
-          (Level.ERROR, s"[DesConnector][getResidencyStatus] Cannot provide a residency status for this pension scheme member for userId ($userId) correlationId ($expectedCorrId).")
+          (
+            Level.ERROR,
+            s"[DesConnector][getResidencyStatus] Cannot provide a residency status for this pension scheme member for userId ($userId) correlationId ($expectedCorrId)."
+          )
         )
       }
     }
   }
+
 }

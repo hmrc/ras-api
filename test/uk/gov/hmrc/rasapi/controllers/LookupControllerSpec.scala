@@ -16,6 +16,7 @@
 
 package uk.gov.hmrc.rasapi.controllers
 
+import ch.qos.logback.classic.Level
 import org.mockito.ArgumentMatchers.{eq as Meq, *}
 import org.mockito.Mockito.*
 import org.scalatest.BeforeAndAfter
@@ -23,7 +24,8 @@ import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpecLike
 import org.scalatestplus.mockito.MockitoSugar
 import org.scalatestplus.play.guice.GuiceOneAppPerSuite
-import play.api.Application
+import play.api.{Application, Logger}
+import uk.gov.hmrc.play.bootstrap.tools.LogCapturing
 import play.api.inject.guice.GuiceApplicationBuilder
 import play.api.libs.functional.syntax.{unlift, *}
 import play.api.libs.json.{JsPath, Json, Writes}
@@ -48,7 +50,12 @@ import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.{ExecutionContext, Future}
 
 class LookupControllerSpec
-    extends AnyWordSpecLike with Matchers with MockitoSugar with GuiceOneAppPerSuite with BeforeAndAfter {
+    extends AnyWordSpecLike
+    with Matchers
+    with MockitoSugar
+    with GuiceOneAppPerSuite
+    with BeforeAndAfter
+    with LogCapturing {
 
   implicit override lazy val app: Application = new GuiceApplicationBuilder()
     .build()
@@ -136,6 +143,9 @@ class LookupControllerSpec
     override lazy val STATUS_MATCHING_FAILED: String     = "STATUS_UNAVAILABLE"
     override lazy val STATUS_TOO_MANY_REQUESTS: String   = "TOO_MANY_REQUESTS"
     override lazy val STATUS_SERVICE_UNAVAILABLE: String = "SERVICE_UNAVAILABLE"
+
+    // The `Logging` trait names the logger after this anonymous subclass, so expose it for LogCapturing.
+    def loggerForTest: Logger = logger
   }
 
   object TestLookupControllerFeb18
@@ -786,6 +796,137 @@ class LookupControllerSpec
 
     "return None when the Accept header is missing" in {
       FakeRequest(Helpers.GET, "/").getVersion shouldBe None
+    }
+  }
+
+  "LookupController logging" should {
+
+    def validRequest =
+      FakeRequest(Helpers.GET, "/residency-status")
+        .withHeaders(acceptHeader)
+        .withJsonBody(Json.toJson(individualDetails)(individualDetailssWrites))
+
+    def stubDesResult(result: Either[ResidencyStatus, ResidencyStatusFailure]): Unit =
+      when(mockDesConnector.getResidencyStatus(any(), any(), any())(using any[HeaderCarrier]))
+        .thenReturn(Future.successful(result))
+
+    "log at INFO level when a residency status is returned successfully" in {
+      when(mockAuthConnector.authorise[Enrolments](any(), any())(any(), any())).thenReturn(successfulRetrieval)
+      when(mockResidencyYearResolver.isBetweenJanAndApril).thenReturn(false)
+      stubDesResult(Left(ResidencyStatus("otherUKResident", Some("otherUKResident"))))
+
+      withCaptureOfLoggingFrom(TestLookupController.loggerForTest) { logs =>
+        await(TestLookupController.getResidencyStatus.apply(validRequest))
+
+        logs.map(event => event.getLevel -> event.getMessage) should contain(
+          Level.INFO -> "[LookupController][getResidencyStatus] Residency status returned successfully for userId (A123456)."
+        )
+      }
+    }
+
+    "log at INFO level when the individual is deceased" in {
+      when(mockAuthConnector.authorise[Enrolments](any(), any())(any(), any())).thenReturn(successfulRetrieval)
+      stubDesResult(Right(ResidencyStatusFailure(STATUS_DECEASED, "Individual is deceased")))
+
+      withCaptureOfLoggingFrom(TestLookupController.loggerForTest) { logs =>
+        await(TestLookupController.getResidencyStatus.apply(validRequest))
+
+        logs.map(event => event.getLevel -> event.getMessage) should contain(
+          Level.INFO -> "[LookupController][getResidencyStatus] Individual is deceased for userId (A123456)."
+        )
+      }
+    }
+
+    "log at WARN level when the individual is not matched" in {
+      when(mockAuthConnector.authorise[Enrolments](any(), any())(any(), any())).thenReturn(successfulRetrieval)
+      stubDesResult(Right(ResidencyStatusFailure(STATUS_MATCHING_FAILED, "")))
+
+      withCaptureOfLoggingFrom(TestLookupController.loggerForTest) { logs =>
+        await(TestLookupController.getResidencyStatus.apply(validRequest))
+
+        logs.map(event => event.getLevel -> event.getMessage) should contain(
+          Level.WARN -> "[LookupController][getResidencyStatus] Individual not matched for userId (A123456)."
+        )
+      }
+    }
+
+    "log at WARN level including the error code when DES returns an unexpected error" in {
+      when(mockAuthConnector.authorise[Enrolments](any(), any())(any(), any())).thenReturn(successfulRetrieval)
+      stubDesResult(Right(ResidencyStatusFailure(STATUS_INTERNAL_SERVER_ERROR, "")))
+
+      withCaptureOfLoggingFrom(TestLookupController.loggerForTest) { logs =>
+        await(TestLookupController.getResidencyStatus.apply(validRequest))
+
+        logs.map(event => event.getLevel -> event.getMessage) should contain(
+          Level.WARN -> s"[LookupController][getResidencyStatus] Error returned from DES, error code: $STATUS_INTERNAL_SERVER_ERROR for userId (A123456)."
+        )
+      }
+    }
+
+    "log at ERROR level when DES reports too many requests" in {
+      when(mockAuthConnector.authorise[Enrolments](any(), any())(any(), any())).thenReturn(successfulRetrieval)
+      stubDesResult(Right(ResidencyStatusFailure(STATUS_TOO_MANY_REQUESTS, "")))
+
+      withCaptureOfLoggingFrom(TestLookupController.loggerForTest) { logs =>
+        await(TestLookupController.getResidencyStatus.apply(validRequest))
+
+        logs.map(event => event.getLevel -> event.getMessage) should contain(
+          Level.ERROR -> "[LookupController][getResidencyStatus] Too Many Requests for userId (A123456)."
+        )
+      }
+    }
+
+    "log at ERROR level when DES is unavailable" in {
+      when(mockAuthConnector.authorise[Enrolments](any(), any())(any(), any())).thenReturn(successfulRetrieval)
+      stubDesResult(Right(ResidencyStatusFailure(STATUS_SERVICE_UNAVAILABLE, "")))
+
+      withCaptureOfLoggingFrom(TestLookupController.loggerForTest) { logs =>
+        await(TestLookupController.getResidencyStatus.apply(validRequest))
+
+        logs.map(event => event.getLevel -> event.getMessage) should contain(
+          Level.ERROR -> "[LookupController][getResidencyStatus] Service unavailable for userId (A123456)."
+        )
+      }
+    }
+
+    "log at ERROR level including the exception message when the DES call fails" in {
+      when(mockAuthConnector.authorise[Enrolments](any(), any())(any(), any())).thenReturn(successfulRetrieval)
+      when(mockDesConnector.getResidencyStatus(any(), any(), any())(using any[HeaderCarrier]))
+        .thenReturn(Future.failed(new RuntimeException("DES exploded")))
+
+      withCaptureOfLoggingFrom(TestLookupController.loggerForTest) { logs =>
+        await(TestLookupController.getResidencyStatus.apply(validRequest))
+
+        logs.map(event => event.getLevel -> event.getMessage) should contain(
+          Level.ERROR -> "[LookupController][getResidencyStatus] Error occurred for userId (A123456), Exception message: DES exploded"
+        )
+      }
+    }
+
+    "log at WARN level when the user has insufficient privileges" in {
+      when(mockAuthConnector.authorise[Enrolments](any(), any())(any(), any()))
+        .thenReturn(Future.failed(new InsufficientEnrolments))
+
+      withCaptureOfLoggingFrom(TestLookupController.loggerForTest) { logs =>
+        await(TestLookupController.getResidencyStatus.apply(validRequest))
+
+        logs.map(event => event.getLevel -> event.getMessage) should contain(
+          Level.WARN -> "[LookupController][getResidencyStatus] Insufficient privileges"
+        )
+      }
+    }
+
+    "log at WARN level when there is no active session" in {
+      when(mockAuthConnector.authorise[Enrolments](any(), any())(any(), any()))
+        .thenReturn(Future.failed(new MissingBearerToken))
+
+      withCaptureOfLoggingFrom(TestLookupController.loggerForTest) { logs =>
+        await(TestLookupController.getResidencyStatus.apply(validRequest))
+
+        logs.map(event => event.getLevel -> event.getMessage) should contain(
+          Level.WARN -> "[LookupController][getResidencyStatus] Inactive session"
+        )
+      }
     }
   }
 
