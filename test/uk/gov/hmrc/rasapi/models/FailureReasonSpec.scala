@@ -52,11 +52,10 @@ class FailureReasonSpec extends AnyWordSpec with Matchers {
       an[IllegalArgumentException] should be thrownBy FailureReason.valueOf("NOT_A_REASON")
     }
 
-    "render each value's toString as its name" in {
+    "render each value's toString as its name" in
       FailureReason.values.foreach { reason =>
         FailureReason.valueOf(reason.toString) shouldBe reason
       }
-    }
   }
 
 }
