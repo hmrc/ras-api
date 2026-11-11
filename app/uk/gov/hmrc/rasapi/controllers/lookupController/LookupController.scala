@@ -65,6 +65,8 @@ class LookupController @Inject() (
   override def validateVersion(version: String): Boolean =
     version == "2.0"
 
+  private lazy val integrationPlatform: String = if (appContext.isHip5161Enabled) "HIP" else "DES"
+
   private val acceptHeaderValidationRules: String = "application/vnd.hmrc.2.0+json"
 
   extension (request: Request[?])
@@ -168,7 +170,7 @@ class LookupController @Inject() (
                     userId = id
                   )
                   logger.warn(
-                    s"[LookupController][getResidencyStatus] Error returned from DES, error code: " +
+                    s"[LookupController][getResidencyStatus] Error returned from $integrationPlatform, error code: " +
                       s"${matchingFailed.code} for userId ($id)."
                   )
                   metrics.registry.counter(INTERNAL_SERVER_ERROR.toString)
