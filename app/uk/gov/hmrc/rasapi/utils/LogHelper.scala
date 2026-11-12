@@ -16,26 +16,36 @@
 
 package uk.gov.hmrc.rasapi.utils
 
-import uk.gov.hmrc.rasapi.models.ConnectorFailure
 import uk.gov.hmrc.http.HeaderCarrier
+import uk.gov.hmrc.rasapi.models.ConnectorFailure
 
 object LogHelper {
 
   private def requestId(hc: HeaderCarrier): String = hc.requestId.map(id => s"requestId=${id.value}").getOrElse("")
 
-  def successText(tag: String, userId: String, details: String = "")(implicit hc: HeaderCarrier): String =
-    s"$tag outcome=SUCCESS userId=$userId $details ${requestId(hc)}".trimWhitespace
+  // extra fields as `key=value` pairs, e.g. corrId=abc-123 attempt=2
+  private def keyValuePairs(context: Seq[(String, String)]): String =
+    context.map((key, value) => s"$key=$value").mkString(" ")
 
-  def failureText(tag: String, userId: String, failure: ConnectorFailure, message: String = "")(implicit
+  def successText(tag: String, userId: String, details: String = "", context: Seq[(String, String)] = Nil)(implicit
     hc: HeaderCarrier
-  ): String = {
+  ): String =
+    s"$tag outcome=SUCCESS userId=$userId ${keyValuePairs(context)} $details ${requestId(hc)}".trimWhitespace
+
+  def failureText(
+    tag: String,
+    userId: String,
+    failure: ConnectorFailure,
+    message: String = "",
+    context: Seq[(String, String)] = Nil // extra key=value fields, e.g. corrId, attempt
+  )(implicit hc: HeaderCarrier): String = {
 
     val status      = failure.status.map(s => s"status=$s").getOrElse("")
     val parseErrors = failure.parseErrors.map(e => s"parseErrors=$e").getOrElse("")
     val cause       = failure.cause.map(c => s"cause=${c.getClass.getSimpleName}").getOrElse("")
 
-    (s"$tag $message outcome=FAILURE reason=${failure.reason} userId=$userId ${requestId(hc)} $status " +
-      s"$parseErrors $cause").trimWhitespace
+    (s"$tag $message outcome=FAILURE reason=${failure.reason} userId=$userId ${keyValuePairs(context)} " +
+      s"${requestId(hc)} $status $parseErrors $cause").trimWhitespace
   }
 
   extension (s: String) {
