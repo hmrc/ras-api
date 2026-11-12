@@ -22,16 +22,17 @@ import play.api.Logging
 import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.rasapi.config.{AppContext, WSHttp}
 import uk.gov.hmrc.rasapi.services.AuditService
+import uk.gov.hmrc.rasapi.utils.CorrelationIdGenerator
 
 import java.io.InputStream
-import java.util.UUID.randomUUID
 import javax.inject.Inject
 import scala.concurrent.{ExecutionContext, Future}
 
 class UpscanConnector @Inject() (
   val wsHttp: WSHttp,
   val auditService: AuditService,
-  val appContext: AppContext
+  val appContext: AppContext,
+  correlationIdGenerator: CorrelationIdGenerator
 )(using ec: ExecutionContext)
     extends Logging {
 
@@ -40,26 +41,12 @@ class UpscanConnector @Inject() (
   val OUTCOME_SUCCESS: String           = "SUCCESS"
   val OUTCOME_FAILURE: String           = "FAILURE"
 
-  def generateNewUUID: String = randomUUID.toString
-
-  def correlationId(using hc: HeaderCarrier): String = {
-    val CorrelationIdPattern = """.*([A-Za-z0-9]{8}-[A-Za-z0-9]{4}-[A-Za-z0-9]{4}-[A-Za-z0-9]{4}).*""".r
-    hc.requestId match {
-      case Some(requestId) =>
-        requestId.value match {
-          case CorrelationIdPattern(prefix) => prefix + "-" + generateNewUUID.substring(24)
-          case _                            => generateNewUUID
-        }
-      case _               => generateNewUUID
-    }
-  }
-
   def getUpscanFile(downloadUrl: String, reference: String, userId: String)(using
     hc: HeaderCarrier
   ): Future[Option[InputStream]] = {
     given system: ActorSystem = ActorSystem()
 
-    val corrId = correlationId
+    val corrId = correlationIdGenerator.correlationId
 
     logger.info(
       s"[UpscanConnector][getUpscanFile] Trying to retrieve file from Upscan: $reference for userId ($userId) correlationId ($corrId)."

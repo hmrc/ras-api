@@ -32,7 +32,7 @@ import uk.gov.hmrc.play.bootstrap.http.HttpClientV2Provider
 import uk.gov.hmrc.rasapi.config.AppContext
 import uk.gov.hmrc.rasapi.models.*
 import uk.gov.hmrc.rasapi.services.AuditService
-import uk.gov.hmrc.rasapi.utils.WireMockHelper
+import uk.gov.hmrc.rasapi.utils.{CorrelationIdGenerator, WireMockHelper}
 
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
@@ -72,6 +72,10 @@ class DesConnectorSpec
 
   val uuid = "123e4567-e89b-42d3-a456-556642440000"
 
+  val fixedCorrelationIdGenerator: CorrelationIdGenerator = new CorrelationIdGenerator {
+    override def generateNewUUID: String = uuid
+  }
+
   lazy val wireMockDesConnector: DesConnector =
     createDesConnector()
 
@@ -80,7 +84,9 @@ class DesConnectorSpec
     retryEnabled: Boolean = true,
     bulkRetryEnabled: Boolean = false
   ): DesConnector =
-    new DesConnector(realHttp, mockAuditService, appContext)(using ExecutionContext.global) {
+    new DesConnector(realHttp, mockAuditService, appContext, fixedCorrelationIdGenerator)(using
+      ExecutionContext.global
+    ) {
 
       override lazy val desBaseUrl: String =
         s"http://localhost:${server.port()}"
@@ -96,8 +102,6 @@ class DesConnectorSpec
 
       override lazy val isRetryEnabled: Boolean     = retryEnabled
       override lazy val isBulkRetryEnabled: Boolean = bulkRetryEnabled
-
-      override def generateNewUUID: String = uuid
     }
 
   val formatter: DateTimeFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd")
@@ -683,26 +687,6 @@ class DesConnectorSpec
 
         verifyDesPost(individualDetails, expectedCount = 3)
       }
-    }
-  }
-
-  "DESConnector correlationID" when {
-    "requestID is present in the headerCarrier" should {
-      "return new ID pre-appending the requestID when the requestID matches the format(8-4-4-4)" in {
-        val requestId = "abcd0000-dh12-fg34-ij56"
-        wireMockDesConnector.correlationId(using
-          HeaderCarrier(requestId = Some(RequestId(requestId)))
-        ) shouldBe s"$requestId-${uuid.substring(24)}"
-      }
-
-      "return new ID when the requestID does not match the format(8-4-4-4)" in {
-        val requestId = "1a2b-dh12-fg34-ij56"
-        wireMockDesConnector.correlationId(using HeaderCarrier(requestId = Some(RequestId(requestId)))) shouldBe uuid
-      }
-    }
-
-    "requestID is not present in the headerCarrier should return a new ID" in {
-      wireMockDesConnector.correlationId(using HeaderCarrier()) shouldBe uuid
     }
   }
 

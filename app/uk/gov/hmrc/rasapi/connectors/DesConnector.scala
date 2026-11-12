@@ -25,9 +25,9 @@ import uk.gov.hmrc.rasapi.config.AppContext
 import uk.gov.hmrc.rasapi.models.*
 import uk.gov.hmrc.rasapi.models.FailureReason.*
 import uk.gov.hmrc.rasapi.services.{AuditService, DesAuditData}
+import uk.gov.hmrc.rasapi.utils.CorrelationIdGenerator
 import uk.gov.hmrc.rasapi.utils.LogHelper.failureText
 
-import java.util.UUID.randomUUID
 import javax.inject.Inject
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.{Failure, Success, Try}
@@ -35,7 +35,8 @@ import scala.util.{Failure, Success, Try}
 class DesConnector @Inject() (
   httpPost: HttpClientV2Provider,
   val auditService: AuditService,
-  val appContext: AppContext
+  val appContext: AppContext,
+  correlationIdGenerator: CorrelationIdGenerator
 )(using ec: ExecutionContext)
     extends Logging {
 
@@ -79,7 +80,7 @@ class DesConnector @Inject() (
   )(using hc: HeaderCarrier): Future[Either[ResidencyStatusFailure, ResidencyStatus]] = {
 
     val uri    = s"$desBaseUrl/individuals/residency-status/"
-    val corrId = correlationId
+    val corrId = correlationIdGenerator.correlationId
 
     val desHeaders = Seq(
       "Environment"   -> desUrlHeaderEnv,
@@ -109,20 +110,6 @@ class DesConnector @Inject() (
     }
 
     getResultAndProcess()
-  }
-
-  def generateNewUUID: String = randomUUID.toString
-
-  def correlationId(using hc: HeaderCarrier): String = {
-    val CorrelationIdPattern = """.*([A-Za-z0-9]{8}-[A-Za-z0-9]{4}-[A-Za-z0-9]{4}-[A-Za-z0-9]{4}).*""".r
-    hc.requestId match {
-      case Some(requestId) =>
-        requestId.value match {
-          case CorrelationIdPattern(prefix) => prefix + "-" + generateNewUUID.substring(24)
-          case _                            => generateNewUUID
-        }
-      case _               => generateNewUUID
-    }
   }
 
   private def sendResidencyStatusRequest(
