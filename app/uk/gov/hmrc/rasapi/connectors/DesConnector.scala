@@ -76,7 +76,7 @@ class DesConnector @Inject() (
     member: IndividualDetails,
     userId: String,
     isBulkRequest: Boolean = false
-  )(using hc: HeaderCarrier): Future[Either[ResidencyStatus, ResidencyStatusFailure]] = {
+  )(using hc: HeaderCarrier): Future[Either[ResidencyStatusFailure, ResidencyStatus]] = {
 
     val uri    = s"$desBaseUrl/individuals/residency-status/"
     val corrId = correlationId
@@ -89,7 +89,7 @@ class DesConnector @Inject() (
       "CorrelationId" -> corrId
     )
 
-    def getResultAndProcess(retryCount: Int = 1): Future[Either[ResidencyStatus, ResidencyStatusFailure]] = {
+    def getResultAndProcess(retryCount: Int = 1): Future[Either[ResidencyStatusFailure, ResidencyStatus]] = {
       val requestData = DesRequestData(userId, member.nino, corrId, retryCount, isBulkRequest)
 
       if (retryCount > 1) {
@@ -97,13 +97,13 @@ class DesConnector @Inject() (
       }
 
       sendResidencyStatusRequest(uri, member, desHeaders, requestData) flatMap {
-        case Left(result)                                                                            => Future.successful(Left(result))
-        case Right(result) if retryCount < retryLimit && isCodeRetryable(result.code, isBulkRequest) =>
+        case Right(result)                                                                          => Future.successful(Right(result))
+        case Left(result) if retryCount < retryLimit && isCodeRetryable(result.code, isBulkRequest) =>
           Thread.sleep(retryDelay) // Delay before sending to HoD to try to avoid transactions per second(tps) clash
           getResultAndProcess(retryCount + 1)
-        case Right(result)                                                                           =>
+        case Left(result)                                                                           =>
           Future.successful(
-            Right(result.copy(code = result.code.replace(error_DoNotReProcess, error_InternalServerError)))
+            Left(result.copy(code = result.code.replace(error_DoNotReProcess, error_InternalServerError)))
           )
       }
     }
@@ -130,7 +130,7 @@ class DesConnector @Inject() (
     member: IndividualDetails,
     desHeaders: Seq[(String, String)],
     call: DesRequestData
-  )(using hc: HeaderCarrier): Future[Either[ResidencyStatus, ResidencyStatusFailure]] = {
+  )(using hc: HeaderCarrier): Future[Either[ResidencyStatusFailure, ResidencyStatus]] = {
 
     val payload = Json.toJson(
       Json
@@ -218,11 +218,11 @@ class DesConnector @Inject() (
     uri: String
   )(using
     hc: HeaderCarrier
-  ): Either[ResidencyStatus, ResidencyStatusFailure] =
+  ): Either[ResidencyStatusFailure, ResidencyStatus] =
     result match {
       case Right(residencyStatus) =>
         auditService.audit(DES_AUDIT_TYPE, uri, requestData.successAudit(200))
-        Left(residencyStatus)
+        Right(residencyStatus)
 
       case Left(failure) =>
         val response = toResidencyStatusFailure(failure)
@@ -242,7 +242,7 @@ class DesConnector @Inject() (
         }
 
         auditService.audit(DES_AUDIT_TYPE, uri, requestData.failureAudit(failure, response.code))
-        Right(response)
+        Left(response)
     }
 
   private def convertResidencyStatus(residencyStatus: String): String =

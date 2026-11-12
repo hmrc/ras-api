@@ -199,7 +199,7 @@ class FileProcessingServiceSpec
           .thenReturn(Future.successful(cacheItem))
 
         when(mockDesConnector.getResidencyStatus(any[IndividualDetails], any(), any())(using any[HeaderCarrier]))
-          .thenReturn(Future.successful(Left(ResidencyStatus("scotResident", Some("otherUKResident")))))
+          .thenReturn(Future.successful(Right(ResidencyStatus("scotResident", Some("otherUKResident")))))
 
         when(mockResidencyYearResolver.isBetweenJanAndApril).thenReturn(true)
 
@@ -293,7 +293,7 @@ class FileProcessingServiceSpec
           .thenReturn(Future.successful(cacheItem))
 
         when(mockDesConnector.getResidencyStatus(any[IndividualDetails], any(), any())(using any[HeaderCarrier]))
-          .thenReturn(Future.successful(Left(ResidencyStatus("scotResident", Some("scotResident")))))
+          .thenReturn(Future.successful(Right(ResidencyStatus("scotResident", Some("scotResident")))))
 
         when(mockResidencyYearResolver.isBetweenJanAndApril).thenReturn(true)
 
@@ -386,7 +386,7 @@ class FileProcessingServiceSpec
           .thenReturn(Future.successful(cacheItem))
 
         when(mockDesConnector.getResidencyStatus(any[IndividualDetails], any(), any())(using any[HeaderCarrier]))
-          .thenReturn(Future.successful(Left(ResidencyStatus("otherUKResident", Some("scotResident")))))
+          .thenReturn(Future.successful(Right(ResidencyStatus("otherUKResident", Some("scotResident")))))
 
         when(mockResidencyYearResolver.isBetweenJanAndApril).thenReturn(false)
 
@@ -480,7 +480,7 @@ class FileProcessingServiceSpec
         when(mockDesConnector.getResidencyStatus(any[IndividualDetails], any(), any())(using any[HeaderCarrier]))
           .thenReturn(
             Future.successful(
-              Right(ResidencyStatusFailure(code = s"$STATUS_MATCHING_FAILED", reason = s"$STATUS_MATCHING_FAILED"))
+              Left(ResidencyStatusFailure(code = s"$STATUS_MATCHING_FAILED", reason = s"$STATUS_MATCHING_FAILED"))
             )
           )
 
@@ -575,7 +575,7 @@ class FileProcessingServiceSpec
 
         when(mockDesConnector.getResidencyStatus(any[IndividualDetails], any(), any())(using any[HeaderCarrier]))
           .thenReturn(
-            Future.successful(Right(ResidencyStatusFailure(code = s"$STATUS_DECEASED", reason = s"$STATUS_DECEASED")))
+            Future.successful(Left(ResidencyStatusFailure(code = s"$STATUS_DECEASED", reason = s"$STATUS_DECEASED")))
           )
 
         when(mockResidencyYearResolver.isBetweenJanAndApril).thenReturn(true)
@@ -669,7 +669,7 @@ class FileProcessingServiceSpec
         when(mockDesConnector.getResidencyStatus(any[IndividualDetails], any(), any())(using any[HeaderCarrier]))
           .thenReturn(
             Future.successful(
-              Right(
+              Left(
                 ResidencyStatusFailure(code = s"$STATUS_SERVICE_UNAVAILABLE", reason = s"$STATUS_SERVICE_UNAVAILABLE")
               )
             )
@@ -883,7 +883,7 @@ class FileProcessingServiceSpec
     "fetch result" when {
       "input row is valid and the date of processing is between january and april" in {
         when(mockDesConnector.getResidencyStatus(data, userId, isBulkRequest = true))
-          .thenReturn(Future.successful(Left(ResidencyStatus("otherUKResident", Some("scotResident")))))
+          .thenReturn(Future.successful(Right(ResidencyStatus("otherUKResident", Some("scotResident")))))
 
         when(mockResidencyYearResolver.isBetweenJanAndApril).thenReturn(true)
 
@@ -894,7 +894,7 @@ class FileProcessingServiceSpec
 
       "input row is valid and the date of processing is between april and december" in {
         when(mockDesConnector.getResidencyStatus(data, userId, isBulkRequest = true))
-          .thenReturn(Future.successful(Left(ResidencyStatus("otherUKResident", Some("scotResident")))))
+          .thenReturn(Future.successful(Right(ResidencyStatus("otherUKResident", Some("scotResident")))))
 
         when(mockResidencyYearResolver.isBetweenJanAndApril).thenReturn(false)
 
@@ -905,7 +905,7 @@ class FileProcessingServiceSpec
 
       "input row matching failed" in {
         when(mockDesConnector.getResidencyStatus(data, userId, isBulkRequest = true))
-          .thenReturn(Future.successful(Right(ResidencyStatusFailure(STATUS_MATCHING_FAILED, STATUS_MATCHING_FAILED))))
+          .thenReturn(Future.successful(Left(ResidencyStatusFailure(STATUS_MATCHING_FAILED, STATUS_MATCHING_FAILED))))
         val inputRow = "AB123456C,John,Smith,1992-02-21"
         val result   = SUT.fetchResult(inputRow, userId, fileId)
         result shouldBe s"AB123456C,John,Smith,1992-02-21,$STATUS_FILE_PROCESSING_MATCHING_FAILED"
@@ -913,7 +913,7 @@ class FileProcessingServiceSpec
 
       "input row returns deceased" in {
         when(mockDesConnector.getResidencyStatus(data, userId, isBulkRequest = true))
-          .thenReturn(Future.successful(Right(ResidencyStatusFailure(STATUS_DECEASED, STATUS_DECEASED))))
+          .thenReturn(Future.successful(Left(ResidencyStatusFailure(STATUS_DECEASED, STATUS_DECEASED))))
         val inputRow = "AB123456C,John,Smith,1992-02-21"
         val result   = SUT.fetchResult(inputRow, userId, fileId)
         result shouldBe s"AB123456C,John,Smith,1992-02-21,$STATUS_FILE_PROCESSING_MATCHING_FAILED"
@@ -959,7 +959,7 @@ class FileProcessingServiceSpec
           .thenReturn(Future.successful(cacheItem))
 
         when(mockDesConnector.getResidencyStatus(any[IndividualDetails], any(), any())(using any[HeaderCarrier]))
-          .thenReturn(Future.successful(Left(ResidencyStatus("otherUKResident", Some("scotResident")))))
+          .thenReturn(Future.successful(Right(ResidencyStatus("otherUKResident", Some("scotResident")))))
 
         when(mockResidencyYearResolver.isBetweenJanAndApril).thenReturn(true)
 

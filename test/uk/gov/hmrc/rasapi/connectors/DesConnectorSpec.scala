@@ -169,8 +169,8 @@ class DesConnectorSpec
 
       val result =
         await(wireMockDesConnector.getResidencyStatus(individualDetails, userId))
-      result.isLeft                       shouldBe true
-      result.left.getOrElse("Get Failed") shouldBe ResidencyStatus("otherUKResident", Some("scotResident"))
+      result.isRight                 shouldBe true
+      result.getOrElse("Get Failed") shouldBe ResidencyStatus("otherUKResident", Some("scotResident"))
 
       verifyDesPost(individualDetails)
     }
@@ -194,7 +194,7 @@ class DesConnectorSpec
         stubDesResponse(200, Json.toJson(successResponse).toString())
 
         val result = await(wireMockDesConnector.getResidencyStatus(individualDetails, userId))
-        result shouldBe Left(ResidencyStatus("welshResident", Some("welshResident")))
+        result shouldBe Right(ResidencyStatus("welshResident", Some("welshResident")))
 
         verifyDesPost(individualDetails)
       }
@@ -216,7 +216,7 @@ class DesConnectorSpec
         stubDesResponse(200, Json.toJson(successResponse).toString())
 
         val result = await(wireMockDesConnector.getResidencyStatus(individualDetails, userId))
-        result shouldBe Left(ResidencyStatus("welshResident", Some("scotResident")))
+        result shouldBe Right(ResidencyStatus("welshResident", Some("scotResident")))
 
         verifyDesPost(individualDetails)
       }
@@ -239,8 +239,8 @@ class DesConnectorSpec
       stubDesResponse(200, Json.toJson(successResponse).toString())
 
       val result = await(wireMockDesConnector.getResidencyStatus(individualDetails, userId))
-      result.isLeft                       shouldBe true
-      result.left.getOrElse("Get Failed") shouldBe ResidencyStatus("otherUKResident", None)
+      result.isRight                 shouldBe true
+      result.getOrElse("Get Failed") shouldBe ResidencyStatus("otherUKResident", None)
 
       verifyDesPost(individualDetails)
     }
@@ -304,8 +304,8 @@ class DesConnectorSpec
           )
         )
 
-        result.isRight                      shouldBe false
-        result.left.getOrElse("Get Failed") shouldBe ResidencyStatus("otherUKResident", Some("scotResident"))
+        result.isLeft                  shouldBe false
+        result.getOrElse("Get Failed") shouldBe ResidencyStatus("otherUKResident", Some("scotResident"))
 
         verifyDesPost(individualDetails, expectedCount = 2)
       }
@@ -334,8 +334,8 @@ class DesConnectorSpec
           )
         )
 
-        result.isLeft                  shouldBe false
-        result.getOrElse("Get Failed") shouldBe errorResponse
+        result.isRight                      shouldBe false
+        result.left.getOrElse("Get Failed") shouldBe errorResponse
 
         verifyDesPost(individualDetails)
       }
@@ -360,8 +360,8 @@ class DesConnectorSpec
       val result = await(
         connector.getResidencyStatus(individualDetails, userId)
       )
-      result.isLeft                  shouldBe false
-      result.getOrElse("Get Failed") shouldBe errorResponse
+      result.isRight                      shouldBe false
+      result.left.getOrElse("Get Failed") shouldBe errorResponse
       verifyDesPost(individualDetails)
     }
 
@@ -377,8 +377,8 @@ class DesConnectorSpec
       stubDesResponse(404, Json.toJson(errorResponse).toString())
       val result = await(wireMockDesConnector.getResidencyStatus(individualDetails, userId))
 
-      result.isLeft                  shouldBe false
-      result.getOrElse("Get Failed") shouldBe errorResponse
+      result.isRight                      shouldBe false
+      result.left.getOrElse("Get Failed") shouldBe errorResponse
 
       verifyDesPost(individualDetails)
     }
@@ -396,8 +396,8 @@ class DesConnectorSpec
 
       val result =
         await(wireMockDesConnector.getResidencyStatus(individualDetails, userId))
-      result.isLeft                  shouldBe false
-      result.getOrElse("Get Failed") shouldBe errorResponse
+      result.isRight                      shouldBe false
+      result.left.getOrElse("Get Failed") shouldBe errorResponse
       verifyDesPost(individualDetails)
     }
     "handle success response but the person is deceased from des" in {
@@ -419,8 +419,8 @@ class DesConnectorSpec
 
       val result = await(wireMockDesConnector.getResidencyStatus(individualDetails, userId))
 
-      result.isLeft                  shouldBe false
-      result.getOrElse("Get Failed") shouldBe expectedResult
+      result.isRight                      shouldBe false
+      result.left.getOrElse("Get Failed") shouldBe expectedResult
 
       verifyDesPost(individualDetails)
     }
@@ -436,8 +436,8 @@ class DesConnectorSpec
       val result =
         await(wireMockDesConnector.getResidencyStatus(individualDetails, userId))
 
-      result.isLeft                  shouldBe false
-      result.getOrElse("Get Failed") shouldBe errorResponse
+      result.isRight                      shouldBe false
+      result.left.getOrElse("Get Failed") shouldBe errorResponse
 
       verifyDesPost(individualDetails, expectedCount = 3)
     }
@@ -453,8 +453,8 @@ class DesConnectorSpec
 
       val result = await(wireMockDesConnector.getResidencyStatus(individualDetails, userId))
 
-      result.isLeft                  shouldBe false
-      result.getOrElse("Get Failed") shouldBe errorResponse
+      result.isRight                      shouldBe false
+      result.left.getOrElse("Get Failed") shouldBe errorResponse
 
       verifyDesPost(individualDetails, expectedCount = 3)
     }
@@ -471,8 +471,8 @@ class DesConnectorSpec
       val result =
         await(wireMockDesConnector.getResidencyStatus(individualDetails, userId))
 
-      result.isLeft                  shouldBe false
-      result.getOrElse("Get Failed") shouldBe expectedErrorResponse
+      result.isRight                      shouldBe false
+      result.left.getOrElse("Get Failed") shouldBe expectedErrorResponse
 
       verifyDesPost(individualDetails)
     }
@@ -503,7 +503,7 @@ class DesConnectorSpec
         )
       )
 
-      result shouldBe Right(
+      result shouldBe Left(
         ResidencyStatusFailure(
           "INTERNAL_SERVER_ERROR",
           "Internal server error."
@@ -542,7 +542,7 @@ class DesConnectorSpec
         connector.getResidencyStatus(individualDetails, userId)
       )
 
-      result shouldBe Right(
+      result shouldBe Left(
         ResidencyStatusFailure(
           "INTERNAL_SERVER_ERROR",
           "Internal server error."
@@ -568,7 +568,7 @@ class DesConnectorSpec
         wireMockDesConnector.getResidencyStatus(individualDetails, userId)
       )
 
-      result shouldBe Right(
+      result shouldBe Left(
         ResidencyStatusFailure(
           "INTERNAL_SERVER_ERROR",
           "Internal server error."
@@ -606,7 +606,7 @@ class DesConnectorSpec
         wireMockDesConnector.getResidencyStatus(individualDetails, userId)
       )
 
-      result shouldBe Right(failureResponse)
+      result shouldBe Left(failureResponse)
 
       verifyDesPost(individualDetails)
     }
@@ -659,8 +659,8 @@ class DesConnectorSpec
         val result =
           await(wireMockDesConnector.getResidencyStatus(individualDetails, userId))
 
-        result.left.getOrElse("Get Failed") shouldBe ResidencyStatus("otherUKResident")
-        result.isRight                      shouldBe false
+        result.getOrElse("Get Failed") shouldBe ResidencyStatus("otherUKResident")
+        result.isLeft                  shouldBe false
 
         verifyDesPost(individualDetails, expectedCount = 2)
       }
@@ -678,8 +678,8 @@ class DesConnectorSpec
 
         val result =
           await(wireMockDesConnector.getResidencyStatus(individualDetails, userId))
-        result.isLeft                  shouldBe false
-        result.getOrElse("Get Failed") shouldBe errorResponse
+        result.isRight                      shouldBe false
+        result.left.getOrElse("Get Failed") shouldBe errorResponse
 
         verifyDesPost(individualDetails, expectedCount = 3)
       }
