@@ -26,6 +26,9 @@ class FailureReasonSpec extends AnyWordSpec with Matchers {
     "define exactly the expected set of values" in {
       FailureReason.values.map(_.toString).toSet shouldBe Set(
         "MATCHING_FAILED",
+        "DECEASED",
+        "MISSING_NEXT_YEAR_STATUS",
+        "DES_FAILURE_RESPONSE",
         "TOO_MANY_REQUESTS",
         "SERVICE_UNAVAILABLE",
         "TIMEOUT",
@@ -41,7 +44,7 @@ class FailureReasonSpec extends AnyWordSpec with Matchers {
     }
 
     "have 12 values" in {
-      FailureReason.values.length shouldBe 12
+      FailureReason.values.length shouldBe 15
     }
 
     "resolve a value by name with valueOf" in {

@@ -16,8 +16,8 @@
 
 package uk.gov.hmrc.rasapi.models
 
-import uk.gov.hmrc.rasapi.models.FailureReason.{INVALID_RESPONSE, PARSE_ERROR}
 import play.api.libs.json.{JsPath, JsonValidationError}
+import uk.gov.hmrc.rasapi.models.FailureReason.{INVALID_RESPONSE, PARSE_ERROR}
 
 import scala.util.control.NoStackTrace
 
@@ -25,7 +25,10 @@ final case class ConnectorFailure(
   reason: FailureReason,
   status: Option[Int] = None,
   parseErrors: Option[String] = None,
-  cause: Option[Throwable] = None
+  cause: Option[Throwable] = None,
+  detail: Option[String] = None, // non-sensitive extra context, e.g. the code from a DES failure body
+  upstreamFailure: Option[ResidencyStatusFailure] =
+    None // failure body returned by DES, passed back to the caller as-is
 ) extends Exception with NoStackTrace {
 
   override def getMessage: String = {
