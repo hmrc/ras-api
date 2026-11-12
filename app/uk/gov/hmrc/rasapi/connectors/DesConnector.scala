@@ -195,7 +195,7 @@ class DesConnector @Inject() (
     case _                                      => ConnectorFailure(INTERNAL_SERVER_ERROR, cause = Some(e))
   }
 
-  private def responseFor(failure: ConnectorFailure): ResidencyStatusFailure = {
+  private def toResidencyStatusFailure(failure: ConnectorFailure): ResidencyStatusFailure = {
     val noStatus      = "Cannot provide a residency status for this pension scheme member."
     val internalError = "Internal server error."
 
@@ -225,14 +225,15 @@ class DesConnector @Inject() (
         Left(residencyStatus)
 
       case Left(failure) =>
-        val response = responseFor(failure)
+        val response = toResidencyStatusFailure(failure)
 
         val context = Seq(
           "corrId"       -> requestData.corrId,
           "attempt"      -> requestData.number.toString,
           "responseCode" -> response.code
         )
-        val line    = failureText(tag, requestData.userId, failure, context = context)
+
+        val line = failureText(tag, requestData.userId, failure, context = context)
 
         failure.reason match {
           case MATCHING_FAILED | DECEASED                                     => logger.info(line)
