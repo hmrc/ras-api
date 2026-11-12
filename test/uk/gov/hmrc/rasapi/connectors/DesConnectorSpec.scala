@@ -111,7 +111,7 @@ class DesConnectorSpec
         nino = "AB123456C",
         deathDate = Some(""),
         deathDateStatus = Some(""),
-        deceasedIndicator = Some(false),
+        deseasedIndicator = Some(false),
         currentYearResidencyStatus = "Uk",
         nextYearResidencyStatus = Some("Scottish")
       )
@@ -132,7 +132,7 @@ class DesConnectorSpec
         nino = "AB123456C",
         deathDate = Some(""),
         deathDateStatus = Some(""),
-        deceasedIndicator = Some(false),
+        deseasedIndicator = Some(false),
         currentYearResidencyStatus = "Uk",
         nextYearResidencyStatus = Some("Scottish")
       )
@@ -201,7 +201,7 @@ class DesConnectorSpec
         nino = "AB123456C",
         deathDate = Some(""),
         deathDateStatus = Some(""),
-        deceasedIndicator = Some(false),
+        deseasedIndicator = Some(false),
         currentYearResidencyStatus = "Uk",
         nextYearResidencyStatus = Some("Scottish")
       )

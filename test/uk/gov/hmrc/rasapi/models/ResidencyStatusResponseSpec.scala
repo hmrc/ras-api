@@ -29,7 +29,7 @@ class ResidencyStatusResponseSpec extends AnyWordSpec with Matchers {
       nino = "AB123456C",
       deathDate = Some("2020-01-01"),
       deathDateStatus = Some("ACTIVE"),
-      deceasedIndicator = Some(false),
+      deseasedIndicator = Some(false),
       currentYearResidencyStatus = "Uk",
       nextYearResidencyStatus = Some("Scottish")
     )
@@ -40,7 +40,7 @@ class ResidencyStatusResponseSpec extends AnyWordSpec with Matchers {
         |  "nino": "AB123456C",
         |  "deathDate": "2020-01-01",
         |  "deathDateStatus": "ACTIVE",
-        |  "deceasedIndicator": false,
+        |  "deseasedIndicator": false,
         |  "currentYearResidencyStatus": "Uk",
         |  "nextYearResidencyStatus": "Scottish"
         |}
@@ -60,7 +60,7 @@ class ResidencyStatusResponseSpec extends AnyWordSpec with Matchers {
         nino = "AB123456C",
         deathDate = None,
         deathDateStatus = None,
-        deceasedIndicator = None,
+        deseasedIndicator = None,
         currentYearResidencyStatus = "Uk",
         nextYearResidencyStatus = None
       )
@@ -81,7 +81,7 @@ class ResidencyStatusResponseSpec extends AnyWordSpec with Matchers {
         nino = "AB123456C",
         deathDate = None,
         deathDateStatus = None,
-        deceasedIndicator = None,
+        deseasedIndicator = None,
         currentYearResidencyStatus = "Uk",
         nextYearResidencyStatus = None
       )

@@ -378,7 +378,7 @@ class DesConnector @Inject() (
 
     Try(httpResponse.json.as[ResidencyStatusSuccess](ResidencyStatusFormats.successFormats)) match {
       case Success(payload) =>
-        payload.deceasedIndicator match {
+        payload.deseasedIndicator match {
           case Some(true) =>
             auditDesResidencyStatusRequest(
               userId,
