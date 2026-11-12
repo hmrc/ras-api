@@ -189,17 +189,18 @@ class DesConnector @Inject() (
     corrId: String
   )(using rasHeaders: HeaderCarrier): Future[Either[ResidencyStatus, ResidencyStatusFailure]] = {
 
-    val payload     = Json.toJson(
+    val payload = Json.toJson(
       Json
         .toJson[IndividualDetails](member)
         .as[JsObject] + ("pensionSchemeOrganisationID" -> Json.toJson(userId))
     )
-    val result      = httpPost
+    val result  = httpPost
       .get()
       .post(url"$uri")
       .setHeader(desHeaders*)
       .withBody(payload)
       .execute[HttpResponse]
+
     val recoverPath = "DesConnector.sendResidencyStatusRequest.recover"
 
     result.map(response => resolveResponse(response, userId, member.nino, corrId, uri, desHeaders)).recover {
