@@ -20,6 +20,9 @@ import com.github.tomakehurst.wiremock.client.WireMock.{
   aResponse, containing, equalTo, equalToJson, post, postRequestedFor, urlEqualTo
 }
 import com.github.tomakehurst.wiremock.stubbing.Scenario.STARTED
+import org.mockito.ArgumentCaptor
+import org.mockito.ArgumentMatchers.{any, eq => eqTo}
+import org.mockito.Mockito.{reset, verify}
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpecLike
 import org.scalatestplus.mockito.MockitoSugar
@@ -177,6 +180,39 @@ class DesConnectorSpec
       result.getOrElse("Get Failed") shouldBe ResidencyStatus("otherUKResident", Some("scotResident"))
 
       verifyDesPost(individualDetails)
+    }
+
+    "audit the DES call as a SUCCESS carrying the actual HTTP status returned by DES" in {
+
+      reset(mockAuditService)
+
+      val successResponse = ResidencyStatusSuccess(
+        nino = "AB123456C",
+        deathDate = Some(""),
+        deathDateStatus = Some(""),
+        deseasedIndicator = Some(false),
+        currentYearResidencyStatus = "Uk",
+        nextYearResidencyStatus = Some("Scottish")
+      )
+
+      val individualDetails = IndividualDetails("AB123456C", "JOHN", "SMITH", LocalDate.parse("1990-02-21", formatter))
+
+      stubDesResponse(200, Json.toJson(successResponse).toString())
+
+      await(wireMockDesConnector.getResidencyStatus(individualDetails, userId))
+
+      val auditDataCaptor: ArgumentCaptor[Map[String, String]] =
+        ArgumentCaptor.forClass(classOf[Map[String, String]])
+
+      verify(mockAuditService).audit(
+        eqTo(wireMockDesConnector.DES_AUDIT_TYPE),
+        any[String],
+        auditDataCaptor.capture()
+      )(using any[HeaderCarrier])
+
+      val auditData = auditDataCaptor.getValue
+      auditData("outcome")    shouldBe "SUCCESS"
+      auditData("httpStatus") shouldBe "200"
     }
 
     "When the requested API version is V2.0" should {

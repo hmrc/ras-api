@@ -137,8 +137,9 @@ class UpscanConnectorSpec
 
         errorLogs                          should have size 1
         errorLogs.head.getFormattedMessage should startWith(
-          s"[UpscanConnector][getUpscanFile] Exception thrown while retrieving file / converting to InputStream for userId ($userId) correlationId ($requestId-"
+          s"[UpscanConnector][getUpscanFile] outcome=FAILURE reason=DOWNLOAD_INCOMPLETE userId=$userId"
         )
+        errorLogs.head.getFormattedMessage should include(s"corrId=$requestId-")
       }
     }
 

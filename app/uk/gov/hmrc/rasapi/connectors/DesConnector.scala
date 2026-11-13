@@ -138,7 +138,7 @@ class DesConnector @Inject() (
       .map(recordRequestAndTransformResult(_, call, uri))
   }
 
-  private def resolveResponse(response: HttpResponse): Either[ConnectorFailure, ResidencyStatus] = {
+  private def resolveResponse(response: HttpResponse): Either[ConnectorFailure, (ResidencyStatus, Int)] = {
     val status = response.status
 
     Try(response.json) match {
@@ -156,7 +156,7 @@ class DesConnector @Inject() (
               ResidencyStatus(
                 convertResidencyStatus(payload.currentYearResidencyStatus),
                 payload.nextYearResidencyStatus.map(convertResidencyStatus)
-              )
+              ) -> status
             )
           case JsError(errors)       =>
             json.validate[ResidencyStatusFailure](ResidencyStatusFormats.failureFormats).asOpt match {
@@ -200,15 +200,15 @@ class DesConnector @Inject() (
   }
 
   private def recordRequestAndTransformResult(
-    result: Either[ConnectorFailure, ResidencyStatus],
+    result: Either[ConnectorFailure, (ResidencyStatus, Int)],
     requestData: DesRequestData,
     uri: String
   )(using
     hc: HeaderCarrier
   ): Either[ResidencyStatusFailure, ResidencyStatus] =
     result match {
-      case Right(residencyStatus) =>
-        auditService.audit(DES_AUDIT_TYPE, uri, requestData.successAudit(200))
+      case Right((residencyStatus, httpStatus)) =>
+        auditService.audit(DES_AUDIT_TYPE, uri, requestData.successAudit(httpStatus))
         Right(residencyStatus)
 
       case Left(failure) =>
