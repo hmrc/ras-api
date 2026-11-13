@@ -18,6 +18,7 @@ package uk.gov.hmrc.rasapi.services
 
 import org.apache.pekko.actor.ActorSystem
 import play.api.Logging
+import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.rasapi.connectors.UpscanConnector
 
 import java.io.*
@@ -30,7 +31,9 @@ trait RasFileReader(using ec: ExecutionContext, system: ActorSystem = ActorSyste
 
   val fileUploadConnector: UpscanConnector
 
-  def readFile(downloadUrl: String, reference: String, userId: String): Future[Iterator[String]] = {
+  def readFile(downloadUrl: String, reference: String, userId: String)(using
+    hc: HeaderCarrier
+  ): Future[Iterator[String]] = {
 
     given codec: Codec = Codec.ISO8859
 

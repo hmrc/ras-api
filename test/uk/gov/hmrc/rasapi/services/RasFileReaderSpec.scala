@@ -22,6 +22,7 @@ import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpecLike
 import org.scalatestplus.mockito.MockitoSugar
 import play.api.test.Helpers.{await, defaultAwaitTimeout}
+import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.rasapi.connectors.UpscanConnector
 
 import java.io.{ByteArrayInputStream, FileNotFoundException}
@@ -29,6 +30,8 @@ import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 
 class RasFileReaderSpec extends AnyWordSpecLike with Matchers with MockitoSugar {
+
+  given hc: HeaderCarrier = HeaderCarrier()
 
   def newReader(connector: UpscanConnector): RasFileReader = new RasFileReader {
     val fileUploadConnector: UpscanConnector = connector
@@ -40,7 +43,7 @@ class RasFileReaderSpec extends AnyWordSpecLike with Matchers with MockitoSugar 
       val mockConnector = mock[UpscanConnector]
       val reader        = newReader(mockConnector)
       val bytes         = "line1\nline2".getBytes("ISO-8859-1")
-      when(mockConnector.getUpscanFile(any(), any(), any()))
+      when(mockConnector.getUpscanFile(any(), any(), any())(using any[HeaderCarrier]))
         .thenReturn(Future.successful(Some(new ByteArrayInputStream(bytes))))
 
       val result = await(reader.readFile("url", "ref", "user"))
@@ -51,7 +54,8 @@ class RasFileReaderSpec extends AnyWordSpecLike with Matchers with MockitoSugar 
     "throw FileNotFoundException when the upstream returns None" in {
       val mockConnector = mock[UpscanConnector]
       val reader        = newReader(mockConnector)
-      when(mockConnector.getUpscanFile(any(), any(), any())).thenReturn(Future.successful(None))
+      when(mockConnector.getUpscanFile(any(), any(), any())(using any[HeaderCarrier]))
+        .thenReturn(Future.successful(None))
 
       intercept[FileNotFoundException] {
         await(reader.readFile("url", "missing-ref", "user"))

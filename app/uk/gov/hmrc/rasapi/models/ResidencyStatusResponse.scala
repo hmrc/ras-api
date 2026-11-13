@@ -24,7 +24,7 @@ case class ResidencyStatusSuccess(
   nino: String,
   deathDate: Option[String],
   deathDateStatus: Option[String],
-  deseasedIndicator: Option[Boolean],
+  deseasedIndicator: Option[Boolean], // typo in the response from DES - do not fix spelling as parsing will break
   currentYearResidencyStatus: String,
   nextYearResidencyStatus: Option[String]
 )
