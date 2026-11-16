@@ -98,13 +98,46 @@ class UpscanConnectorSpec
         await(connector.getUpscanFile(downloadUrl, reference, userId))
       }
 
-      exception.getMessage shouldBe
-        "Error Streaming file from Upscan service"
+      exception.getMessage should startWith("Error Streaming file from Upscan service")
 
       server.verify(
         1,
         getRequestedFor(urlEqualTo("/download"))
       )
+    }
+
+    "return None when Upscan responds 404 Not Found" in {
+
+      server.stubFor(
+        get(urlEqualTo("/download"))
+          .willReturn(aResponse().withStatus(404).withBody("not found"))
+      )
+
+      val downloadUrl =
+        s"http://localhost:${server.port()}/download"
+
+      await(connector.getUpscanFile(downloadUrl, reference, userId)) shouldBe None
+
+      server.verify(1, getRequestedFor(urlEqualTo("/download")))
+    }
+
+    "return a RuntimeException when Upscan responds with a non-404 error status" in {
+
+      server.stubFor(
+        get(urlEqualTo("/download"))
+          .willReturn(aResponse().withStatus(500).withBody("boom"))
+      )
+
+      val downloadUrl =
+        s"http://localhost:${server.port()}/download"
+
+      val exception = intercept[RuntimeException] {
+        await(connector.getUpscanFile(downloadUrl, reference, userId))
+      }
+
+      exception.getMessage should startWith("Unexpected status 500 retrieving file from Upscan service")
+
+      server.verify(1, getRequestedFor(urlEqualTo("/download")))
     }
 
   }
@@ -143,7 +176,63 @@ class UpscanConnectorSpec
       }
     }
 
-    "not log at ERROR level when the file is streamed successfully" in {
+    "log a SUCCESS at INFO with the bytes read, and nothing at ERROR, when the file is streamed to completion" in {
+
+      val body = "Test\r\nPassed"
+
+      server.stubFor(
+        get(urlEqualTo("/download"))
+          .willReturn(
+            aResponse()
+              .withStatus(200)
+              .withHeader("Content-Type", "application/octet-stream")
+              .withBody(body)
+          )
+      )
+
+      val downloadUrl =
+        s"http://localhost:${server.port()}/download"
+
+      withCaptureOfLoggingFrom(connectorLogger) { logs =>
+        val result = await(connector.getUpscanFile(downloadUrl, reference, userId))
+
+        // Drain to EOF so the success outcome is detected, then close.
+        val stream = result.get
+        try Iterator.continually(stream.read()).takeWhile(_ != -1).foreach(_ => ())
+        finally stream.close()
+
+        logs.count(_.getLevel == Level.ERROR) shouldBe 0
+
+        val infoLogs = logs.filter(_.getLevel == Level.INFO).map(_.getFormattedMessage)
+        infoLogs.exists(_.contains(s"outcome=SUCCESS userId=$userId")) shouldBe true
+        infoLogs.exists(_.contains(s"bytesRead=${body.length}"))       shouldBe true
+      }
+    }
+
+    "log at ERROR including the httpStatus when Upscan responds with an error status" in {
+
+      server.stubFor(
+        get(urlEqualTo("/download"))
+          .willReturn(aResponse().withStatus(503).withBody("unavailable"))
+      )
+
+      val downloadUrl =
+        s"http://localhost:${server.port()}/download"
+
+      withCaptureOfLoggingFrom(connectorLogger) { logs =>
+        intercept[RuntimeException] {
+          await(connector.getUpscanFile(downloadUrl, reference, userId))
+        }
+
+        val errorLogs = logs.filter(_.getLevel == Level.ERROR)
+
+        errorLogs                          should have size 1
+        errorLogs.head.getFormattedMessage should include("outcome=FAILURE reason=UNEXPECTED_STATUS")
+        errorLogs.head.getFormattedMessage should include("status=503")
+      }
+    }
+
+    "log at WARN when the stream is closed before reaching EOF" in {
 
       server.stubFor(
         get(urlEqualTo("/download"))
@@ -159,12 +248,15 @@ class UpscanConnectorSpec
         s"http://localhost:${server.port()}/download"
 
       withCaptureOfLoggingFrom(connectorLogger) { logs =>
-        val result =
-          await(connector.getUpscanFile(downloadUrl, reference, userId))
+        val result = await(connector.getUpscanFile(downloadUrl, reference, userId))
 
+        // Close immediately without reading to EOF.
         result.foreach(_.close())
 
         logs.count(_.getLevel == Level.ERROR) shouldBe 0
+
+        val warnLogs = logs.filter(_.getLevel == Level.WARN).map(_.getFormattedMessage)
+        warnLogs.exists(_.contains("outcome=FAILURE reason=DOWNLOAD_INCOMPLETE")) shouldBe true
       }
     }
 
