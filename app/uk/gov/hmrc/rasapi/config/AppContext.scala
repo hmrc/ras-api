@@ -18,6 +18,8 @@ package uk.gov.hmrc.rasapi.config
 
 import uk.gov.hmrc.play.bootstrap.config.ServicesConfig
 
+import java.nio.charset.StandardCharsets
+import java.util.Base64
 import javax.inject.Inject
 import scala.concurrent.duration.Duration
 
@@ -31,6 +33,7 @@ class AppContext @Inject() (val servicesConfig: ServicesConfig) {
   lazy val allowDefaultRUK: Boolean                   = servicesConfig.getBoolean("toggle-feature.allow-default-ruk")
   lazy val retryEnabled: Boolean                      = servicesConfig.getBoolean("toggle-feature.retry-enabled")
   lazy val bulkRetryEnabled: Boolean                  = servicesConfig.getBoolean("toggle-feature.bulk-retry-enabled")
+  lazy val isHip5161Enabled: Boolean                  = servicesConfig.getBoolean("toggle-feature.hip.api-5161")
   lazy val requestRetryLimit: Int                     = servicesConfig.getInt("request-retry-limit")
   lazy val retryDelay: Int                            = servicesConfig.getInt("retry-delay")
   lazy val deceasedStatus: String                     = servicesConfig.getString("status.deceased")
@@ -40,6 +43,13 @@ class AppContext @Inject() (val servicesConfig: ServicesConfig) {
   lazy val doNotReProcessStatus: String               = servicesConfig.getString("status.do-not-re-process")
   lazy val fileProcessingMatchingFailedStatus: String = servicesConfig.getString("status.matching-failed.csv")
   lazy val apiv2Status: String                        = servicesConfig.getString("api.versions.v2_0.status")
+
+  lazy val hipOriginator: String   = servicesConfig.getString("microservice.services.hip.originatorId")
+  lazy val hipClientID: String     = servicesConfig.getString("microservice.services.hip.clientID")
+  lazy val hipClientSecret: String = servicesConfig.getString("microservice.services.hip.clientSecret")
+
+  lazy val hipAuthToken: String =
+    Base64.getEncoder.encodeToString(s"$hipClientID:$hipClientSecret".getBytes(StandardCharsets.UTF_8))
 
   lazy val fileProcessingInternalServerErrorStatus: String =
     servicesConfig.getString("status.internal-server-error.csv")

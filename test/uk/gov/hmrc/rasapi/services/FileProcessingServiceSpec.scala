@@ -17,7 +17,6 @@
 package uk.gov.hmrc.rasapi.services
 
 import org.apache.pekko.actor.ActorSystem
-import play.api.Logging
 import org.apache.pekko.stream.Materializer
 import org.mockito.ArgumentCaptor
 import org.mockito.ArgumentMatchers.{eq as Meq, *}
@@ -28,6 +27,7 @@ import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpecLike
 import org.scalatestplus.mockito.MockitoSugar
 import org.scalatestplus.play.guice.GuiceOneAppPerSuite
+import play.api.Logging
 import play.api.libs.json.{JsObject, Json}
 import play.api.mvc.AnyContentAsEmpty
 import play.api.test.FakeRequest
@@ -36,7 +36,7 @@ import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.mongo.cache.CacheItem
 import uk.gov.hmrc.mongo.test.DefaultPlayMongoRepositorySupport
 import uk.gov.hmrc.rasapi.config.AppContext
-import uk.gov.hmrc.rasapi.connectors.{DesConnector, UpscanConnector}
+import uk.gov.hmrc.rasapi.connectors.{IntegrationPlatformRouter, UpscanConnector}
 import uk.gov.hmrc.rasapi.helpers.ResidencyYearResolver
 import uk.gov.hmrc.rasapi.metrics.Metrics
 import uk.gov.hmrc.rasapi.models.*
@@ -74,12 +74,12 @@ class FileProcessingServiceSpec
 
   val mockUpscanConnector: UpscanConnector = mock[UpscanConnector]
 
-  val mockDesConnector: DesConnector                   = mock[DesConnector]
-  val mockSessionCache: RasFilesSessionService         = mock[RasFilesSessionService]
-  val mockResidencyYearResolver: ResidencyYearResolver = mock[ResidencyYearResolver]
-  val mockAuditService: AuditService                   = mock[AuditService]
-  val appContext: AppContext                           = app.injector.instanceOf[AppContext]
-  val metrics: Metrics                                 = app.injector.instanceOf[Metrics]
+  val mockIntegrationPlatformRouter: IntegrationPlatformRouter = mock[IntegrationPlatformRouter]
+  val mockSessionCache: RasFilesSessionService                 = mock[RasFilesSessionService]
+  val mockResidencyYearResolver: ResidencyYearResolver         = mock[ResidencyYearResolver]
+  val mockAuditService: AuditService                           = mock[AuditService]
+  val appContext: AppContext                                   = app.injector.instanceOf[AppContext]
+  val metrics: Metrics                                         = app.injector.instanceOf[Metrics]
 
   val STATUS_DECEASED: String                              = "DECEASED"
   val STATUS_MATCHING_FAILED: String                       = "STATUS_UNAVAILABLE"
@@ -94,7 +94,7 @@ class FileProcessingServiceSpec
 
   val SUT: FileProcessingService = new FileProcessingService(
     mockUpscanConnector,
-    mockDesConnector,
+    mockIntegrationPlatformRouter,
     mockResidencyYearResolver,
     mockAuditService,
     mockSessionCache,
@@ -128,12 +128,12 @@ class FileProcessingServiceSpec
   val fileId: String        = "file-id-1234"
   private val newLineRegexp = "(\\r|\\n)"
 
-  when(mockDesConnector.otherUk).thenReturn("otherUKResident")
-  when(mockDesConnector.scotRes).thenReturn("scotResident")
+  when(mockIntegrationPlatformRouter.otherUk).thenReturn("otherUKResident")
+  when(mockIntegrationPlatformRouter.scotRes).thenReturn("scotResident")
 
   before {
     reset(mockUpscanConnector)
-    reset(mockDesConnector)
+    reset(mockIntegrationPlatformRouter)
     reset(mockResidencyYearResolver)
     reset(mockAuditService)
     reset(mockSessionCache)
@@ -147,7 +147,7 @@ class FileProcessingServiceSpec
 
         val SUT = new FileProcessingService(
           mockUpscanConnector,
-          mockDesConnector,
+          mockIntegrationPlatformRouter,
           mockResidencyYearResolver,
           mockAuditService,
           mockSessionCache,
@@ -171,8 +171,8 @@ class FileProcessingServiceSpec
         when(mockUpscanConnector.getUpscanFile(any(), any(), any()))
           .thenReturn(Future.successful(Some(new FileInputStream(testFilePath.toFile))))
 
-        when(mockDesConnector.otherUk).thenReturn("otherUKResident")
-        when(mockDesConnector.scotRes).thenReturn("scotResident")
+        when(mockIntegrationPlatformRouter.otherUk).thenReturn("otherUKResident")
+        when(mockIntegrationPlatformRouter.scotRes).thenReturn("scotResident")
 
         val expectedResultsFile =
           "National Insurance number,First name,Last name,Date of birth,2017 to 2018 residency status,2018 to 2019 residency status" +
@@ -198,7 +198,7 @@ class FileProcessingServiceSpec
         when(mockSessionCache.updateFileSession(any(), any(), any(), any()))
           .thenReturn(Future.successful(cacheItem))
 
-        when(mockDesConnector.getResidencyStatus(any[IndividualDetails], any(), any()))
+        when(mockIntegrationPlatformRouter.getResidencyStatus(any[IndividualDetails], any(), any()))
           .thenReturn(Future.successful(Left(ResidencyStatus("scotResident", Some("otherUKResident")))))
 
         when(mockResidencyYearResolver.isBetweenJanAndApril).thenReturn(true)
@@ -241,7 +241,7 @@ class FileProcessingServiceSpec
 
         val SUT = new FileProcessingService(
           mockUpscanConnector,
-          mockDesConnector,
+          mockIntegrationPlatformRouter,
           mockResidencyYearResolver,
           mockAuditService,
           mockSessionCache,
@@ -264,9 +264,6 @@ class FileProcessingServiceSpec
 
         when(mockUpscanConnector.getUpscanFile(any(), any(), any()))
           .thenReturn(Future.successful(Some(new FileInputStream(testFilePath.toFile))))
-
-        when(mockDesConnector.otherUk).thenReturn("otherUKResident")
-        when(mockDesConnector.scotRes).thenReturn("scotResident")
 
         val expectedResultsFile =
           "National Insurance number,First name,Last name,Date of birth,2018 to 2019 residency status,2019 to 2020 residency status" +
@@ -292,7 +289,7 @@ class FileProcessingServiceSpec
         when(mockSessionCache.updateFileSession(any(), any(), any(), any()))
           .thenReturn(Future.successful(cacheItem))
 
-        when(mockDesConnector.getResidencyStatus(any[IndividualDetails], any(), any()))
+        when(mockIntegrationPlatformRouter.getResidencyStatus(any[IndividualDetails], any(), any()))
           .thenReturn(Future.successful(Left(ResidencyStatus("scotResident", Some("scotResident")))))
 
         when(mockResidencyYearResolver.isBetweenJanAndApril).thenReturn(true)
@@ -334,7 +331,7 @@ class FileProcessingServiceSpec
 
         val SUT = new FileProcessingService(
           mockUpscanConnector,
-          mockDesConnector,
+          mockIntegrationPlatformRouter,
           mockResidencyYearResolver,
           mockAuditService,
           mockSessionCache,
@@ -357,9 +354,6 @@ class FileProcessingServiceSpec
 
         when(mockUpscanConnector.getUpscanFile(any(), any(), any()))
           .thenReturn(Future.successful(Some(new FileInputStream(testFilePath.toFile))))
-
-        when(mockDesConnector.otherUk).thenReturn("otherUKResident")
-        when(mockDesConnector.scotRes).thenReturn("scotResident")
 
         val expectedResultsFile =
           "National Insurance number,First name,Last name,Date of birth,2018 to 2019 residency status" +
@@ -385,7 +379,7 @@ class FileProcessingServiceSpec
         when(mockSessionCache.updateFileSession(any(), any(), any(), any()))
           .thenReturn(Future.successful(cacheItem))
 
-        when(mockDesConnector.getResidencyStatus(any[IndividualDetails], any(), any()))
+        when(mockIntegrationPlatformRouter.getResidencyStatus(any[IndividualDetails], any(), any()))
           .thenReturn(Future.successful(Left(ResidencyStatus("otherUKResident", Some("scotResident")))))
 
         when(mockResidencyYearResolver.isBetweenJanAndApril).thenReturn(false)
@@ -426,7 +420,7 @@ class FileProcessingServiceSpec
 
         val SUT = new FileProcessingService(
           mockUpscanConnector,
-          mockDesConnector,
+          mockIntegrationPlatformRouter,
           mockResidencyYearResolver,
           mockAuditService,
           mockSessionCache,
@@ -449,9 +443,6 @@ class FileProcessingServiceSpec
 
         when(mockUpscanConnector.getUpscanFile(any(), any(), any()))
           .thenReturn(Future.successful(Some(new FileInputStream(testFilePath.toFile))))
-
-        when(mockDesConnector.otherUk).thenReturn("otherUKResident")
-        when(mockDesConnector.scotRes).thenReturn("scotResident")
 
         val expectedResultsFile =
           "National Insurance number,First name,Last name,Date of birth,2017 to 2018 residency status,2018 to 2019 residency status" +
@@ -477,7 +468,7 @@ class FileProcessingServiceSpec
         when(mockSessionCache.updateFileSession(any(), any(), any(), any()))
           .thenReturn(Future.successful(cacheItem))
 
-        when(mockDesConnector.getResidencyStatus(any[IndividualDetails], any(), any())).thenReturn(
+        when(mockIntegrationPlatformRouter.getResidencyStatus(any[IndividualDetails], any(), any())).thenReturn(
           Future.successful(
             Right(ResidencyStatusFailure(code = s"$STATUS_MATCHING_FAILED", reason = s"$STATUS_MATCHING_FAILED"))
           )
@@ -521,7 +512,7 @@ class FileProcessingServiceSpec
 
         val SUT = new FileProcessingService(
           mockUpscanConnector,
-          mockDesConnector,
+          mockIntegrationPlatformRouter,
           mockResidencyYearResolver,
           mockAuditService,
           mockSessionCache,
@@ -544,9 +535,6 @@ class FileProcessingServiceSpec
 
         when(mockUpscanConnector.getUpscanFile(any(), any(), any()))
           .thenReturn(Future.successful(Some(new FileInputStream(testFilePath.toFile))))
-
-        when(mockDesConnector.otherUk).thenReturn("otherUKResident")
-        when(mockDesConnector.scotRes).thenReturn("scotResident")
 
         val expectedResultsFile =
           "National Insurance number,First name,Last name,Date of birth,2017 to 2018 residency status,2018 to 2019 residency status" +
@@ -572,7 +560,7 @@ class FileProcessingServiceSpec
         when(mockSessionCache.updateFileSession(any(), any(), any(), any()))
           .thenReturn(Future.successful(cacheItem))
 
-        when(mockDesConnector.getResidencyStatus(any[IndividualDetails], any(), any())).thenReturn(
+        when(mockIntegrationPlatformRouter.getResidencyStatus(any[IndividualDetails], any(), any())).thenReturn(
           Future.successful(Right(ResidencyStatusFailure(code = s"$STATUS_DECEASED", reason = s"$STATUS_DECEASED")))
         )
 
@@ -613,7 +601,7 @@ class FileProcessingServiceSpec
 
         val SUT = new FileProcessingService(
           mockUpscanConnector,
-          mockDesConnector,
+          mockIntegrationPlatformRouter,
           mockResidencyYearResolver,
           mockAuditService,
           mockSessionCache,
@@ -636,9 +624,6 @@ class FileProcessingServiceSpec
 
         when(mockUpscanConnector.getUpscanFile(any(), any(), any()))
           .thenReturn(Future.successful(Some(new FileInputStream(testFilePath.toFile))))
-
-        when(mockDesConnector.otherUk).thenReturn("otherUKResident")
-        when(mockDesConnector.scotRes).thenReturn("scotResident")
 
         val expectedResultsFile =
           "National Insurance number,First name,Last name,Date of birth,2017 to 2018 residency status,2018 to 2019 residency status" +
@@ -664,7 +649,7 @@ class FileProcessingServiceSpec
         when(mockSessionCache.updateFileSession(any(), any(), any(), any()))
           .thenReturn(Future.successful(cacheItem))
 
-        when(mockDesConnector.getResidencyStatus(any[IndividualDetails], any(), any())).thenReturn(
+        when(mockIntegrationPlatformRouter.getResidencyStatus(any[IndividualDetails], any(), any())).thenReturn(
           Future.successful(
             Right(
               ResidencyStatusFailure(code = s"$STATUS_SERVICE_UNAVAILABLE", reason = s"$STATUS_SERVICE_UNAVAILABLE")
@@ -878,7 +863,7 @@ class FileProcessingServiceSpec
 
     "fetch result" when {
       "input row is valid and the date of processing is between january and april" in {
-        when(mockDesConnector.getResidencyStatus(data, userId, isBulkRequest = true))
+        when(mockIntegrationPlatformRouter.getResidencyStatus(data, userId, isBulkRequest = true))
           .thenReturn(Future.successful(Left(ResidencyStatus("otherUKResident", Some("scotResident")))))
 
         when(mockResidencyYearResolver.isBetweenJanAndApril).thenReturn(true)
@@ -889,7 +874,7 @@ class FileProcessingServiceSpec
       }
 
       "input row is valid and the date of processing is between april and december" in {
-        when(mockDesConnector.getResidencyStatus(data, userId, isBulkRequest = true))
+        when(mockIntegrationPlatformRouter.getResidencyStatus(data, userId, isBulkRequest = true))
           .thenReturn(Future.successful(Left(ResidencyStatus("otherUKResident", Some("scotResident")))))
 
         when(mockResidencyYearResolver.isBetweenJanAndApril).thenReturn(false)
@@ -900,7 +885,7 @@ class FileProcessingServiceSpec
       }
 
       "input row matching failed" in {
-        when(mockDesConnector.getResidencyStatus(data, userId, isBulkRequest = true))
+        when(mockIntegrationPlatformRouter.getResidencyStatus(data, userId, isBulkRequest = true))
           .thenReturn(Future.successful(Right(ResidencyStatusFailure(STATUS_MATCHING_FAILED, STATUS_MATCHING_FAILED))))
         val inputRow = "AB123456C,John,Smith,1992-02-21"
         val result   = SUT.fetchResult(inputRow, userId, fileId)
@@ -908,7 +893,7 @@ class FileProcessingServiceSpec
       }
 
       "input row returns deceased" in {
-        when(mockDesConnector.getResidencyStatus(data, userId, isBulkRequest = true))
+        when(mockIntegrationPlatformRouter.getResidencyStatus(data, userId, isBulkRequest = true))
           .thenReturn(Future.successful(Right(ResidencyStatusFailure(STATUS_DECEASED, STATUS_DECEASED))))
         val inputRow = "AB123456C,John,Smith,1992-02-21"
         val result   = SUT.fetchResult(inputRow, userId, fileId)
@@ -954,7 +939,7 @@ class FileProcessingServiceSpec
         when(mockSessionCache.updateFileSession(any(), any(), any(), any()))
           .thenReturn(Future.successful(cacheItem))
 
-        when(mockDesConnector.getResidencyStatus(any[IndividualDetails], any(), any()))
+        when(mockIntegrationPlatformRouter.getResidencyStatus(any[IndividualDetails], any(), any()))
           .thenReturn(Future.successful(Left(ResidencyStatus("otherUKResident", Some("scotResident")))))
 
         when(mockResidencyYearResolver.isBetweenJanAndApril).thenReturn(true)
