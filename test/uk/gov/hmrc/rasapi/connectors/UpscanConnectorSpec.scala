@@ -16,250 +16,280 @@
 
 package uk.gov.hmrc.rasapi.connectors
 
+import ch.qos.logback.classic.Level
+import ch.qos.logback.classic.spi.ILoggingEvent
+import com.github.tomakehurst.wiremock.client.WireMock.{aResponse, get, urlEqualTo}
+import com.github.tomakehurst.wiremock.http.Fault
+import org.apache.pekko.stream.scaladsl.Source as PekkoSource
+import org.apache.pekko.util.ByteString
+import org.mockito.ArgumentCaptor
+import org.mockito.ArgumentMatchers.{any, eq as eqTo}
+import org.mockito.Mockito.{reset, verify}
+import org.scalatest.BeforeAndAfterEach
+import org.scalatest.concurrent.{Eventually, IntegrationPatience}
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpecLike
+import org.scalatestplus.mockito.MockitoSugar
 import org.scalatestplus.play.guice.GuiceOneAppPerSuite
+import play.api.inject.bind
+import play.api.inject.guice.GuiceApplicationBuilder
 import play.api.test.Helpers.{await, defaultAwaitTimeout}
-
-import java.io.{BufferedReader, InputStreamReader}
-import uk.gov.hmrc.rasapi.utils.WireMockHelper
-import com.github.tomakehurst.wiremock.client.WireMock.{aResponse, get, getRequestedFor, urlEqualTo}
-import com.github.tomakehurst.wiremock.http.Fault
-import ch.qos.logback.classic.Level
-import play.api.Logger
+import play.api.{Application, Logger}
 import uk.gov.hmrc.http.{HeaderCarrier, RequestId}
 import uk.gov.hmrc.play.bootstrap.tools.LogCapturing
+import uk.gov.hmrc.rasapi.models.{ConnectorFailure, FailureReason}
+import uk.gov.hmrc.rasapi.services.AuditService
+import uk.gov.hmrc.rasapi.utils.WireMockHelper
+
+import java.io.{IOException, InputStream}
+import scala.io.Source
+import scala.util.Using
 
 class UpscanConnectorSpec
-    extends AnyWordSpecLike with Matchers with GuiceOneAppPerSuite with WireMockHelper with LogCapturing {
+    extends AnyWordSpecLike
+    with Matchers
+    with GuiceOneAppPerSuite
+    with WireMockHelper
+    with LogCapturing
+    with Eventually
+    with IntegrationPatience
+    with MockitoSugar
+    with BeforeAndAfterEach {
+
+  val mockAuditService: AuditService = mock[AuditService]
+
+  override def fakeApplication(): Application =
+    new GuiceApplicationBuilder()
+      .configure("play.ws.timeout.idle" -> "500 millis") // short timeout, so timeout test fails fast
+      .overrides(bind[AuditService].toInstance(mockAuditService))
+      .build()
+
+  override def beforeEach(): Unit = {
+    super.beforeEach()
+    reset(mockAuditService)
+  }
+
   given hc: HeaderCarrier             = HeaderCarrier()
   lazy val connector: UpscanConnector = app.injector.instanceOf[UpscanConnector]
 
   val reference: String = "0b215e97-11d4-4006-91db-c067e74fc653"
+  val userId: String    = "A1234567"
 
-  val userId: String = "A1234567"
-
-  // Capturing from a Logger named after the connector class targets the same underlying
-  // logback logger that the connector's `Logging` trait writes to (`Logger(getClass)`).
   val connectorLogger: Logger = Logger(classOf[UpscanConnector])
+
+  private val commonAuditData: Map[String, String] = Map(
+    "downstreamService" -> "UPSCAN",
+    "fileReference"     -> reference,
+    "userIdentifier"    -> userId,
+    "auditEventType"    -> "ReliefAtSourceUpscanFileRetrieval"
+  )
+
+  private def downloadUrl: String = s"http://localhost:${server.port()}/download"
+
+  private def getFile()(using HeaderCarrier): Option[InputStream] =
+    await(connector.getUpscanFile(downloadUrl, reference, userId))
+
+  private def stubDownload(status: Int, body: String): Unit =
+    server.stubFor(
+      get(urlEqualTo("/download"))
+        .willReturn(
+          aResponse()
+            .withStatus(status)
+            .withHeader("Content-Type", "application/octet-stream")
+            .withBody(body)
+        )
+    )
+
+  private def stubFault(fault: Fault): Unit =
+    server.stubFor(get(urlEqualTo("/download")).willReturn(aResponse().withFault(fault)))
+
+  private def readAll(stream: InputStream): Array[Byte] =
+    Using.resource(stream)(_.readAllBytes())
+
+  private def readLines(stream: InputStream): List[String] =
+    Using.resource(Source.fromInputStream(stream))(_.getLines().toList)
+
+  private def messagesAt(level: Level, logs: List[ILoggingEvent]): List[String] =
+    logs.filter(_.getLevel == level).map(_.getFormattedMessage)
+
+  private def auditedData(): Map[String, String] = {
+    val captor = ArgumentCaptor.forClass(classOf[Map[String, String]])
+    verify(mockAuditService).audit(eqTo("ReliefAtSourceUpscanFileRetrieval"), eqTo(reference), captor.capture())(using
+      any[HeaderCarrier]()
+    )
+    captor.getValue
+  }
 
   "getUpscanFile" should {
 
-    "return a streamed response from Upscan service" in {
+    "return the file as a stream, and log and audit SUCCESS once it has been read, when Upscan responds 200" in {
+      stubDownload(200, "Test\r\nPassed")
 
-      server.stubFor(
-        get(urlEqualTo("/download"))
-          .willReturn(
-            aResponse()
-              .withStatus(200)
-              .withHeader("Content-Type", "application/octet-stream")
-              .withBody("Test\r\nPassed")
-          )
-      )
+      withCaptureOfLoggingFrom(connectorLogger) { logs =>
+        readLines(getFile().get) shouldBe List("Test", "Passed")
 
-      val downloadUrl =
-        s"http://localhost:${server.port()}/download"
-
-      val result =
-        await(connector.getUpscanFile(downloadUrl, reference, userId))
-
-      val reader =
-        new BufferedReader(new InputStreamReader(result.get))
-
-      try {
-        val lines = Iterator
-          .continually(reader.readLine())
-          .takeWhile(_ != null)
-          .toList
-
-        lines shouldBe List("Test", "Passed")
-      } finally reader.close()
-
-      server.verify(
-        1,
-        getRequestedFor(urlEqualTo("/download"))
-      )
-    }
-
-    "return a RuntimeException when Upscan connection fails" in {
-
-      server.stubFor(
-        get(urlEqualTo("/download"))
-          .willReturn(
-            aResponse()
-              .withFault(Fault.CONNECTION_RESET_BY_PEER)
-          )
-      )
-
-      val downloadUrl =
-        s"http://localhost:${server.port()}/download"
-
-      val exception = intercept[RuntimeException] {
-        await(connector.getUpscanFile(downloadUrl, reference, userId))
+        eventually {
+          messagesAt(Level.INFO, logs).exists(_.contains(s"outcome=SUCCESS userId=$userId")) shouldBe true
+        }
+        messagesAt(Level.ERROR, logs) shouldBe empty
       }
 
-      exception.getMessage should startWith("Error Streaming file from Upscan service")
-
-      server.verify(
-        1,
-        getRequestedFor(urlEqualTo("/download"))
+      val audit = eventually(auditedData())
+      audit                                          should contain allElementsOf commonAuditData
+      audit                                          should contain allElementsOf Map(
+        "outcome"        -> "SUCCESS",
+        "processingPath" -> "UpscanConnector.getUpscanFile"
       )
+      audit.keySet                                   should contain noneOf ("reason", "httpStatus", "failureCategory", "errorDetail")
+      audit.values.exists(_.contains("/download")) shouldBe false // the download URL is never audited
     }
 
-    "return None when Upscan responds 404 Not Found" in {
+    "return None, and log and audit the status, when Upscan responds 404" in {
+      stubDownload(404, "not found")
 
-      server.stubFor(
-        get(urlEqualTo("/download"))
-          .willReturn(aResponse().withStatus(404).withBody("not found"))
-      )
+      withCaptureOfLoggingFrom(connectorLogger) { logs =>
+        getFile() shouldBe None
 
-      val downloadUrl =
-        s"http://localhost:${server.port()}/download"
+        val errorLogs = messagesAt(Level.ERROR, logs)
 
-      await(connector.getUpscanFile(downloadUrl, reference, userId)) shouldBe None
-
-      server.verify(1, getRequestedFor(urlEqualTo("/download")))
-    }
-
-    "return a RuntimeException when Upscan responds with a non-404 error status" in {
-
-      server.stubFor(
-        get(urlEqualTo("/download"))
-          .willReturn(aResponse().withStatus(500).withBody("boom"))
-      )
-
-      val downloadUrl =
-        s"http://localhost:${server.port()}/download"
-
-      val exception = intercept[RuntimeException] {
-        await(connector.getUpscanFile(downloadUrl, reference, userId))
+        errorLogs      should have size 1
+        errorLogs.head should include("outcome=FAILURE reason=UNEXPECTED_STATUS")
+        errorLogs.head should include("status=404")
       }
 
-      exception.getMessage should startWith("Unexpected status 500 retrieving file from Upscan service")
-
-      server.verify(1, getRequestedFor(urlEqualTo("/download")))
+      val audit = auditedData()
+      audit should contain allElementsOf commonAuditData
+      audit should contain allElementsOf Map(
+        "outcome"         -> "FAILURE",
+        "reason"          -> "UNEXPECTED_STATUS",
+        "httpStatus"      -> "404",
+        "failureCategory" -> "HTTP_404",
+        "processingPath"  -> "UpscanConnector.getUpscanFile.unexpectedStatus"
+      )
     }
 
-  }
+    "fail with UNEXPECTED_STATUS, and log and audit the status, when Upscan responds with any other error status" in {
+      stubDownload(503, "unavailable")
 
-  "getUpscanFile logging" should {
+      withCaptureOfLoggingFrom(connectorLogger) { logs =>
+        val failure = intercept[ConnectorFailure](getFile())
 
-    "log at ERROR level including userId and correlationId when streaming fails" in {
+        failure.reason shouldBe FailureReason.UNEXPECTED_STATUS
+        failure.status shouldBe Some(503)
 
-      server.stubFor(
-        get(urlEqualTo("/download"))
-          .willReturn(
-            aResponse()
-              .withFault(Fault.CONNECTION_RESET_BY_PEER)
-          )
+        val errorLogs = messagesAt(Level.ERROR, logs)
+
+        errorLogs      should have size 1
+        errorLogs.head should include("outcome=FAILURE reason=UNEXPECTED_STATUS")
+        errorLogs.head should include("status=503")
+      }
+
+      val audit = auditedData()
+      audit should contain allElementsOf commonAuditData
+
+      audit should contain allElementsOf Map(
+        "outcome"         -> "FAILURE",
+        "reason"          -> "UNEXPECTED_STATUS",
+        "httpStatus"      -> "503",
+        "failureCategory" -> "HTTP_503",
+        "processingPath"  -> "UpscanConnector.getUpscanFile.unexpectedStatus"
       )
+    }
+
+    "fail with CONNECTION_FAILURE, and log and audit userId and correlationId, when the connection to Upscan fails" in {
+      stubFault(Fault.CONNECTION_RESET_BY_PEER)
 
       val requestId: String                = "abcd0000-dh12-fg34-ij56"
-      given hcWithRequestId: HeaderCarrier =
-        HeaderCarrier(requestId = Some(RequestId(requestId)))
-
-      val downloadUrl =
-        s"http://localhost:${server.port()}/download"
+      given hcWithRequestId: HeaderCarrier = HeaderCarrier(requestId = Some(RequestId(requestId)))
 
       withCaptureOfLoggingFrom(connectorLogger) { logs =>
-        intercept[RuntimeException] {
-          await(connector.getUpscanFile(downloadUrl, reference, userId))
-        }
+        val failure = intercept[ConnectorFailure](getFile())
 
-        val errorLogs = logs.filter(_.getLevel == Level.ERROR)
+        failure.reason shouldBe FailureReason.CONNECTION_FAILURE
+        failure.cause  shouldBe defined
 
-        errorLogs                          should have size 1
-        errorLogs.head.getFormattedMessage should startWith(
-          s"[UpscanConnector][getUpscanFile] outcome=FAILURE reason=DOWNLOAD_INCOMPLETE userId=$userId"
+        val errorLogs = messagesAt(Level.ERROR, logs)
+        errorLogs should have size 1
+
+        errorLogs.head should startWith(
+          s"[UpscanConnector][getUpscanFile] outcome=FAILURE reason=CONNECTION_FAILURE userId=$userId"
         )
-        errorLogs.head.getFormattedMessage should include(s"corrId=$requestId-")
+
+        errorLogs.head should include(s"corrId=$requestId-")
       }
+
+      val audit = auditedData()
+      audit                  should contain allElementsOf commonAuditData
+      audit                  should contain allElementsOf Map(
+        "outcome"        -> "FAILURE",
+        "reason"         -> "CONNECTION_FAILURE",
+        "processingPath" -> "UpscanConnector.getUpscanFile.recover"
+      )
+      audit("correlationId") should startWith(s"$requestId-")
+      audit.keySet           should contain("errorDetail")
     }
 
-    "log a SUCCESS at INFO with the bytes read, and nothing at ERROR, when the file is streamed to completion" in {
-
-      val body = "Test\r\nPassed"
-
+    "fail with TIMEOUT, and log and audit it, when Upscan doesn't respond within the idle timeout" in {
       server.stubFor(
         get(urlEqualTo("/download"))
-          .willReturn(
-            aResponse()
-              .withStatus(200)
-              .withHeader("Content-Type", "application/octet-stream")
-              .withBody(body)
-          )
+          .willReturn(aResponse().withStatus(200).withBody("late").withFixedDelay(2000))
       )
 
-      val downloadUrl =
-        s"http://localhost:${server.port()}/download"
-
       withCaptureOfLoggingFrom(connectorLogger) { logs =>
-        val result = await(connector.getUpscanFile(downloadUrl, reference, userId))
+        intercept[ConnectorFailure](getFile()).reason shouldBe FailureReason.TIMEOUT
 
-        // Drain to EOF so the success outcome is detected, then close.
-        val stream = result.get
-        try Iterator.continually(stream.read()).takeWhile(_ != -1).foreach(_ => ())
-        finally stream.close()
-
-        logs.count(_.getLevel == Level.ERROR) shouldBe 0
-
-        val infoLogs = logs.filter(_.getLevel == Level.INFO).map(_.getFormattedMessage)
-        infoLogs.exists(_.contains(s"outcome=SUCCESS userId=$userId")) shouldBe true
-        infoLogs.exists(_.contains(s"bytesRead=${body.length}"))       shouldBe true
+        val errorLogs = messagesAt(Level.ERROR, logs)
+        errorLogs      should have size 1
+        errorLogs.head should include("outcome=FAILURE reason=TIMEOUT")
       }
-    }
 
-    "log at ERROR including the httpStatus when Upscan responds with an error status" in {
+      val audit = auditedData()
+      audit should contain allElementsOf commonAuditData
 
-      server.stubFor(
-        get(urlEqualTo("/download"))
-          .willReturn(aResponse().withStatus(503).withBody("unavailable"))
+      audit should contain allElementsOf Map(
+        "outcome"        -> "FAILURE",
+        "reason"         -> "TIMEOUT",
+        "processingPath" -> "UpscanConnector.getUpscanFile.recover"
       )
+    }
+  }
 
-      val downloadUrl =
-        s"http://localhost:${server.port()}/download"
+  "monitoredStream" should {
+
+    "log and audit a DOWNLOAD_INCOMPLETE, and no SUCCESS, when the body fails part-way through the download" in {
+      // simulates a connection dropped mid-download
+      val failingBody =
+        PekkoSource.single(ByteString("partial")) ++ PekkoSource.failed(new IOException("Connection reset"))
 
       withCaptureOfLoggingFrom(connectorLogger) { logs =>
-        intercept[RuntimeException] {
-          await(connector.getUpscanFile(downloadUrl, reference, userId))
+        intercept[IOException] {
+          readAll(connector.monitoredStream(failingBody, userId, reference, corrId = "test-corr-id"))
         }
 
-        val errorLogs = logs.filter(_.getLevel == Level.ERROR)
+        eventually {
+          val errorLogs = messagesAt(Level.ERROR, logs)
 
-        errorLogs                          should have size 1
-        errorLogs.head.getFormattedMessage should include("outcome=FAILURE reason=UNEXPECTED_STATUS")
-        errorLogs.head.getFormattedMessage should include("status=503")
+          errorLogs      should have size 1
+          errorLogs.head should include("outcome=FAILURE reason=DOWNLOAD_INCOMPLETE")
+          errorLogs.head should include(s"userId=$userId")
+          errorLogs.head should include("corrId=test-corr-id")
+        }
+
+        messagesAt(Level.INFO, logs).exists(_.contains("outcome=SUCCESS")) shouldBe false
       }
-    }
 
-    "log at WARN when the stream is closed before reaching EOF" in {
+      val audit = eventually(auditedData())
+      audit should contain allElementsOf commonAuditData
 
-      server.stubFor(
-        get(urlEqualTo("/download"))
-          .willReturn(
-            aResponse()
-              .withStatus(200)
-              .withHeader("Content-Type", "application/octet-stream")
-              .withBody("Test\r\nPassed")
-          )
+      audit should contain allElementsOf Map(
+        "outcome"         -> "FAILURE",
+        "reason"          -> "DOWNLOAD_INCOMPLETE",
+        "failureCategory" -> "STREAMING_ERROR",
+        "errorDetail"     -> "Connection reset",
+        "correlationId"   -> "test-corr-id",
+        "processingPath"  -> "UpscanConnector.getUpscanFile.streamFailure"
       )
-
-      val downloadUrl =
-        s"http://localhost:${server.port()}/download"
-
-      withCaptureOfLoggingFrom(connectorLogger) { logs =>
-        val result = await(connector.getUpscanFile(downloadUrl, reference, userId))
-
-        // Close immediately without reading to EOF.
-        result.foreach(_.close())
-
-        logs.count(_.getLevel == Level.ERROR) shouldBe 0
-
-        val warnLogs = logs.filter(_.getLevel == Level.WARN).map(_.getFormattedMessage)
-        warnLogs.exists(_.contains("outcome=FAILURE reason=DOWNLOAD_INCOMPLETE")) shouldBe true
-      }
     }
-
   }
 
 }

@@ -24,7 +24,7 @@ import uk.gov.hmrc.play.bootstrap.http.HttpClientV2Provider
 import uk.gov.hmrc.rasapi.config.AppContext
 import uk.gov.hmrc.rasapi.models.*
 import uk.gov.hmrc.rasapi.models.FailureReason.*
-import uk.gov.hmrc.rasapi.services.{AuditService, DesAuditData}
+import uk.gov.hmrc.rasapi.services.AuditService
 import uk.gov.hmrc.rasapi.utils.CorrelationIdGenerator
 import uk.gov.hmrc.rasapi.utils.LogHelper.failureText
 
