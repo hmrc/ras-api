@@ -53,6 +53,9 @@ import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.Try
 
+import org.scalatest.concurrent.Eventually
+import org.scalatest.time.{Millis, Seconds, Span}
+
 class FileProcessingServiceSpec
     extends AnyWordSpecLike
     with Matchers
@@ -61,7 +64,11 @@ class FileProcessingServiceSpec
     with MockitoSugar
     with BeforeAndAfter
     with DefaultPlayMongoRepositorySupport[Chunks]
-    with Logging {
+    with Logging
+    with Eventually {
+
+  implicit override val patienceConfig: PatienceConfig =
+    PatienceConfig(timeout = Span(20, Seconds), interval = Span(100, Millis))
 
   given hc: HeaderCarrier = HeaderCarrier()
 
@@ -205,7 +212,12 @@ class FileProcessingServiceSpec
 
         SUT.processFile("user1234", callbackData)
 
-        Thread.sleep(5000)
+        // processFile runs in the background with updateFileSession being its last step
+        // wait for this to be called before checking the results
+        eventually {
+          verify(mockSessionCache).updateFileSession(any(), any(), any(), any())
+          ()
+        }
 
         val res    = await(repository.fetchFile(fileId, userId))
         var result = new String("")
@@ -299,7 +311,10 @@ class FileProcessingServiceSpec
 
         SUT.processFile("user1234", callbackData)
 
-        Thread.sleep(20000)
+        eventually {
+          verify(mockSessionCache).updateFileSession(any(), any(), any(), any())
+          ()
+        }
 
         val res    = await(repository.fetchFile(fileId, userId))
         var result = new String("")
@@ -392,7 +407,10 @@ class FileProcessingServiceSpec
 
         SUT.processFile("user1234", upscanCallbackData)
 
-        Thread.sleep(20000)
+        eventually {
+          verify(mockSessionCache).updateFileSession(any(), any(), any(), any())
+          ()
+        }
 
         val res    = await(repository.fetchFile(fileId, userId))
         var result = new String("")
@@ -488,7 +506,10 @@ class FileProcessingServiceSpec
 
         SUT.processFile("user1234", upscanCallbackData)
 
-        Thread.sleep(20000)
+        eventually {
+          verify(mockSessionCache).updateFileSession(any(), any(), any(), any())
+          ()
+        }
 
         val res    = await(repository.fetchFile(fileId, userId))
         var result = new String("")
@@ -582,7 +603,10 @@ class FileProcessingServiceSpec
 
         SUT.processFile("user1234", callbackData)
 
-        Thread.sleep(20000)
+        eventually {
+          verify(mockSessionCache).updateFileSession(any(), any(), any(), any())
+          ()
+        }
 
         val res    = await(repository.fetchFile(fileId, userId))
         var result = new String("")
@@ -679,7 +703,10 @@ class FileProcessingServiceSpec
 
         SUT.processFile("user1234", callbackData)
 
-        Thread.sleep(20000)
+        eventually {
+          verify(mockSessionCache).updateFileSession(any(), any(), any(), any())
+          ()
+        }
 
         val res    = await(repository.fetchFile(fileId, userId))
         var result = new String("")
@@ -965,7 +992,10 @@ class FileProcessingServiceSpec
 
         SUT.processFile("user1234", upscanCallbackData)
 
-        Thread.sleep(5000)
+        eventually {
+          verify(mockSessionCache).updateFileSession(any(), any(), any(), any())
+          ()
+        }
 
         val res    = await(repository.fetchFile(fileId, userId))
         var result = new String("")

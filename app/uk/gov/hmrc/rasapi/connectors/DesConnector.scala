@@ -47,7 +47,7 @@ class DesConnector @Inject() (
   val welshRes = "welshResident"
   val otherUk  = "otherUKResident"
 
-  val DES_AUDIT_TYPE: String = "ReliefAtSourceDesResidencyStatus"
+  val DES_AUDIT_TYPE: String = "ReliefAtSourceAudit_DES_Response"
 
   private val tag = "[DesConnector][getResidencyStatus]"
 

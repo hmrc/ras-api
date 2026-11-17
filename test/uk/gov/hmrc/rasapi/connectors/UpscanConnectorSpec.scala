@@ -182,6 +182,7 @@ class UpscanConnectorSpec
         errorLogs      should have size 1
         errorLogs.head should include("outcome=FAILURE reason=UNEXPECTED_STATUS")
         errorLogs.head should include("status=503")
+        errorLogs.head should not include "/download"
       }
 
       val audit = auditedData()

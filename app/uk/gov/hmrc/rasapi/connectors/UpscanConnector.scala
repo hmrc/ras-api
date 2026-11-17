@@ -68,7 +68,7 @@ class UpscanConnector @Inject() (
     logger.info(s"$tag Trying to retrieve file from Upscan: $reference for userId ($userId) correlationId ($corrId).")
 
     def logAndAuditFailure(failure: ConnectorFailure, processingPath: String): Unit = {
-      logger.error(failureText(tag, userId, failure, context = context), failure.cause.orNull)
+      logger.error(failureText(tag, userId, failure, context = context))
       auditUpscanCall(userId, reference, corrId, OUTCOME_FAILURE, Some(failure), processingPath)
     }
 
@@ -119,7 +119,8 @@ class UpscanConnector @Inject() (
             auditUpscanCall(userId, reference, corrId, OUTCOME_SUCCESS, None, "UpscanConnector.getUpscanFile")
           case Failure(ex) =>
             val failure = streamingFailure(ex)
-            logger.error(failureText(tag, userId, failure, context = context), ex)
+            logger.error(failureText(tag, userId, failure, context = context))
+
             auditUpscanCall(
               userId,
               reference,
