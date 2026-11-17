@@ -186,16 +186,17 @@ class DesConnector @Inject() (
     val noStatus      = "Cannot provide a residency status for this pension scheme member."
     val internalError = "Internal server error."
 
-    failure.reason match {
-      case DES_FAILURE_RESPONSE                             =>
-        failure.upstreamFailure.getOrElse(ResidencyStatusFailure(error_InternalServerError, internalError))
-      case MATCHING_FAILED                                  => ResidencyStatusFailure(error_MatchingFailed, noStatus)
-      case DECEASED                                         => ResidencyStatusFailure(error_Deceased, noStatus)
-      case TOO_MANY_REQUESTS                                => ResidencyStatusFailure(error_TooManyRequests, "Too Many Requests.")
-      case SERVICE_UNAVAILABLE                              => ResidencyStatusFailure(error_ServiceUnavailable, "Service unavailable")
-      case BAD_REQUEST | TIMEOUT | MISSING_NEXT_YEAR_STATUS =>
-        ResidencyStatusFailure(error_DoNotReProcess, internalError)
-      case _                                                => ResidencyStatusFailure(error_InternalServerError, internalError)
+    // if DES sent its own failure body pass it through unchanged, otherwise map our reason to a code
+    failure.upstreamFailure.getOrElse {
+      failure.reason match {
+        case MATCHING_FAILED                                  => ResidencyStatusFailure(error_MatchingFailed, noStatus)
+        case DECEASED                                         => ResidencyStatusFailure(error_Deceased, noStatus)
+        case TOO_MANY_REQUESTS                                => ResidencyStatusFailure(error_TooManyRequests, "Too Many Requests.")
+        case SERVICE_UNAVAILABLE                              => ResidencyStatusFailure(error_ServiceUnavailable, "Service unavailable")
+        case BAD_REQUEST | TIMEOUT | MISSING_NEXT_YEAR_STATUS =>
+          ResidencyStatusFailure(error_DoNotReProcess, internalError)
+        case _                                                => ResidencyStatusFailure(error_InternalServerError, internalError)
+      }
     }
   }
 
