@@ -217,6 +217,7 @@ class UpscanConnectorSpec
         )
 
         errorLogs.head should include(s"corrId=$requestId-")
+        errorLogs.head should not include "/download"
       }
 
       val audit = auditedData()
@@ -240,8 +241,10 @@ class UpscanConnectorSpec
         intercept[ConnectorFailure](getFile()).reason shouldBe FailureReason.TIMEOUT
 
         val errorLogs = messagesAt(Level.ERROR, logs)
+
         errorLogs      should have size 1
         errorLogs.head should include("outcome=FAILURE reason=TIMEOUT")
+        errorLogs.head should not include "/download"
       }
 
       val audit = auditedData()
