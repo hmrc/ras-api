@@ -141,10 +141,9 @@ class HipConnector @Inject() (
     result
       .map(response => resolveResponse(response, userId, member.nino))
       .recover {
-
         case _: BadRequestException              =>
           logger.error(
-            s"[IntegrationPlatformConnector][getResidencyStatus] Bad Request returned from HIP The details sent were not " +
+            s"[HipConnector][getResidencyStatus] Bad Request returned from HIP The details sent were not " +
               s"valid. userId ($userId)."
           )
           Right(ResidencyStatusFailure(error_DoNotReProcess, "Internal server error."))
@@ -167,29 +166,29 @@ class HipConnector @Inject() (
           )
         case UpstreamErrorResponse(_, 429, _, _) =>
           logger.error(
-            s"[IntegrationPlatformConnector][getResidencyStatus] Request could not be sent 429 (Too Many Requests) was sent " +
+            s"[HipConnector][getResidencyStatus] Request could not be sent 429 (Too Many Requests) was sent " +
               s"from the HoD. userId ($userId)."
           )
           Right(ResidencyStatusFailure(error_TooManyRequests, "Too Many Requests."))
 
         case _: GatewayTimeoutException =>
-          logger.error(s"[IntegrationPlatformConnector][getResidencyStatus] Request has timed out. userId ($userId).")
+          logger.error(s"[HipConnector][getResidencyStatus] Request has timed out. userId ($userId).")
           Right(ResidencyStatusFailure(error_DoNotReProcess, "Internal server error."))
 
         case errorResponse: UpstreamErrorResponse =>
           if (errorResponse.statusCode == 503) {
-            logger.error(s"[IntegrationPlatformConnector][getResidencyStatus] Service unavailable. userId ($userId).")
+            logger.error(s"[HipConnector][getResidencyStatus] Service unavailable. userId ($userId).")
             Right(ResidencyStatusFailure(error_ServiceUnavailable, "Service unavailable"))
           } else {
             logger.error(
-              s"[IntegrationPlatformConnector][getResidencyStatus] ${errorResponse.statusCode} was returned from HIP. userId ($userId)."
+              s"[HipConnector][getResidencyStatus] ${errorResponse.statusCode} was returned from HIP. userId ($userId)."
             )
             Right(ResidencyStatusFailure(error_InternalServerError, "Internal server error."))
           }
 
         case th: Throwable =>
           logger.error(
-            s"[IntegrationPlatformConnector][getResidencyStatus] Caught error occurred when calling the HoD. userId ($userId).Exception message: ${th.getMessage}."
+            s"[HipConnector][getResidencyStatus] Caught error occurred when calling the HoD. userId ($userId).Exception message: ${th.getMessage}."
           )
           Right(ResidencyStatusFailure(error_InternalServerError, "Internal server error."))
       }
@@ -237,12 +236,24 @@ class HipConnector @Inject() (
         We could validate any json returned here
        */
       case BAD_REQUEST         => throw BadRequestException("")
+//        resolveFailureResponse(httpResponse, BadRequestException(""))
       case FORBIDDEN           => throw UpstreamErrorResponse("", 403)
+//        resolveFailureResponse(httpResponse, UpstreamErrorResponse("", 403))
       case NOT_FOUND           => throw NotFoundException("")
       case TOO_MANY_REQUESTS   => throw UpstreamErrorResponse("", 429)
       case REQUEST_TIMEOUT     => throw RequestTimeoutException("")
       case SERVICE_UNAVAILABLE => throw UpstreamErrorResponse("", 503)
       case _                   => throw InternalServerException("")
+    }
+
+  private def resolveFailureResponse(httpResponse: HttpResponse, t: Throwable) =
+    Try(httpResponse.json.as[HipBadRequestResponse](HipErrorResponse.hipErrorResponseReads)) match {
+      case Success(data) =>
+        logger.debug(s"[HipConnector][resolveResponse] HipFailureResponse from HIP :$data")
+        throw t
+      case Failure(ex)   =>
+        logger.error(s"[HipConnector][resolveResponse] Error from HIP :${ex.getMessage}", ex)
+        Right(ResidencyStatusFailure(error_InternalServerError, "Internal server error."))
     }
 
 }

@@ -71,7 +71,7 @@ class HipConnectorSpec
 
   lazy val hipConnector: HipConnector = createIntegrationPlatformConnector()
 
-  lazy val integrationPlatformPath: String = "/paye/person/regional-residency-status"
+  lazy val hipPath: String = "/paye/person/regional-residency-status"
 
   def createIntegrationPlatformConnector(
     allowNoNextYearStatusEnabled: Boolean = true,
@@ -128,11 +128,11 @@ class HipConnectorSpec
     expectedCount: Int = 1
   ): Unit = {
 
-    lazy val hipOriginator: String = appContext.servicesConfig.getString("microservice.services.hip.originatorId")
+    lazy val hipOriginator: String = appContext.hipOriginator
 
     server.verify(
       expectedCount,
-      postRequestedFor(urlEqualTo(integrationPlatformPath))
+      postRequestedFor(urlEqualTo(hipPath))
         .withHeader("Authorization", matching("Basic .+"))
         .withHeader("Content-Type", containing("application/json"))
         .withHeader("correlationId", equalTo(uuid))
@@ -150,7 +150,7 @@ class HipConnectorSpec
     body: String = ""
   ): Unit =
     server.stubFor(
-      post(urlEqualTo(integrationPlatformPath))
+      post(urlEqualTo(hipPath))
         .willReturn(
           aResponse()
             .withStatus(status)
@@ -161,7 +161,7 @@ class HipConnectorSpec
 
   s"HIP Connector getResidencyStatus with matching" should {
 
-    "handle successful response when 200 is returned from integrationPlatformRouter and CY and CYPlusOne is present" in {
+    "handle successful response when 200 is returned from HipConnector and CY and CYPlusOne is present" in {
 
       val successResponse = ResidencyStatusSuccess(
         nino = "AB123456C",
@@ -186,7 +186,7 @@ class HipConnectorSpec
 
     "When the requested API version is V2.0" should {
 
-      "handle successful response when 200 is returned from integrationPlatformRouter where CY and CYPlusOne is present for a Welsh resident" in {
+      "handle successful response when 200 is returned from HipConnector where CY and CYPlusOne is present for a Welsh resident" in {
 
         val successResponse = ResidencyStatusSuccess(
           nino = "AA246255",
@@ -209,7 +209,7 @@ class HipConnectorSpec
         verifyIntegrationPlatformPost(individualDetails)
       }
 
-      "handle successful response when 200 is returned from integrationPlatformRouter where CY and CYPlusOne is present for a Scottish resident moving in Wales" in {
+      "handle successful response when 200 is returned from HipConnector where CY and CYPlusOne is present for a Scottish resident moving in Wales" in {
 
         val successResponse = ResidencyStatusSuccess(
           nino = "SG123480",
@@ -234,7 +234,7 @@ class HipConnectorSpec
 
     }
 
-    "handle successful response when 200 is returned from integrationPlatformRouter and only CY is present and feature toggle is turned on" in {
+    "handle successful response when 200 is returned from HipConnector and only CY is present and feature toggle is turned on" in {
 
       val successResponse = ResidencyStatusSuccess(
         nino = "AB123456C",
@@ -257,7 +257,7 @@ class HipConnectorSpec
       verifyIntegrationPlatformPost(individualDetails)
     }
 
-    "handle unsuccessful response for bulk request when 429 is returned from integrationPlatformRouter the first time around and CY and " +
+    "handle unsuccessful response for bulk request when 429 is returned from HipConnector the first time around and CY and " +
       "CYPlusOne is present and bulk retry is true but retry enabled is false" in {
 
         given formatF: OFormat[ResidencyStatusFailure] = ResidencyStatusFormats.failureFormats
@@ -279,7 +279,7 @@ class HipConnectorSpec
         val scenarioName = "bulk-retry-429-then-success"
 
         server.stubFor(
-          post(urlEqualTo(integrationPlatformPath))
+          post(urlEqualTo(hipPath))
             .inScenario(scenarioName)
             .whenScenarioStateIs(STARTED)
             .willReturn(
@@ -292,7 +292,7 @@ class HipConnectorSpec
         )
 
         server.stubFor(
-          post(urlEqualTo(integrationPlatformPath))
+          post(urlEqualTo(hipPath))
             .inScenario(scenarioName)
             .whenScenarioStateIs("Second Request")
             .willReturn(
@@ -312,7 +312,7 @@ class HipConnectorSpec
         verifyIntegrationPlatformPost(individualDetails, expectedCount = 2)
       }
 
-    "handle unsuccessful response for bulk request when 429 is returned from integrationPlatformRouter the first time around and CY and " +
+    "handle unsuccessful response for bulk request when 429 is returned from HipConnector the first time around and CY and " +
       "CYPlusOne is present and bulk retry is false and retry enabled is false" in {
 
         given formatF: OFormat[ResidencyStatusFailure] = ResidencyStatusFormats.failureFormats
@@ -332,9 +332,7 @@ class HipConnectorSpec
         verifyIntegrationPlatformPost(individualDetails)
       }
 
-    "handle successful response when 200 is returned from integrationPlatformRouter and only CY is present and no next year status toggle is turned off" in {
-
-//      given formatF: OFormat[ResidencyStatusFailure] = ResidencyStatusFormats.failureFormats
+    "handle successful response when 200 is returned from HipConnector and only CY is present and no next year status toggle is turned off" in {
 
       val errorResponse =
         ResidencyStatusFailure(hipConnector.error_InternalServerError, "Internal server error.")
@@ -360,7 +358,7 @@ class HipConnectorSpec
       verifyIntegrationPlatformPost(individualDetails)
     }
 
-    "handle failure response (no match) from integrationPlatformRouter" in {
+    "handle failure response (no match) from HipConnector" in {
       given formatF: OFormat[ResidencyStatusFailure] = ResidencyStatusFormats.failureFormats
       val errorResponse                              = ResidencyStatusFailure(
         "STATUS_UNAVAILABLE",
@@ -377,7 +375,7 @@ class HipConnectorSpec
 
       verifyIntegrationPlatformPost(individualDetails)
     }
-    "handle forbidden response from integrationPlatformRouter" in {
+    "handle forbidden response from HipConnector" in {
 
       val errorResponse = ResidencyStatusFailure(
         appContext.matchingFailedStatus,
@@ -395,7 +393,7 @@ class HipConnectorSpec
       result.getOrElse("Get Failed") shouldBe errorResponse
       verifyIntegrationPlatformPost(individualDetails)
     }
-    "handle success response but the person is deceased from integrationPlatformRouter" in {
+    "handle success response but the person is deceased from HipConnector" in {
       val successResponse = ResidencyStatusSuccess(
         nino = "AB123456C",
         deathDate = Some("2017-12-25"),
@@ -421,7 +419,7 @@ class HipConnectorSpec
       verifyIntegrationPlatformPost(individualDetails)
     }
 
-    "handle unexpected responses as 500 from integrationPlatformRouter" in {
+    "handle unexpected responses as 500 from HipConnector" in {
       given formatF: OFormat[ResidencyStatusFailure] = ResidencyStatusFormats.failureFormats
 
       val errorResponse = ResidencyStatusFailure("INTERNAL_SERVER_ERROR", "Internal server error.")
@@ -438,7 +436,7 @@ class HipConnectorSpec
       verifyIntegrationPlatformPost(individualDetails, expectedCount = 3)
     }
 
-    "handle Service Unavailable (503) response from integrationPlatformRouter" in {
+    "handle Service Unavailable (503) response from HipConnector" in {
       val errorResponse = ResidencyStatusFailure("SERVICE_UNAVAILABLE", "Service unavailable")
 
       val individualDetails = IndividualDetails("AB123456C", "JOHN", "Lewis", LocalDate.parse("1990-02-21", formatter))
@@ -453,7 +451,7 @@ class HipConnectorSpec
       verifyIntegrationPlatformPost(individualDetails, expectedCount = 3)
     }
 
-    "handle bad request from integrationPlatformRouter" in {
+    "handle bad request from HipConnector" in {
       given formatF: OFormat[ResidencyStatusFailure] = ResidencyStatusFormats.failureFormats
 
       val expectedErrorResponse = ResidencyStatusFailure("INTERNAL_SERVER_ERROR", "Internal server error.")
@@ -476,7 +474,7 @@ class HipConnectorSpec
       val individualDetails = IndividualDetails("AB123456C", "JOHN", "Lewis", LocalDate.parse("1990-02-21", formatter))
 
       server.stubFor(
-        post(urlEqualTo(integrationPlatformPath))
+        post(urlEqualTo(hipPath))
           .willReturn(
             aResponse()
               .withStatus(200)
@@ -503,7 +501,7 @@ class HipConnectorSpec
       val individualDetails = IndividualDetails("AB123456C", "JOHN", "SMITH", LocalDate.parse("1990-02-21", formatter))
 
       server.stubFor(
-        post(urlEqualTo(integrationPlatformPath))
+        post(urlEqualTo(hipPath))
           .willReturn(
             aResponse()
               .withFault(Fault.CONNECTION_RESET_BY_PEER)
@@ -549,7 +547,7 @@ class HipConnectorSpec
         val scenarioName = "retry-429-then-success"
 
         server.stubFor(
-          post(urlEqualTo(integrationPlatformPath))
+          post(urlEqualTo(hipPath))
             .inScenario(scenarioName)
             .whenScenarioStateIs(STARTED)
             .willReturn(
@@ -562,7 +560,7 @@ class HipConnectorSpec
         )
 
         server.stubFor(
-          post(urlEqualTo(integrationPlatformPath))
+          post(urlEqualTo(hipPath))
             .inScenario(scenarioName)
             .whenScenarioStateIs("Second Request")
             .willReturn(
