@@ -27,8 +27,8 @@ class LogHelperSpec extends AnyWordSpec with Matchers {
   private val userId = "A123456"
   private val cause  = new GatewayTimeoutException("GET of 'http://localhost/residency-status' timed out")
 
-  private val noRequestId: HeaderCarrier            = HeaderCarrier()
-  implicit private val withRequestId: HeaderCarrier = HeaderCarrier(requestId = Some(RequestId("govuk-tax-test")))
+  private val noRequestId: HeaderCarrier     = HeaderCarrier()
+  private given withRequestId: HeaderCarrier = HeaderCarrier(requestId = Some(RequestId("govuk-tax-test")))
 
   "successText" should {
 
@@ -46,14 +46,14 @@ class LogHelperSpec extends AnyWordSpec with Matchers {
   "failureText" should {
 
     "contain only the tag, outcome, reason and userId when nothing else is set" in {
-      LogHelper.failureText(tag, userId, ConnectorFailure(FailureReason.TOO_MANY_REQUESTS))(noRequestId) shouldBe
+      LogHelper.failureText(tag, userId, ConnectorFailure(FailureReason.TOO_MANY_REQUESTS))(using noRequestId) shouldBe
         s"$tag outcome=FAILURE reason=TOO_MANY_REQUESTS userId=$userId"
     }
 
     "put the message straight after the tag" in {
       val failure = ConnectorFailure(FailureReason.MATCHING_FAILED, status = Some(403))
 
-      LogHelper.failureText(tag, userId, failure, "Member not found")(noRequestId) shouldBe
+      LogHelper.failureText(tag, userId, failure, "Member not found")(using noRequestId) shouldBe
         s"$tag Member not found outcome=FAILURE reason=MATCHING_FAILED userId=$userId status=403"
     }
 
@@ -65,7 +65,7 @@ class LogHelperSpec extends AnyWordSpec with Matchers {
         cause = Some(cause)
       )
 
-      LogHelper.failureText(tag, userId, failure, "Response json did not match expected format")(
+      LogHelper.failureText(tag, userId, failure, "Response json did not match expected format")(using
         withRequestId
       ) shouldBe
         s"$tag Response json did not match expected format outcome=FAILURE reason=INVALID_RESPONSE userId=$userId " +
@@ -76,14 +76,14 @@ class LogHelperSpec extends AnyWordSpec with Matchers {
     "log the cause's type but not its message" in {
       val failure = ConnectorFailure(FailureReason.TIMEOUT, cause = Some(cause))
 
-      LogHelper.failureText(tag, userId, failure)(noRequestId) shouldBe
+      LogHelper.failureText(tag, userId, failure)(using noRequestId) shouldBe
         s"$tag outcome=FAILURE reason=TIMEOUT userId=$userId cause=GatewayTimeoutException"
     }
 
     "collapse newlines so the failure stays on one log line" in {
       val failure = ConnectorFailure(FailureReason.INTERNAL_SERVER_ERROR, status = Some(500))
 
-      LogHelper.failureText(tag, userId, failure, "first line\nsecond line")(noRequestId) shouldBe
+      LogHelper.failureText(tag, userId, failure, "first line\nsecond line")(using noRequestId) shouldBe
         s"$tag first line second line outcome=FAILURE reason=INTERNAL_SERVER_ERROR userId=$userId status=500"
     }
   }

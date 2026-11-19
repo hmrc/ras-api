@@ -27,7 +27,7 @@ object LogHelper {
   private def keyValuePairs(context: Seq[(String, String)]): String =
     context.map((key, value) => s"$key=$value").mkString(" ")
 
-  def successText(tag: String, userId: String, details: String = "", context: Seq[(String, String)] = Nil)(implicit
+  def successText(tag: String, userId: String, details: String = "", context: Seq[(String, String)] = Nil)(using
     hc: HeaderCarrier
   ): String =
     s"$tag outcome=SUCCESS userId=$userId ${keyValuePairs(context)} $details ${requestId(hc)}".trimWhitespace
@@ -38,7 +38,7 @@ object LogHelper {
     failure: ConnectorFailure,
     message: String = "",
     context: Seq[(String, String)] = Nil // extra key=value fields, e.g. corrId, attempt
-  )(implicit hc: HeaderCarrier): String = {
+  )(using hc: HeaderCarrier): String = {
 
     val status      = failure.status.map(s => s"status=$s").getOrElse("")
     val parseErrors = failure.parseErrors.map(e => s"parseErrors=$e").getOrElse("")

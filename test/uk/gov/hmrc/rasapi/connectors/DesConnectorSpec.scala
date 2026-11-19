@@ -24,7 +24,7 @@ import com.github.tomakehurst.wiremock.client.WireMock.{
 import com.github.tomakehurst.wiremock.http.Fault
 import com.github.tomakehurst.wiremock.stubbing.Scenario.STARTED
 import org.mockito.ArgumentCaptor
-import org.mockito.ArgumentMatchers.{any, eq => eqTo}
+import org.mockito.ArgumentMatchers.{any, eq as eqTo}
 import org.mockito.Mockito.{atLeastOnce, reset, verify}
 import org.scalatest.BeforeAndAfterEach
 import org.scalatest.concurrent.Eventually
