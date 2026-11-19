@@ -61,7 +61,7 @@ trait ResultsGenerator extends Logging {
         )
 
         result match {
-          case Left(residencyStatus)         =>
+          case Right(residencyStatus)       =>
             val resStatus =
               if (residencyYearResolver.isBetweenJanAndApril) {
                 updateResidencyResponse(residencyStatus)
@@ -76,7 +76,7 @@ trait ResultsGenerator extends Logging {
               fileId = fileId
             )
             inputRow + comma + resStatus.toString
-          case Right(residencyStatusFailure) =>
+          case Left(residencyStatusFailure) =>
             auditResponse(
               failureReason = Some(residencyStatusFailure.code.replace(MATCHING_FAILED, "MATCHING_FAILED")),
               nino = memberDetails.nino,

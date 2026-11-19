@@ -114,13 +114,13 @@ class FileProcessingServiceUnitSpec
       val result = svc.processFile("user1234", callbackWithoutUrl)
 
       result shouldBe false
-      verify(upscan, never()).getUpscanFile(any(), any(), any())
+      verify(upscan, never()).getUpscanFile(any(), any(), any())(using any[HeaderCarrier])
     }
 
     "return true and skip manipulation when readFile fails" in {
       val upscan       = mock[UpscanConnector]
       val sessionCache = mock[RasFilesSessionService]
-      when(upscan.getUpscanFile(any(), any(), any())).thenReturn(Future.successful(None))
+      when(upscan.getUpscanFile(any(), any(), any())(using any[HeaderCarrier])).thenReturn(Future.successful(None))
 
       val svc    = buildService(upscan = upscan, sessionCache = sessionCache)
       val result = svc.processFile("user1234", callbackData)
@@ -129,7 +129,7 @@ class FileProcessingServiceUnitSpec
 
       // Future not mapped, so eventually should capture when done
       eventually {
-        verify(upscan, atLeastOnce()).getUpscanFile(any(), any(), any())
+        verify(upscan, atLeastOnce()).getUpscanFile(any(), any(), any())(using any[HeaderCarrier])
       }
       verify(sessionCache, never()).updateFileSession(any(), any(), any(), any())
     }

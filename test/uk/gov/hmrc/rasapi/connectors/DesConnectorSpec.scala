@@ -16,32 +16,42 @@
 
 package uk.gov.hmrc.rasapi.connectors
 
+import ch.qos.logback.classic.Level
+import ch.qos.logback.classic.spi.ILoggingEvent
 import com.github.tomakehurst.wiremock.client.WireMock.{
   aResponse, containing, equalTo, equalToJson, post, postRequestedFor, urlEqualTo
 }
+import com.github.tomakehurst.wiremock.http.Fault
 import com.github.tomakehurst.wiremock.stubbing.Scenario.STARTED
+import org.mockito.ArgumentCaptor
+import org.mockito.ArgumentMatchers.{any, eq as eqTo}
+import org.mockito.Mockito.{atLeastOnce, reset, verify}
+import org.scalatest.BeforeAndAfterEach
+import org.scalatest.concurrent.Eventually
 import org.scalatest.matchers.should.Matchers
+import org.scalatest.time.{Millis, Seconds, Span}
 import org.scalatest.wordspec.AnyWordSpecLike
 import org.scalatestplus.mockito.MockitoSugar
 import org.scalatestplus.play.guice.GuiceOneAppPerSuite
+import play.api.{Application, Logger}
+import play.api.inject.guice.GuiceApplicationBuilder
 import play.api.libs.json.{JsValue, Json, OFormat}
 import play.api.test.Helpers.{await, defaultAwaitTimeout}
 import uk.gov.hmrc.http.*
 import uk.gov.hmrc.play.bootstrap.config.ServicesConfig
 import uk.gov.hmrc.play.bootstrap.http.HttpClientV2Provider
+import uk.gov.hmrc.play.bootstrap.tools.LogCapturing
 import uk.gov.hmrc.rasapi.config.AppContext
 import uk.gov.hmrc.rasapi.models.*
 import uk.gov.hmrc.rasapi.services.AuditService
-import uk.gov.hmrc.rasapi.utils.WireMockHelper
+import uk.gov.hmrc.rasapi.utils.{CorrelationIdGenerator, WireMockHelper}
 
+import java.net.ServerSocket
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import scala.concurrent.ExecutionContext
-import com.github.tomakehurst.wiremock.http.Fault
-import play.api.Application
-import play.api.inject.guice.GuiceApplicationBuilder
-import org.scalatest.concurrent.Eventually
-import org.scalatest.time.{Millis, Seconds, Span}
+import scala.jdk.CollectionConverters.*
+import scala.util.Using
 
 class DesConnectorSpec
     extends AnyWordSpecLike
@@ -49,7 +59,9 @@ class DesConnectorSpec
     with GuiceOneAppPerSuite
     with MockitoSugar
     with WireMockHelper
-    with Eventually {
+    with Eventually
+    with BeforeAndAfterEach
+    with LogCapturing {
 
   override def fakeApplication(): Application =
     new GuiceApplicationBuilder()
@@ -59,86 +71,85 @@ class DesConnectorSpec
       )
       .build()
 
+  override def beforeEach(): Unit = {
+    super.beforeEach()
+    reset(mockAuditService)
+  }
+
   given hc: HeaderCarrier = HeaderCarrier()
 
-  val mockAuditService: AuditService            = mock[AuditService]
-  given format: OFormat[ResidencyStatusSuccess] = ResidencyStatusFormats.successFormats
+  given successFormat: OFormat[ResidencyStatusSuccess] = ResidencyStatusFormats.successFormats
+  given failureFormat: OFormat[ResidencyStatusFailure] = ResidencyStatusFormats.failureFormats
 
-  val servicesConfig: ServicesConfig = app.injector.instanceOf[ServicesConfig]
-  val appContext: AppContext         = app.injector.instanceOf[AppContext]
+  val mockAuditService: AuditService = mock[AuditService]
 
-  lazy val realHttp: HttpClientV2Provider =
-    app.injector.instanceOf[HttpClientV2Provider]
+  val servicesConfig: ServicesConfig      = app.injector.instanceOf[ServicesConfig]
+  val appContext: AppContext              = app.injector.instanceOf[AppContext]
+  lazy val realHttp: HttpClientV2Provider = app.injector.instanceOf[HttpClientV2Provider]
 
-  val uuid = "123e4567-e89b-42d3-a456-556642440000"
+  val uuid   = "123e4567-e89b-42d3-a456-556642440000"
+  val userId = "A123456"
+  val desUrl = "/individuals/residency-status/"
 
-  lazy val wireMockDesConnector: DesConnector =
-    createDesConnector()
+  val formatter: DateTimeFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd")
+
+  val fixedCorrelationIdGenerator: CorrelationIdGenerator = new CorrelationIdGenerator {
+    override def generateNewUUID: String = uuid
+  }
+
+  lazy val defaultConnector: DesConnector = createDesConnector()
+  lazy val desLogger: Logger              = Logger(defaultConnector.getClass)
 
   def createDesConnector(
     allowNoNextYearStatusEnabled: Boolean = true,
     retryEnabled: Boolean = true,
-    bulkRetryEnabled: Boolean = false
+    bulkRetryEnabled: Boolean = false,
+    baseUrl: String = s"http://localhost:${server.port()}"
   ): DesConnector =
-    new DesConnector(realHttp, mockAuditService, appContext)(using ExecutionContext.global) {
-
-      override lazy val desBaseUrl: String =
-        s"http://localhost:${server.port()}"
-
-      override lazy val allowNoNextYearStatus: Boolean =
-        allowNoNextYearStatusEnabled
-
-      override lazy val retryLimit: Int = 3
-      override lazy val retryDelay: Int = 500
-
-      override lazy val desUrlHeaderEnv: String = "DES HEADER"
-      override lazy val desAuthToken: String    = "DES AUTH TOKEN"
-
-      override lazy val isRetryEnabled: Boolean     = retryEnabled
-      override lazy val isBulkRetryEnabled: Boolean = bulkRetryEnabled
-
-      override def generateNewUUID: String = uuid
+    new DesConnector(realHttp, mockAuditService, appContext, fixedCorrelationIdGenerator)(using
+      ExecutionContext.global
+    ) {
+      override lazy val desBaseUrl: String             = baseUrl
+      override lazy val allowNoNextYearStatus: Boolean = allowNoNextYearStatusEnabled
+      override lazy val retryLimit: Int                = 3
+      override lazy val retryDelay: Int                = 500
+      override lazy val desUrlHeaderEnv: String        = "DES HEADER"
+      override lazy val desAuthToken: String           = "DES AUTH TOKEN"
+      override lazy val isRetryEnabled: Boolean        = retryEnabled
+      override lazy val isBulkRetryEnabled: Boolean    = bulkRetryEnabled
     }
 
-  val formatter: DateTimeFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd")
+  val member: IndividualDetails =
+    IndividualDetails("AB123456C", "JOHN", "SMITH", LocalDate.parse("1990-02-21", formatter))
 
-  val userId = "A123456"
+  val noStatusReason = "Cannot provide a residency status for this pension scheme member."
 
-  def createJsonPayload(individualDetails: IndividualDetails): JsValue = Json.parse(
-    s"""
-       |{
-       |  "nino": "${individualDetails.nino}",
-       |  "firstName": "${individualDetails.firstName}",
-       |  "lastName": "${individualDetails.lastName}",
-       |  "dob": "${individualDetails.dateOfBirth.format(formatter)}",
-       |  "pensionSchemeOrganisationID": "$userId"
-       |}
-    """.stripMargin
-  )
+  val internalServerError: ResidencyStatusFailure =
+    ResidencyStatusFailure("INTERNAL_SERVER_ERROR", "Internal server error.")
 
-  def verifyDesPost(
-    member: IndividualDetails,
-    expectedCount: Int = 1
-  ): Unit =
-    server.verify(
-      expectedCount,
-      postRequestedFor(urlEqualTo("/individuals/residency-status/"))
-        .withHeader("Environment", equalTo("DES HEADER"))
-        .withHeader("OriginatorId", equalTo("DA_RAS"))
-        .withHeader("Authorization", equalTo("Bearer DES AUTH TOKEN"))
-        .withHeader("Content-Type", containing("application/json"))
-        .withHeader("CorrelationId", equalTo(uuid))
-        .withRequestBody(
-          equalToJson(createJsonPayload(member).toString())
+  def successBody(
+    current: String = "Uk",
+    nextYear: Option[String] = Some("Scottish"),
+    deceased: Option[Boolean] = Some(false)
+  ): String =
+    Json
+      .toJson(
+        ResidencyStatusSuccess(
+          nino = member.nino,
+          deathDate = Some(""),
+          deathDateStatus = Some(""),
+          deseasedIndicator = deceased,
+          currentYearResidencyStatus = current,
+          nextYearResidencyStatus = nextYear
         )
-    )
+      )
+      .toString()
 
-  def stubDesResponse(
-    status: Int,
-    body: String = ""
-  ): Unit =
+  def failureBody(failure: ResidencyStatusFailure): String = Json.toJson(failure).toString()
+
+  def stubDesResponse(status: Int, body: String = ""): Unit =
     server.stubFor(
-      post(urlEqualTo("/individuals/residency-status/"))
+      post(urlEqualTo(desUrl))
         .willReturn(
           aResponse()
             .withStatus(status)
@@ -147,562 +158,504 @@ class DesConnectorSpec
         )
     )
 
-  "DESConnector getResidencyStatus with matching" should {
+  // first call returns 429, every subsequent call returns 200 with the given body
+  def stubDes429ThenSuccess(scenarioName: String, body: String): Unit = {
+    server.stubFor(
+      post(urlEqualTo(desUrl))
+        .inScenario(scenarioName)
+        .whenScenarioStateIs(STARTED)
+        .willReturn(aResponse().withStatus(429).withHeader("Content-Type", "application/json"))
+        .willSetStateTo("Second Request")
+    )
+    server.stubFor(
+      post(urlEqualTo(desUrl))
+        .inScenario(scenarioName)
+        .whenScenarioStateIs("Second Request")
+        .willReturn(aResponse().withStatus(200).withHeader("Content-Type", "application/json").withBody(body))
+    )
+  }
 
-    "handle successful response when 200 is returned from des and CY and CYPlusOne is present" in {
+  def verifyDesPost(expectedCount: Int = 1): Unit = {
+    val expectedDesPayload: JsValue = Json.obj(
+      "nino"                        -> member.nino,
+      "firstName"                   -> member.firstName,
+      "lastName"                    -> member.lastName,
+      "dob"                         -> member.dateOfBirth.format(formatter),
+      "pensionSchemeOrganisationID" -> userId
+    )
 
-      val successresponse = ResidencyStatusSuccess(
-        nino = "AB123456C",
-        deathDate = Some(""),
-        deathDateStatus = Some(""),
-        deseasedIndicator = Some(false),
-        currentYearResidencyStatus = "Uk",
-        nextYearResidencyStatus = Some("Scottish")
-      )
+    server.verify(
+      expectedCount,
+      postRequestedFor(urlEqualTo(desUrl))
+        .withHeader("Environment", equalTo("DES HEADER"))
+        .withHeader("OriginatorId", equalTo("DA_RAS"))
+        .withHeader("Authorization", equalTo("Bearer DES AUTH TOKEN"))
+        .withHeader("Content-Type", containing("application/json"))
+        .withHeader("CorrelationId", equalTo(uuid))
+        .withRequestBody(equalToJson(expectedDesPayload.toString()))
+    )
+  }
 
-      val individualDetails = IndividualDetails("AB123456C", "JOHN", "SMITH", LocalDate.parse("1990-02-21", formatter))
+  def desAudits(): List[Map[String, String]] = {
+    val captor: ArgumentCaptor[Map[String, String]] = ArgumentCaptor.forClass(classOf[Map[String, String]])
 
-      stubDesResponse(
-        200,
-        Json.toJson(successresponse).toString()
-      )
+    verify(mockAuditService, atLeastOnce())
+      .audit(eqTo(defaultConnector.DES_AUDIT_TYPE), any[String], captor.capture())(using any[HeaderCarrier])
 
-      val result =
-        await(wireMockDesConnector.getResidencyStatus(individualDetails, userId))
-      result.isLeft                       shouldBe true
-      result.left.getOrElse("Get Failed") shouldBe ResidencyStatus("otherUKResident", Some("scotResident"))
+    captor.getAllValues.asScala.toList
+  }
 
-      verifyDesPost(individualDetails)
-    }
+  def baseAuditFields(attempt: Int, outcome: String, requestSource: String = "API"): Map[String, String] = Map(
+    "downstreamService" -> "DES",
+    "userIdentifier"    -> userId,
+    "nino"              -> member.nino,
+    "correlationId"     -> uuid,
+    "requestSource"     -> requestSource,
+    "attempt"           -> attempt.toString,
+    "outcome"           -> outcome
+  )
+
+  def assertSingleFailureAudit(audits: List[Map[String, String]], fields: (String, String)*): Unit = {
+    audits      should have size 1
+    audits.head should contain allElementsOf baseAuditFields(attempt = 1, outcome = "FAILURE") ++ fields
+  }
+
+  def assertFailureAuditPerAttempt(
+    audits: List[Map[String, String]],
+    attempts: Int,
+    fields: (String, String)*
+  ): Unit = {
+    audits.map(_("attempt")) shouldBe (1 to attempts).map(_.toString).toList
+    audits.foreach(_ should contain allElementsOf Map("outcome" -> "FAILURE", "correlationId" -> uuid) ++ fields)
+  }
+
+  def messages(logs: List[ILoggingEvent]): List[String] = logs.map(_.getFormattedMessage)
+
+  def messagesAt(level: Level, logs: List[ILoggingEvent]): List[String] =
+    logs.filter(_.getLevel == level).map(_.getFormattedMessage)
+
+  val tag = "[DesConnector][getResidencyStatus]"
+
+  "DESConnector getResidencyStatus" should {
+
+    "return the residency status, and audit SUCCESS with the DES status, when 200 is returned with CY and CYPlusOne" in
+      withCaptureOfLoggingFrom(desLogger) { logs =>
+        stubDesResponse(200, successBody())
+
+        await(defaultConnector.getResidencyStatus(member, userId)) shouldBe
+          Right(ResidencyStatus("otherUKResident", Some("scotResident")))
+
+        verifyDesPost()
+
+        val audits = desAudits()
+        audits      should have size 1
+        audits.head should contain allElementsOf baseAuditFields(attempt = 1, outcome = "SUCCESS") +
+          ("httpStatus" -> "200")
+
+        // success is visible through the audit only, to keep bulk-file log volume down
+        logs shouldBe empty
+      }
 
     "When the requested API version is V2.0" should {
 
-      "handle successful response when 200 is returned from des where CY and CYPlusOne is present for a Welsh resident" in {
+      "map a Welsh resident for CY and CYPlusOne" in {
+        stubDesResponse(200, successBody(current = "Welsh", nextYear = Some("Welsh")))
 
-        val successResponse = ResidencyStatusSuccess(
-          nino = "AA246255",
-          deathDate = Some(""),
-          deathDateStatus = Some(""),
-          deseasedIndicator = Some(false),
-          currentYearResidencyStatus = "Welsh",
-          nextYearResidencyStatus = Some("Welsh")
-        )
+        await(defaultConnector.getResidencyStatus(member, userId)) shouldBe
+          Right(ResidencyStatus("welshResident", Some("welshResident")))
 
-        val individualDetails =
-          IndividualDetails("AB123456C", "JACK", "OSCAR", LocalDate.parse("1962-07-07", formatter))
-
-        stubDesResponse(200, Json.toJson(successResponse).toString())
-
-        val result = await(wireMockDesConnector.getResidencyStatus(individualDetails, userId))
-        result shouldBe Left(ResidencyStatus("welshResident", Some("welshResident")))
-
-        verifyDesPost(individualDetails)
+        verifyDesPost()
       }
 
-      "handle successful response when 200 is returned from des where CY and CYPlusOne is present for a Scottish resident moving in Wales" in {
+      "map a Welsh resident moving to Scotland" in {
+        stubDesResponse(200, successBody(current = "Welsh", nextYear = Some("Scottish")))
 
-        val successResponse = ResidencyStatusSuccess(
-          nino = "SG123480",
-          deathDate = Some(""),
-          deathDateStatus = Some(""),
-          deseasedIndicator = Some(false),
-          currentYearResidencyStatus = "Welsh",
-          nextYearResidencyStatus = Some("Scottish")
-        )
+        await(defaultConnector.getResidencyStatus(member, userId)) shouldBe
+          Right(ResidencyStatus("welshResident", Some("scotResident")))
 
-        val individualDetails =
-          IndividualDetails("SG123480", "HELEN", "SMITH", LocalDate.parse("1975-02-18", formatter))
-
-        stubDesResponse(200, Json.toJson(successResponse).toString())
-
-        val result = await(wireMockDesConnector.getResidencyStatus(individualDetails, userId))
-        result shouldBe Left(ResidencyStatus("welshResident", Some("scotResident")))
-
-        verifyDesPost(individualDetails)
+        verifyDesPost()
       }
-
     }
 
-    "handle successful response when 200 is returned from des and only CY is present and feature toggle is turned on" in {
+    "return only CY when CYPlusOne is missing and the no-next-year-status toggle is on" in {
+      stubDesResponse(200, successBody(nextYear = None, deceased = None))
 
-      val successResponse = ResidencyStatusSuccess(
-        nino = "AB123456C",
-        deathDate = Some(""),
-        deathDateStatus = Some(""),
-        deseasedIndicator = None,
-        currentYearResidencyStatus = "Uk",
-        nextYearResidencyStatus = None
-      )
+      await(defaultConnector.getResidencyStatus(member, userId)) shouldBe
+        Right(ResidencyStatus("otherUKResident", None))
 
-      val individualDetails = IndividualDetails("AB123456C", "JOHN", "SMITH", LocalDate.parse("1990-02-21", formatter))
-
-      stubDesResponse(200, Json.toJson(successResponse).toString())
-
-      val result = await(wireMockDesConnector.getResidencyStatus(individualDetails, userId))
-      result.isLeft                       shouldBe true
-      result.left.getOrElse("Get Failed") shouldBe ResidencyStatus("otherUKResident", None)
-
-      verifyDesPost(individualDetails)
+      verifyDesPost()
     }
 
-    "handle unsuccessful response for bulk request when 429 is returned from des the first time around and CY and " +
-      "CYPlusOne is present and bulk retry is true but retry enabled is false" in {
+    "return internal server error, and audit MISSING_NEXT_YEAR_STATUS, when CYPlusOne is missing and the toggle is off" in {
+      val connector = createDesConnector(allowNoNextYearStatusEnabled = false)
+      stubDesResponse(200, successBody(nextYear = None))
 
-        given formatF: OFormat[ResidencyStatusFailure] = ResidencyStatusFormats.failureFormats
+      await(connector.getResidencyStatus(member, userId)) shouldBe
+        Left(ResidencyStatusFailure(connector.error_InternalServerError, "Internal server error."))
 
-        val connector = createDesConnector(
-          retryEnabled = false,
-          bulkRetryEnabled = true
-        )
+      verifyDesPost()
 
-        val errorResponse   = ResidencyStatusFailure("INTERNAL_SERVER_ERROR", "Internal server error.")
-        val successResponse = ResidencyStatusSuccess(
-          nino = "AB123456C",
-          deathDate = Some(""),
-          deathDateStatus = Some(""),
-          deseasedIndicator = Some(false),
-          currentYearResidencyStatus = "Uk",
-          nextYearResidencyStatus = Some("Scottish")
-        )
-
-        val individualDetails =
-          IndividualDetails("AB123456C", "JOHN", "SMITH", LocalDate.parse("1990-02-21", formatter))
-
-        val desUrl       = "/individuals/residency-status/"
-        val scenarioName = "bulk-retry-429-then-success"
-
-        server.stubFor(
-          post(urlEqualTo(desUrl))
-            .inScenario(scenarioName)
-            .whenScenarioStateIs(STARTED)
-            .willReturn(
-              aResponse()
-                .withStatus(429)
-                .withHeader("Content-Type", "application/json")
-                .withBody(Json.toJson(errorResponse).toString())
-            )
-            .willSetStateTo("Second Request")
-        )
-
-        server.stubFor(
-          post(urlEqualTo(desUrl))
-            .inScenario(scenarioName)
-            .whenScenarioStateIs("Second Request")
-            .willReturn(
-              aResponse()
-                .withStatus(200)
-                .withHeader("Content-Type", "application/json")
-                .withBody(Json.toJson(successResponse).toString())
-            )
-        )
-
-        val result = await(
-          connector.getResidencyStatus(
-            individualDetails,
-            userId,
-            isBulkRequest = true
-          )
-        )
-
-        result.isRight                      shouldBe false
-        result.left.getOrElse("Get Failed") shouldBe ResidencyStatus("otherUKResident", Some("scotResident"))
-
-        verifyDesPost(individualDetails, expectedCount = 2)
-      }
-
-    "handle unsuccessful response for bulk request when 429 is returned from des the first time around and CY and " +
-      "CYPlusOne is present and bulk retry is false and retry enabled is false" in {
-
-        given formatF: OFormat[ResidencyStatusFailure] = ResidencyStatusFormats.failureFormats
-
-        val connector = createDesConnector(
-          retryEnabled = false,
-          bulkRetryEnabled = false
-        )
-
-        val errorResponse = ResidencyStatusFailure("TOO_MANY_REQUESTS", "Too Many Requests.")
-
-        val individualDetails =
-          IndividualDetails("AB123456C", "JOHN", "SMITH", LocalDate.parse("1990-02-21", formatter))
-        stubDesResponse(429, Json.toJson(errorResponse).toString())
-
-        val result = await(
-          connector.getResidencyStatus(
-            individualDetails,
-            userId,
-            isBulkRequest = true
-          )
-        )
-
-        result.isLeft                  shouldBe false
-        result.getOrElse("Get Failed") shouldBe errorResponse
-
-        verifyDesPost(individualDetails)
-      }
-
-    "handle successful response when 200 is returned from des and only CY is present and no next year status toggle is turned off" in {
-      val connector         = createDesConnector(
-        allowNoNextYearStatusEnabled = false
+      val audits       = desAudits()
+      assertSingleFailureAudit(
+        audits,
+        "reason"       -> "MISSING_NEXT_YEAR_STATUS",
+        "httpStatus"   -> "200",
+        "responseCode" -> "DO_NOT_RE_PROCESS"
       )
-      val errorResponse     =
-        ResidencyStatusFailure(connector.error_InternalServerError, "Internal server error.")
-      val successResponse   = ResidencyStatusSuccess(
-        nino = "AB123456C",
-        deathDate = Some(""),
-        deathDateStatus = Some(""),
-        deseasedIndicator = Some(false),
-        currentYearResidencyStatus = "Uk",
-        nextYearResidencyStatus = None
-      )
-      val individualDetails = IndividualDetails("AB123456C", "JOHN", "SMITH", LocalDate.parse("1990-02-21", formatter))
-
-      stubDesResponse(200, Json.toJson(successResponse).toString())
-      val result = await(
-        connector.getResidencyStatus(individualDetails, userId)
-      )
-      result.isLeft                  shouldBe false
-      result.getOrElse("Get Failed") shouldBe errorResponse
-      verifyDesPost(individualDetails)
     }
 
-    "handle failure response (no match) from des" in {
-      given formatF: OFormat[ResidencyStatusFailure] = ResidencyStatusFormats.failureFormats
-      val errorResponse                              = ResidencyStatusFailure(
-        "STATUS_UNAVAILABLE",
-        "Cannot provide a residency status for this pension scheme member."
+    "return matching failed, and audit MATCHING_FAILED with status 404, when DES returns 404" in {
+      stubDesResponse(404, failureBody(ResidencyStatusFailure("STATUS_UNAVAILABLE", noStatusReason)))
+
+      await(defaultConnector.getResidencyStatus(member, userId)) shouldBe
+        Left(ResidencyStatusFailure(appContext.matchingFailedStatus, noStatusReason))
+
+      verifyDesPost()
+
+      val audits       = desAudits()
+      assertSingleFailureAudit(
+        audits,
+        "reason"       -> "MATCHING_FAILED",
+        "httpStatus"   -> "404",
+        "responseCode" -> appContext.matchingFailedStatus
       )
-
-      val individualDetails = IndividualDetails("AB123456C", "JOHN", "Lewis", LocalDate.parse("1990-02-21", formatter))
-
-      stubDesResponse(404, Json.toJson(errorResponse).toString())
-      val result = await(wireMockDesConnector.getResidencyStatus(individualDetails, userId))
-
-      result.isLeft                  shouldBe false
-      result.getOrElse("Get Failed") shouldBe errorResponse
-
-      verifyDesPost(individualDetails)
     }
-    "handle forbidden response from des" in {
 
-      val errorResponse = ResidencyStatusFailure(
-        appContext.matchingFailedStatus,
-        "Cannot provide a residency status for this pension scheme member."
-      )
-
-      val individualDetails =
-        IndividualDetails("AB123456C", "JOHN", "Lewis", LocalDate.parse("1990-02-21", formatter))
-
+    "return matching failed, and audit MATCHING_FAILED with status 403, when DES returns 403" in {
       stubDesResponse(403, """{"code":"STATUS_UNAVAILABLE"}""")
 
-      val result =
-        await(wireMockDesConnector.getResidencyStatus(individualDetails, userId))
-      result.isLeft                  shouldBe false
-      result.getOrElse("Get Failed") shouldBe errorResponse
-      verifyDesPost(individualDetails)
-    }
-    "handle success response but the person is deceased from des" in {
-      val successResponse = ResidencyStatusSuccess(
-        nino = "AB123456C",
-        deathDate = Some("2017-12-25"),
-        deathDateStatus = None,
-        deseasedIndicator = Some(true),
-        currentYearResidencyStatus = "Uk",
-        nextYearResidencyStatus = Some("Uk")
+      await(defaultConnector.getResidencyStatus(member, userId)) shouldBe
+        Left(ResidencyStatusFailure(appContext.matchingFailedStatus, noStatusReason))
+
+      verifyDesPost()
+
+      val audits       = desAudits()
+      assertSingleFailureAudit(
+        audits,
+        "reason"       -> "MATCHING_FAILED",
+        "httpStatus"   -> "403",
+        "responseCode" -> appContext.matchingFailedStatus
       )
-
-      val individualDetails = IndividualDetails("AB123456C", "JOHN", "Lewis", LocalDate.parse("1990-02-21", formatter))
-
-      stubDesResponse(200, Json.toJson(successResponse).toString())
-
-      val expectedResult =
-        ResidencyStatusFailure("DECEASED", "Cannot provide a residency status for this pension scheme member.")
-
-      val result = await(wireMockDesConnector.getResidencyStatus(individualDetails, userId))
-
-      result.isLeft                  shouldBe false
-      result.getOrElse("Get Failed") shouldBe expectedResult
-
-      verifyDesPost(individualDetails)
     }
 
-    "handle unexpected responses as 500 from des" in {
-      given formatF: OFormat[ResidencyStatusFailure] = ResidencyStatusFormats.failureFormats
-      val errorResponse                              = ResidencyStatusFailure("INTERNAL_SERVER_ERROR", "Internal server error.")
+    "return deceased, and audit DECEASED, when DES flags the member as deceased" in
+      withCaptureOfLoggingFrom(desLogger) { logs =>
+        stubDesResponse(200, successBody(nextYear = Some("Uk"), deceased = Some(true)))
 
-      val individualDetails = IndividualDetails("AB123456C", "JOHN", "Lewis", LocalDate.parse("1990-02-21", formatter))
+        await(defaultConnector.getResidencyStatus(member, userId)) shouldBe
+          Left(ResidencyStatusFailure("DECEASED", noStatusReason))
 
-      stubDesResponse(500, Json.toJson(errorResponse).toString())
+        verifyDesPost()
 
-      val result =
-        await(wireMockDesConnector.getResidencyStatus(individualDetails, userId))
+        val audits       = desAudits()
+        assertSingleFailureAudit(
+          audits,
+          "reason"       -> "DECEASED",
+          "httpStatus"   -> "200",
+          "responseCode" -> "DECEASED"
+        )
 
-      result.isLeft                  shouldBe false
-      result.getOrElse("Get Failed") shouldBe errorResponse
+        logs.map(event => event.getLevel -> event.getFormattedMessage) shouldBe List(
+          Level.INFO ->
+            (s"$tag outcome=FAILURE reason=DECEASED userId=$userId corrId=$uuid " +
+              "attempt=1 responseCode=DECEASED status=200")
+        )
+      }
 
-      verifyDesPost(individualDetails, expectedCount = 3)
+    "return internal server error, and audit BAD_REQUEST, when DES returns 400" in {
+      stubDesResponse(400, failureBody(ResidencyStatusFailure("DO_NOT_RE_PROCESS", "Internal server error.")))
+
+      await(defaultConnector.getResidencyStatus(member, userId)) shouldBe Left(internalServerError)
+
+      verifyDesPost()
+
+      val audits = desAudits()
+
+      assertSingleFailureAudit(
+        audits,
+        "reason"       -> "BAD_REQUEST",
+        "httpStatus"   -> "400",
+        "responseCode" -> "DO_NOT_RE_PROCESS"
+      )
     }
 
-    "handle Service Unavailable (503) response from des" in {
-      given formatF: OFormat[ResidencyStatusFailure] =
-        ResidencyStatusFormats.failureFormats
-      val errorResponse                              = ResidencyStatusFailure("SERVICE_UNAVAILABLE", "Service unavailable")
+    "retry, then return internal server error and audit each attempt, when DES returns 500" in
+      withCaptureOfLoggingFrom(desLogger) { logs =>
+        stubDesResponse(500, failureBody(internalServerError))
 
-      val individualDetails = IndividualDetails("AB123456C", "JOHN", "Lewis", LocalDate.parse("1990-02-21", formatter))
+        await(defaultConnector.getResidencyStatus(member, userId)) shouldBe Left(internalServerError)
 
+        verifyDesPost(expectedCount = 3)
+
+        val audits     = desAudits()
+        assertFailureAuditPerAttempt(
+          audits,
+          attempts = 3,
+          "reason"     -> "INTERNAL_SERVER_ERROR",
+          "httpStatus" -> "500"
+        )
+
+        // unexpected failures log at ERROR, once per attempt
+        val errorLogs = messagesAt(Level.ERROR, logs)
+
+        errorLogs should have size 3
+
+        errorLogs.zipWithIndex.foreach { (line, i) =>
+          line should include("outcome=FAILURE reason=INTERNAL_SERVER_ERROR")
+          line should include(s"attempt=${i + 1}")
+          line should include("status=500")
+        }
+      }
+
+    "retry, then return service unavailable and audit each attempt, when DES returns 503" in {
       stubDesResponse(503)
 
-      val result = await(wireMockDesConnector.getResidencyStatus(individualDetails, userId))
+      await(defaultConnector.getResidencyStatus(member, userId)) shouldBe
+        Left(ResidencyStatusFailure("SERVICE_UNAVAILABLE", "Service unavailable"))
 
-      result.isLeft                  shouldBe false
-      result.getOrElse("Get Failed") shouldBe errorResponse
+      verifyDesPost(expectedCount = 3)
 
-      verifyDesPost(individualDetails, expectedCount = 3)
+      val audits     = desAudits()
+      assertFailureAuditPerAttempt(
+        audits,
+        attempts = 3,
+        "reason"     -> "SERVICE_UNAVAILABLE",
+        "httpStatus" -> "503"
+      )
     }
 
-    "handle bad request from des" in {
-      given formatF: OFormat[ResidencyStatusFailure] = ResidencyStatusFormats.failureFormats
-      val expectedErrorResponse                      = ResidencyStatusFailure("INTERNAL_SERVER_ERROR", "Internal server error.")
-      val errorResponse                              = ResidencyStatusFailure("DO_NOT_RE_PROCESS", "Internal server error.")
+    "retry, then return internal server error and audit UNEXPECTED_STATUS, when DES returns a status we don't handle" in {
+      stubDesResponse(502)
 
-      val individualDetails = IndividualDetails("AB123456C", "JOHN", "Lewis", LocalDate.parse("1990-02-21", formatter))
+      await(defaultConnector.getResidencyStatus(member, userId)) shouldBe Left(internalServerError)
 
-      stubDesResponse(400, Json.toJson(errorResponse).toString())
+      verifyDesPost(expectedCount = 3)
 
-      val result =
-        await(wireMockDesConnector.getResidencyStatus(individualDetails, userId))
+      val audits = desAudits()
 
-      result.isLeft                  shouldBe false
-      result.getOrElse("Get Failed") shouldBe expectedErrorResponse
-
-      verifyDesPost(individualDetails)
+      assertFailureAuditPerAttempt(
+        audits,
+        attempts = 3,
+        "reason"       -> "UNEXPECTED_STATUS",
+        "httpStatus"   -> "502",
+        "responseCode" -> "INTERNAL_SERVER_ERROR"
+      )
     }
 
-    "handle GatewayTimeoutException when DES request times out" in {
-
-      val individualDetails =
-        IndividualDetails(
-          "AB123456C",
-          "JOHN",
-          "Lewis",
-          LocalDate.parse("1990-02-21", formatter)
-        )
-
+    "return internal server error, and audit TIMEOUT with no HTTP status, when the DES request times out" in {
       server.stubFor(
-        post(urlEqualTo("/individuals/residency-status/"))
-          .willReturn(
-            aResponse()
-              .withStatus(200)
-              .withFixedDelay(4000)
-          )
+        post(urlEqualTo(desUrl)).willReturn(aResponse().withStatus(200).withFixedDelay(4000))
       )
 
-      val result = await(
-        wireMockDesConnector.getResidencyStatus(
-          individualDetails,
-          userId
-        )
-      )
+      await(defaultConnector.getResidencyStatus(member, userId)) shouldBe Left(internalServerError)
 
-      result shouldBe Right(
-        ResidencyStatusFailure(
-          "INTERNAL_SERVER_ERROR",
-          "Internal server error."
-        )
-      )
-
-      eventually(
-        timeout(Span(8, Seconds)),
-        interval(Span(200, Millis))
-      ) {
-        verifyDesPost(individualDetails, expectedCount = 1)
+      eventually(timeout(Span(8, Seconds)), interval(Span(200, Millis))) {
+        verifyDesPost()
       }
+
+      val audits = desAudits()
+
+      assertSingleFailureAudit(
+        audits,
+        "reason"       -> "TIMEOUT",
+        "cause"        -> "GatewayTimeoutException",
+        "responseCode" -> "DO_NOT_RE_PROCESS"
+      )
+      audits.head.keySet should not contain "httpStatus"
     }
 
-    "handle unexpected connection failure from des" in {
-
+    "return internal server error, and audit the failure, when DES resets the connection" in {
       val connector = createDesConnector(retryEnabled = false)
-
-      val individualDetails =
-        IndividualDetails(
-          "AB123456C",
-          "JOHN",
-          "SMITH",
-          LocalDate.parse("1990-02-21", formatter)
-        )
-
       server.stubFor(
-        post(urlEqualTo("/individuals/residency-status/"))
-          .willReturn(
-            aResponse()
-              .withFault(Fault.CONNECTION_RESET_BY_PEER)
-          )
+        post(urlEqualTo(desUrl)).willReturn(aResponse().withFault(Fault.CONNECTION_RESET_BY_PEER))
       )
 
-      val result = await(
-        connector.getResidencyStatus(individualDetails, userId)
-      )
+      await(connector.getResidencyStatus(member, userId)) shouldBe Left(internalServerError)
 
-      result shouldBe Right(
-        ResidencyStatusFailure(
-          "INTERNAL_SERVER_ERROR",
-          "Internal server error."
-        )
-      )
+      verifyDesPost()
 
-      verifyDesPost(individualDetails)
+      val audits = desAudits()
+
+      assertSingleFailureAudit(
+        audits,
+        "reason"       -> "INTERNAL_SERVER_ERROR",
+        "responseCode" -> "INTERNAL_SERVER_ERROR"
+      )
+      audits.head.keySet should contain("cause")
     }
 
-    "handle invalid JSON response from des" in {
+    "return internal server error, and audit CONNECTION_FAILURE, when DES refuses the connection" in {
 
-      val individualDetails =
-        IndividualDetails(
-          "AB123456C",
-          "JOHN",
-          "SMITH",
-          LocalDate.parse("1990-02-21", formatter)
-        )
+      // a local port with nothing listening, so connecting to it is refused
+      val unusedPort: Int = Using.resource(new ServerSocket(0))(_.getLocalPort)
 
-      stubDesResponse(200, "invalid json")
+      val connector = createDesConnector(retryEnabled = false, baseUrl = s"http://localhost:$unusedPort")
 
-      val result = await(
-        wireMockDesConnector.getResidencyStatus(individualDetails, userId)
+      await(connector.getResidencyStatus(member, userId)) shouldBe Left(internalServerError)
+
+      val audits = desAudits()
+
+      assertSingleFailureAudit(
+        audits,
+        "reason"       -> "CONNECTION_FAILURE",
+        "cause"        -> "BadGatewayException",
+        "responseCode" -> "INTERNAL_SERVER_ERROR"
       )
 
-      result shouldBe Right(
-        ResidencyStatusFailure(
-          "INTERNAL_SERVER_ERROR",
-          "Internal server error."
-        )
-      )
-
-      verifyDesPost(individualDetails, expectedCount = 3)
+      audits.head.keySet should not contain "httpStatus"
     }
 
-    "handle valid failure JSON returned with HTTP 200 from des" in {
+    "retry, then return internal server error and audit PARSE_ERROR without parse paths, when DES returns non-JSON" in
+      withCaptureOfLoggingFrom(desLogger) { logs =>
+        stubDesResponse(200, s"<html>${member.nino}</html>")
 
-      given formatF: OFormat[ResidencyStatusFailure] =
-        ResidencyStatusFormats.failureFormats
+        await(defaultConnector.getResidencyStatus(member, userId)) shouldBe Left(internalServerError)
 
-      val individualDetails =
-        IndividualDetails(
-          "AB123456C",
-          "JOHN",
-          "SMITH",
-          LocalDate.parse("1990-02-21", formatter)
-        )
+        verifyDesPost(expectedCount = 3)
 
-      val failureResponse =
-        ResidencyStatusFailure(
-          "STATUS_UNAVAILABLE",
-          "Cannot provide a residency status for this pension scheme member."
-        )
+        val audits = desAudits()
+        assertFailureAuditPerAttempt(audits, attempts = 3, "reason" -> "PARSE_ERROR", "httpStatus" -> "200")
+        audits.foreach { audit =>
+          audit.keySet should contain("cause")
+          audit.keySet should not contain "parseErrors"
+        }
 
-      stubDesResponse(
-        200,
-        Json.toJson(failureResponse).toString()
-      )
+        // the parser's message quotes the body; logs carry only the exception type
+        val errorLogs = messagesAt(Level.ERROR, logs)
 
-      val result = await(
-        wireMockDesConnector.getResidencyStatus(individualDetails, userId)
-      )
-
-      result shouldBe Right(failureResponse)
-
-      verifyDesPost(individualDetails)
-    }
-
-    "Handle requests" when {
-      "it cannot be processed the first time round" in {
-
-        given formatF: OFormat[ResidencyStatusFailure] = ResidencyStatusFormats.failureFormats
-        val errorResponse                              = ResidencyStatusFailure("INTERNAL_SERVER_ERROR", "Internal server error.")
-        val successResponse                            = ResidencyStatusSuccess(
-          nino = "AB123456C",
-          deathDate = Some(""),
-          deathDateStatus = Some(""),
-          deseasedIndicator = Some(false),
-          currentYearResidencyStatus = "Uk",
-          nextYearResidencyStatus = None
-        )
-
-        val individualDetails =
-          IndividualDetails("AB123456C", "JOHN", "Lewis", LocalDate.parse("1990-02-21", formatter))
-
-        val desUrl       = "/individuals/residency-status/"
-        val scenarioName = "retry-429-then-success"
-
-        server.stubFor(
-          post(urlEqualTo(desUrl))
-            .inScenario(scenarioName)
-            .whenScenarioStateIs(STARTED)
-            .willReturn(
-              aResponse()
-                .withStatus(429)
-                .withHeader("Content-Type", "application/json")
-                .withBody(Json.toJson(errorResponse).toString())
-            )
-            .willSetStateTo("Second Request")
-        )
-
-        server.stubFor(
-          post(urlEqualTo(desUrl))
-            .inScenario(scenarioName)
-            .whenScenarioStateIs("Second Request")
-            .willReturn(
-              aResponse()
-                .withStatus(200)
-                .withHeader("Content-Type", "application/json")
-                .withBody(Json.toJson(successResponse).toString())
-            )
-        )
-
-        val result =
-          await(wireMockDesConnector.getResidencyStatus(individualDetails, userId))
-
-        result.left.getOrElse("Get Failed") shouldBe ResidencyStatus("otherUKResident")
-        result.isRight                      shouldBe false
-
-        verifyDesPost(individualDetails, expectedCount = 2)
+        errorLogs should have size 3
+        errorLogs.foreach(_ should include("outcome=FAILURE reason=PARSE_ERROR"))
+        errorLogs.foreach(_ should include("cause="))
+        messages(logs).foreach(_ should not include member.nino)
+        messages(logs).foreach(_ should not include "<html>")
       }
 
-      "429 (Too Many Requests) has been returned 3 times" in {
+    "retry, then return internal server error and audit INVALID_RESPONSE with the failing JSON paths, " +
+      "when DES returns JSON of the wrong shape" in
+      withCaptureOfLoggingFrom(desLogger) { logs =>
+        stubDesResponse(200, s"""{"nino":"${member.nino}","unexpected":"shape"}""")
 
-        given formatF: OFormat[ResidencyStatusFailure] = ResidencyStatusFormats.failureFormats
+        await(defaultConnector.getResidencyStatus(member, userId)) shouldBe Left(internalServerError)
 
-        val errorResponse = ResidencyStatusFailure("TOO_MANY_REQUESTS", "Too Many Requests.")
+        verifyDesPost(expectedCount = 3)
 
-        val individualDetails =
-          IndividualDetails("AB123456C", "JOHN", "Lewis", LocalDate.parse("1990-02-21", formatter))
+        val audits = desAudits()
+        assertFailureAuditPerAttempt(audits, attempts = 3, "reason" -> "INVALID_RESPONSE", "httpStatus" -> "200")
+        audits.foreach(_("parseErrors") should include("/currentYearResidencyStatus"))
 
+        // logs name the failing JSON paths, never values in the body
+        val errorLogs = messagesAt(Level.ERROR, logs)
+
+        errorLogs should have size 3
+        errorLogs.foreach(_ should include("outcome=FAILURE reason=INVALID_RESPONSE"))
+        errorLogs.foreach(_ should include("parseErrors=/currentYearResidencyStatus"))
+        messages(logs).foreach(_ should not include member.nino)
+      }
+
+    "pass DES's failure body through, and audit DES_FAILURE_RESPONSE, when DES returns a failure body with 200" in {
+      val desFailure = ResidencyStatusFailure("STATUS_UNAVAILABLE", noStatusReason)
+      stubDesResponse(200, failureBody(desFailure))
+
+      await(defaultConnector.getResidencyStatus(member, userId)) shouldBe Left(desFailure)
+
+      verifyDesPost()
+
+      val audits = desAudits()
+
+      assertSingleFailureAudit(
+        audits,
+        "reason"       -> "DES_FAILURE_RESPONSE",
+        "httpStatus"   -> "200",
+        "responseCode" -> "STATUS_UNAVAILABLE"
+      )
+    }
+
+    "for a bulk request" should {
+
+      "retry a 429 when bulk retry is on but retry is off, auditing both attempts as FE_BULK" in {
+        val connector = createDesConnector(retryEnabled = false, bulkRetryEnabled = true)
+        stubDes429ThenSuccess("bulk-retry-429-then-success", successBody())
+
+        await(connector.getResidencyStatus(member, userId, isBulkRequest = true)) shouldBe
+          Right(ResidencyStatus("otherUKResident", Some("scotResident")))
+
+        verifyDesPost(expectedCount = 2)
+
+        val audits = desAudits()
+        audits should have size 2
+
+        audits.head should contain allElementsOf baseAuditFields(1, "FAILURE", "FE_BULK") ++ Map(
+          "reason"     -> "TOO_MANY_REQUESTS",
+          "httpStatus" -> "429"
+        )
+
+        audits(1) should contain allElementsOf baseAuditFields(2, "SUCCESS", "FE_BULK") + ("httpStatus" -> "200")
+      }
+
+      "not retry a 429 when both bulk retry and retry are off" in {
+        val connector = createDesConnector(retryEnabled = false, bulkRetryEnabled = false)
         stubDesResponse(429)
 
-        val result =
-          await(wireMockDesConnector.getResidencyStatus(individualDetails, userId))
-        result.isLeft                  shouldBe false
-        result.getOrElse("Get Failed") shouldBe errorResponse
+        await(connector.getResidencyStatus(member, userId, isBulkRequest = true)) shouldBe
+          Left(ResidencyStatusFailure("TOO_MANY_REQUESTS", "Too Many Requests."))
 
-        verifyDesPost(individualDetails, expectedCount = 3)
-      }
-    }
-  }
+        verifyDesPost()
 
-  "DESConnector correlationID" when {
-    "requestID is present in the headerCarrier" should {
-      "return new ID pre-appending the requestID when the requestID matches the format(8-4-4-4)" in {
-        val requestId = "abcd0000-dh12-fg34-ij56"
-        wireMockDesConnector.correlationId(using
-          HeaderCarrier(requestId = Some(RequestId(requestId)))
-        ) shouldBe s"$requestId-${uuid.substring(24)}"
-      }
+        val audits = desAudits()
+        audits should have size 1
 
-      "return new ID when the requestID does not match the format(8-4-4-4)" in {
-        val requestId = "1a2b-dh12-fg34-ij56"
-        wireMockDesConnector.correlationId(using HeaderCarrier(requestId = Some(RequestId(requestId)))) shouldBe uuid
+        audits.head should contain allElementsOf baseAuditFields(
+          1,
+          "FAILURE",
+          "FE_BULK"
+        ) + ("reason" -> "TOO_MANY_REQUESTS")
       }
     }
 
-    "requestID is not present in the headerCarrier should return a new ID" in {
-      wireMockDesConnector.correlationId(using HeaderCarrier()) shouldBe uuid
+    "retrying" should {
+
+      "succeed on the second attempt after a 429, auditing a FAILURE then a SUCCESS under one correlation id" in {
+        stubDes429ThenSuccess("retry-429-then-success", successBody(nextYear = None))
+
+        await(defaultConnector.getResidencyStatus(member, userId)) shouldBe
+          Right(ResidencyStatus("otherUKResident"))
+
+        verifyDesPost(expectedCount = 2)
+
+        val audits = desAudits()
+        audits.map(a => a("attempt") -> a("outcome")) shouldBe List("1" -> "FAILURE", "2" -> "SUCCESS")
+        audits.map(_("correlationId")).distinct       shouldBe List(uuid)
+      }
+
+      "give up after 3 attempts when DES keeps returning 429, auditing every attempt" in
+        withCaptureOfLoggingFrom(desLogger) { logs =>
+          stubDesResponse(429)
+
+          await(defaultConnector.getResidencyStatus(member, userId)) shouldBe
+            Left(ResidencyStatusFailure("TOO_MANY_REQUESTS", "Too Many Requests."))
+
+          verifyDesPost(expectedCount = 3)
+
+          val audits       = desAudits()
+          assertFailureAuditPerAttempt(
+            audits,
+            attempts = 3,
+            "reason"       -> "TOO_MANY_REQUESTS",
+            "httpStatus"   -> "429",
+            "responseCode" -> "TOO_MANY_REQUESTS"
+          )
+
+          // throttling logs at WARN - a failure line per attempt, and a retry line before attempts 2 and 3
+          val warningLogs = messagesAt(Level.WARN, logs)
+          warningLogs.filter(_.contains("outcome=FAILURE reason=TOO_MANY_REQUESTS")) should have size 3
+
+          warningLogs.filter(_.contains("Retrying DES call")) shouldBe List(
+            s"$tag Retrying DES call userId=$userId corrId=$uuid attempt=2",
+            s"$tag Retrying DES call userId=$userId corrId=$uuid attempt=3"
+          )
+
+          messagesAt(Level.ERROR, logs) shouldBe empty
+        }
     }
   }
 

@@ -24,13 +24,14 @@ import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpecLike
 import org.scalatestplus.mockito.MockitoSugar
 import org.scalatestplus.play.guice.GuiceOneAppPerSuite
-import play.api.Application
 import play.api.http.Status.{BAD_REQUEST, OK}
 import play.api.inject.guice.GuiceApplicationBuilder
 import play.api.libs.json.Json
 import play.api.mvc.ControllerComponents
 import play.api.test.FakeRequest
 import play.api.test.Helpers.{defaultAwaitTimeout, status}
+import play.api.{Application, Logger}
+import uk.gov.hmrc.play.bootstrap.tools.LogCapturing
 import uk.gov.hmrc.rasapi.controllers.fileProcessing.FileProcessingController
 import uk.gov.hmrc.rasapi.models.*
 import uk.gov.hmrc.rasapi.services.{FileProcessingService, RasFilesSessionService}
@@ -40,7 +41,12 @@ import scala.concurrent.ExecutionContext
 import scala.util.Random
 
 class FileProcessingControllerSpec
-    extends AnyWordSpecLike with Matchers with MockitoSugar with GuiceOneAppPerSuite with BeforeAndAfter {
+    extends AnyWordSpecLike
+    with Matchers
+    with MockitoSugar
+    with GuiceOneAppPerSuite
+    with BeforeAndAfter
+    with LogCapturing {
 
   val downloadUrl            = "/upscan-download/11370e18-6e24-453e-b45a-76d3e32ea33d"
   val fileId                 = "file-id-1"
@@ -75,6 +81,8 @@ class FileProcessingControllerSpec
       ExecutionContext.global
     )
 
+  val controllerLogger: Logger = Logger(classOf[FileProcessingController])
+
   before {
     reset(mockFileProcessingService)
     reset(mockSessionCacheService)
@@ -94,10 +102,7 @@ class FileProcessingControllerSpec
         val result =
           SUT.statusCallback(userId).apply(fakeRequest.withJsonBody(Json.toJson(upscanCallbackData)))
 
-        verify(mockFileProcessingService).processFile(Meq(userId), Meq(upscanCallbackData))(using
-          any(),
-          any()
-        )
+        verify(mockFileProcessingService).processFile(Meq(userId), Meq(upscanCallbackData))(using any(), any())
         verify(mockSessionCacheService).updateFileSession(Meq(userId), Meq(upscanCallbackData), Meq(None), Meq(None))
 
         status(result) shouldBe OK
@@ -106,15 +111,31 @@ class FileProcessingControllerSpec
     }
 
     "return BadRequest and not interact with FileProcessingService" when {
+
       "no json is provided" in {
         val result = SUT.statusCallback(userId).apply(fakeRequest)
 
         status(result) mustBe BAD_REQUEST
         verify(mockFileProcessingService, never()).processFile(any(), any())(using any(), any())
       }
+
+      "the json is the wrong shape, logging the failing paths but not the body" in
+        withCaptureOfLoggingFrom(controllerLogger) { logs =>
+          val wrongShape = Json.obj("downloadUrl" -> downloadUrl, "fileStatus" -> "READY") // no reference field
+
+          val result = SUT.statusCallback(userId).apply(fakeRequest.withJsonBody(wrongShape))
+
+          status(result) mustBe BAD_REQUEST
+          verify(mockFileProcessingService, never()).processFile(any(), any())(using any(), any())
+
+          val messages = logs.map(_.getFormattedMessage)
+          messages.exists(_.contains("parseErrors=/reference")) shouldBe true
+          messages.foreach(_ should not include downloadUrl)
+        }
     }
 
     "return Ok and not interact with FileProcessingService" when {
+
       "an 'FAILED' status is given" in {
         val fileStatus = "FAILED"
 

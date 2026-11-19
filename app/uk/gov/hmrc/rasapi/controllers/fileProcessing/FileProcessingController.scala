@@ -17,15 +17,14 @@
 package uk.gov.hmrc.rasapi.controllers.fileProcessing
 
 import play.api.Logging
-import play.api.libs.json.JsSuccess
+import play.api.libs.json.{JsError, JsSuccess}
 import play.api.mvc.*
 import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
-import uk.gov.hmrc.rasapi.models.UpscanCallbackData
+import uk.gov.hmrc.rasapi.models.{ConnectorFailure, UpscanCallbackData}
 import uk.gov.hmrc.rasapi.services.{FileProcessingService, RasFilesSessionService}
 
 import javax.inject.Inject
 import scala.concurrent.{ExecutionContext, Future}
-import scala.util.{Failure, Success, Try}
 
 class FileProcessingController @Inject() (
   val sessionCacheService: RasFilesSessionService,
@@ -38,7 +37,7 @@ class FileProcessingController @Inject() (
   private val STATUS_FAILED: String = "FAILED"
 
   def statusCallback(userId: String): Action[AnyContent] = Action.async { implicit request =>
-    withValidJson() match {
+    withValidJson(userId) match {
       case Some(callbackData) =>
         callbackData.fileStatus match {
           case STATUS_READY  =>
@@ -61,26 +60,29 @@ class FileProcessingController @Inject() (
                 s" ${callbackData.fileStatus}"
             )
         }
+
         Future(Ok(""))
       case None               =>
-        logger.warn("[FileProcessingController][handleInvalidRequest] Invalid Json supplied")
         Future.successful(BadRequest(""))
     }
   }
 
-  private def withValidJson()(using request: Request[AnyContent]): Option[UpscanCallbackData] =
+  private def withValidJson(userId: String)(using request: Request[AnyContent]): Option[UpscanCallbackData] =
     request.body.asJson match {
       case Some(json) =>
-        Try(json.validate[UpscanCallbackData]) match {
-          case Success(JsSuccess(payload, _)) =>
-            Some(payload)
-          case Failure(exception)             =>
+        json.validate[UpscanCallbackData] match {
+          case JsSuccess(payload, _) => Some(payload)
+          case JsError(errors)       =>
             logger.warn(
-              s"[FileProcessingController][withValidJson] Json could not be parsed. Json Data: $json, exception: ${exception.getMessage}"
+              s"[FileProcessingController][withValidJson] Callback json did not match expected format " +
+                s"userId=$userId parseErrors=${ConnectorFailure.formatJsErrors(errors)}"
             )
             None
         }
-      case _          => logger.warn("[FileProcessingController][withValidJson] No json provided."); None
+
+      case None =>
+        logger.warn(s"[FileProcessingController][withValidJson] No json provided userId=$userId")
+        None
     }
 
 }

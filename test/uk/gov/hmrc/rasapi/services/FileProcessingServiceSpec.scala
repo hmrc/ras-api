@@ -53,6 +53,9 @@ import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.Try
 
+import org.scalatest.concurrent.Eventually
+import org.scalatest.time.{Millis, Seconds, Span}
+
 class FileProcessingServiceSpec
     extends AnyWordSpecLike
     with Matchers
@@ -61,7 +64,11 @@ class FileProcessingServiceSpec
     with MockitoSugar
     with BeforeAndAfter
     with DefaultPlayMongoRepositorySupport[Chunks]
-    with Logging {
+    with Logging
+    with Eventually {
+
+  implicit override val patienceConfig: PatienceConfig =
+    PatienceConfig(timeout = Span(20, Seconds), interval = Span(100, Millis))
 
   given hc: HeaderCarrier = HeaderCarrier()
 
@@ -168,7 +175,7 @@ class FileProcessingServiceSpec
           override val SERVICE_UNAVAILABLE: String                   = STATUS_SERVICE_UNAVAILABLE
         }
 
-        when(mockUpscanConnector.getUpscanFile(any(), any(), any()))
+        when(mockUpscanConnector.getUpscanFile(any(), any(), any())(using any[HeaderCarrier]))
           .thenReturn(Future.successful(Some(new FileInputStream(testFilePath.toFile))))
 
         when(mockDesConnector.otherUk).thenReturn("otherUKResident")
@@ -198,14 +205,19 @@ class FileProcessingServiceSpec
         when(mockSessionCache.updateFileSession(any(), any(), any(), any()))
           .thenReturn(Future.successful(cacheItem))
 
-        when(mockDesConnector.getResidencyStatus(any[IndividualDetails], any(), any()))
-          .thenReturn(Future.successful(Left(ResidencyStatus("scotResident", Some("otherUKResident")))))
+        when(mockDesConnector.getResidencyStatus(any[IndividualDetails], any(), any())(using any[HeaderCarrier]))
+          .thenReturn(Future.successful(Right(ResidencyStatus("scotResident", Some("otherUKResident")))))
 
         when(mockResidencyYearResolver.isBetweenJanAndApril).thenReturn(true)
 
         SUT.processFile("user1234", callbackData)
 
-        Thread.sleep(5000)
+        // processFile runs in the background with updateFileSession being its last step
+        // wait for this to be called before checking the results
+        eventually {
+          verify(mockSessionCache).updateFileSession(any(), any(), any(), any())
+          ()
+        }
 
         val res    = await(repository.fetchFile(fileId, userId))
         var result = new String("")
@@ -262,7 +274,7 @@ class FileProcessingServiceSpec
           override val SERVICE_UNAVAILABLE: String                   = STATUS_SERVICE_UNAVAILABLE
         }
 
-        when(mockUpscanConnector.getUpscanFile(any(), any(), any()))
+        when(mockUpscanConnector.getUpscanFile(any(), any(), any())(using any[HeaderCarrier]))
           .thenReturn(Future.successful(Some(new FileInputStream(testFilePath.toFile))))
 
         when(mockDesConnector.otherUk).thenReturn("otherUKResident")
@@ -292,14 +304,17 @@ class FileProcessingServiceSpec
         when(mockSessionCache.updateFileSession(any(), any(), any(), any()))
           .thenReturn(Future.successful(cacheItem))
 
-        when(mockDesConnector.getResidencyStatus(any[IndividualDetails], any(), any()))
-          .thenReturn(Future.successful(Left(ResidencyStatus("scotResident", Some("scotResident")))))
+        when(mockDesConnector.getResidencyStatus(any[IndividualDetails], any(), any())(using any[HeaderCarrier]))
+          .thenReturn(Future.successful(Right(ResidencyStatus("scotResident", Some("scotResident")))))
 
         when(mockResidencyYearResolver.isBetweenJanAndApril).thenReturn(true)
 
         SUT.processFile("user1234", callbackData)
 
-        Thread.sleep(20000)
+        eventually {
+          verify(mockSessionCache).updateFileSession(any(), any(), any(), any())
+          ()
+        }
 
         val res    = await(repository.fetchFile(fileId, userId))
         var result = new String("")
@@ -355,7 +370,7 @@ class FileProcessingServiceSpec
           override val SERVICE_UNAVAILABLE: String                   = STATUS_SERVICE_UNAVAILABLE
         }
 
-        when(mockUpscanConnector.getUpscanFile(any(), any(), any()))
+        when(mockUpscanConnector.getUpscanFile(any(), any(), any())(using any[HeaderCarrier]))
           .thenReturn(Future.successful(Some(new FileInputStream(testFilePath.toFile))))
 
         when(mockDesConnector.otherUk).thenReturn("otherUKResident")
@@ -385,14 +400,17 @@ class FileProcessingServiceSpec
         when(mockSessionCache.updateFileSession(any(), any(), any(), any()))
           .thenReturn(Future.successful(cacheItem))
 
-        when(mockDesConnector.getResidencyStatus(any[IndividualDetails], any(), any()))
-          .thenReturn(Future.successful(Left(ResidencyStatus("otherUKResident", Some("scotResident")))))
+        when(mockDesConnector.getResidencyStatus(any[IndividualDetails], any(), any())(using any[HeaderCarrier]))
+          .thenReturn(Future.successful(Right(ResidencyStatus("otherUKResident", Some("scotResident")))))
 
         when(mockResidencyYearResolver.isBetweenJanAndApril).thenReturn(false)
 
         SUT.processFile("user1234", upscanCallbackData)
 
-        Thread.sleep(20000)
+        eventually {
+          verify(mockSessionCache).updateFileSession(any(), any(), any(), any())
+          ()
+        }
 
         val res    = await(repository.fetchFile(fileId, userId))
         var result = new String("")
@@ -447,7 +465,7 @@ class FileProcessingServiceSpec
           override val SERVICE_UNAVAILABLE: String                   = STATUS_SERVICE_UNAVAILABLE
         }
 
-        when(mockUpscanConnector.getUpscanFile(any(), any(), any()))
+        when(mockUpscanConnector.getUpscanFile(any(), any(), any())(using any[HeaderCarrier]))
           .thenReturn(Future.successful(Some(new FileInputStream(testFilePath.toFile))))
 
         when(mockDesConnector.otherUk).thenReturn("otherUKResident")
@@ -477,17 +495,21 @@ class FileProcessingServiceSpec
         when(mockSessionCache.updateFileSession(any(), any(), any(), any()))
           .thenReturn(Future.successful(cacheItem))
 
-        when(mockDesConnector.getResidencyStatus(any[IndividualDetails], any(), any())).thenReturn(
-          Future.successful(
-            Right(ResidencyStatusFailure(code = s"$STATUS_MATCHING_FAILED", reason = s"$STATUS_MATCHING_FAILED"))
+        when(mockDesConnector.getResidencyStatus(any[IndividualDetails], any(), any())(using any[HeaderCarrier]))
+          .thenReturn(
+            Future.successful(
+              Left(ResidencyStatusFailure(code = s"$STATUS_MATCHING_FAILED", reason = s"$STATUS_MATCHING_FAILED"))
+            )
           )
-        )
 
         when(mockResidencyYearResolver.isBetweenJanAndApril).thenReturn(true)
 
         SUT.processFile("user1234", upscanCallbackData)
 
-        Thread.sleep(20000)
+        eventually {
+          verify(mockSessionCache).updateFileSession(any(), any(), any(), any())
+          ()
+        }
 
         val res    = await(repository.fetchFile(fileId, userId))
         var result = new String("")
@@ -542,7 +564,7 @@ class FileProcessingServiceSpec
           override val SERVICE_UNAVAILABLE: String                   = STATUS_SERVICE_UNAVAILABLE
         }
 
-        when(mockUpscanConnector.getUpscanFile(any(), any(), any()))
+        when(mockUpscanConnector.getUpscanFile(any(), any(), any())(using any[HeaderCarrier]))
           .thenReturn(Future.successful(Some(new FileInputStream(testFilePath.toFile))))
 
         when(mockDesConnector.otherUk).thenReturn("otherUKResident")
@@ -572,15 +594,19 @@ class FileProcessingServiceSpec
         when(mockSessionCache.updateFileSession(any(), any(), any(), any()))
           .thenReturn(Future.successful(cacheItem))
 
-        when(mockDesConnector.getResidencyStatus(any[IndividualDetails], any(), any())).thenReturn(
-          Future.successful(Right(ResidencyStatusFailure(code = s"$STATUS_DECEASED", reason = s"$STATUS_DECEASED")))
-        )
+        when(mockDesConnector.getResidencyStatus(any[IndividualDetails], any(), any())(using any[HeaderCarrier]))
+          .thenReturn(
+            Future.successful(Left(ResidencyStatusFailure(code = s"$STATUS_DECEASED", reason = s"$STATUS_DECEASED")))
+          )
 
         when(mockResidencyYearResolver.isBetweenJanAndApril).thenReturn(true)
 
         SUT.processFile("user1234", callbackData)
 
-        Thread.sleep(20000)
+        eventually {
+          verify(mockSessionCache).updateFileSession(any(), any(), any(), any())
+          ()
+        }
 
         val res    = await(repository.fetchFile(fileId, userId))
         var result = new String("")
@@ -634,7 +660,7 @@ class FileProcessingServiceSpec
           override val SERVICE_UNAVAILABLE: String                   = STATUS_SERVICE_UNAVAILABLE
         }
 
-        when(mockUpscanConnector.getUpscanFile(any(), any(), any()))
+        when(mockUpscanConnector.getUpscanFile(any(), any(), any())(using any[HeaderCarrier]))
           .thenReturn(Future.successful(Some(new FileInputStream(testFilePath.toFile))))
 
         when(mockDesConnector.otherUk).thenReturn("otherUKResident")
@@ -664,19 +690,23 @@ class FileProcessingServiceSpec
         when(mockSessionCache.updateFileSession(any(), any(), any(), any()))
           .thenReturn(Future.successful(cacheItem))
 
-        when(mockDesConnector.getResidencyStatus(any[IndividualDetails], any(), any())).thenReturn(
-          Future.successful(
-            Right(
-              ResidencyStatusFailure(code = s"$STATUS_SERVICE_UNAVAILABLE", reason = s"$STATUS_SERVICE_UNAVAILABLE")
+        when(mockDesConnector.getResidencyStatus(any[IndividualDetails], any(), any())(using any[HeaderCarrier]))
+          .thenReturn(
+            Future.successful(
+              Left(
+                ResidencyStatusFailure(code = s"$STATUS_SERVICE_UNAVAILABLE", reason = s"$STATUS_SERVICE_UNAVAILABLE")
+              )
             )
           )
-        )
 
         when(mockResidencyYearResolver.isBetweenJanAndApril).thenReturn(true)
 
         SUT.processFile("user1234", callbackData)
 
-        Thread.sleep(20000)
+        eventually {
+          verify(mockSessionCache).updateFileSession(any(), any(), any(), any())
+          ()
+        }
 
         val res    = await(repository.fetchFile(fileId, userId))
         var result = new String("")
@@ -716,7 +746,8 @@ class FileProcessingServiceSpec
         val row1        = "Johné,Smithè,AB123456C,1990-02-21".getBytes(StandardCharsets.ISO_8859_1)
         val inputStream = new ByteArrayInputStream(row1)
 
-        when(mockUpscanConnector.getUpscanFile(any(), any(), any())).thenReturn(Future.successful(Some(inputStream)))
+        when(mockUpscanConnector.getUpscanFile(any(), any(), any())(using any[HeaderCarrier]))
+          .thenReturn(Future.successful(Some(inputStream)))
 
         val result = await(SUT.readFile(reference, fileId, userId))
 
@@ -879,7 +910,7 @@ class FileProcessingServiceSpec
     "fetch result" when {
       "input row is valid and the date of processing is between january and april" in {
         when(mockDesConnector.getResidencyStatus(data, userId, isBulkRequest = true))
-          .thenReturn(Future.successful(Left(ResidencyStatus("otherUKResident", Some("scotResident")))))
+          .thenReturn(Future.successful(Right(ResidencyStatus("otherUKResident", Some("scotResident")))))
 
         when(mockResidencyYearResolver.isBetweenJanAndApril).thenReturn(true)
 
@@ -890,7 +921,7 @@ class FileProcessingServiceSpec
 
       "input row is valid and the date of processing is between april and december" in {
         when(mockDesConnector.getResidencyStatus(data, userId, isBulkRequest = true))
-          .thenReturn(Future.successful(Left(ResidencyStatus("otherUKResident", Some("scotResident")))))
+          .thenReturn(Future.successful(Right(ResidencyStatus("otherUKResident", Some("scotResident")))))
 
         when(mockResidencyYearResolver.isBetweenJanAndApril).thenReturn(false)
 
@@ -901,7 +932,7 @@ class FileProcessingServiceSpec
 
       "input row matching failed" in {
         when(mockDesConnector.getResidencyStatus(data, userId, isBulkRequest = true))
-          .thenReturn(Future.successful(Right(ResidencyStatusFailure(STATUS_MATCHING_FAILED, STATUS_MATCHING_FAILED))))
+          .thenReturn(Future.successful(Left(ResidencyStatusFailure(STATUS_MATCHING_FAILED, STATUS_MATCHING_FAILED))))
         val inputRow = "AB123456C,John,Smith,1992-02-21"
         val result   = SUT.fetchResult(inputRow, userId, fileId)
         result shouldBe s"AB123456C,John,Smith,1992-02-21,$STATUS_FILE_PROCESSING_MATCHING_FAILED"
@@ -909,7 +940,7 @@ class FileProcessingServiceSpec
 
       "input row returns deceased" in {
         when(mockDesConnector.getResidencyStatus(data, userId, isBulkRequest = true))
-          .thenReturn(Future.successful(Right(ResidencyStatusFailure(STATUS_DECEASED, STATUS_DECEASED))))
+          .thenReturn(Future.successful(Left(ResidencyStatusFailure(STATUS_DECEASED, STATUS_DECEASED))))
         val inputRow = "AB123456C,John,Smith,1992-02-21"
         val result   = SUT.fetchResult(inputRow, userId, fileId)
         result shouldBe s"AB123456C,John,Smith,1992-02-21,$STATUS_FILE_PROCESSING_MATCHING_FAILED"
@@ -927,7 +958,7 @@ class FileProcessingServiceSpec
 
         val testFilePath = getTestFilePath
 
-        when(mockUpscanConnector.getUpscanFile(any(), any(), any()))
+        when(mockUpscanConnector.getUpscanFile(any(), any(), any())(using any[HeaderCarrier]))
           .thenReturn(Future.successful(Some(new FileInputStream(testFilePath.toFile))))
 
         val expectedResultsFile =
@@ -954,14 +985,17 @@ class FileProcessingServiceSpec
         when(mockSessionCache.updateFileSession(any(), any(), any(), any()))
           .thenReturn(Future.successful(cacheItem))
 
-        when(mockDesConnector.getResidencyStatus(any[IndividualDetails], any(), any()))
-          .thenReturn(Future.successful(Left(ResidencyStatus("otherUKResident", Some("scotResident")))))
+        when(mockDesConnector.getResidencyStatus(any[IndividualDetails], any(), any())(using any[HeaderCarrier]))
+          .thenReturn(Future.successful(Right(ResidencyStatus("otherUKResident", Some("scotResident")))))
 
         when(mockResidencyYearResolver.isBetweenJanAndApril).thenReturn(true)
 
         SUT.processFile("user1234", upscanCallbackData)
 
-        Thread.sleep(5000)
+        eventually {
+          verify(mockSessionCache).updateFileSession(any(), any(), any(), any())
+          ()
+        }
 
         val res    = await(repository.fetchFile(fileId, userId))
         var result = new String("")

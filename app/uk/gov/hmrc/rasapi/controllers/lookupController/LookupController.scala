@@ -93,7 +93,7 @@ class LookupController @Inject() (
           // The Accept header is validated by validateAccept before this body runs, so apiVersion is always defined
           // here; the V2_0 fallback only guards the unreachable None case so a missing version never fails the request.
           desConnector.getResidencyStatus(individualDetails, id).map {
-            case Left(residencyStatusResponse) =>
+            case Right(residencyStatusResponse) =>
               val residencyStatus =
                 if (residencyYearResolver.isBetweenJanAndApril) {
                   updateResidencyResponse(residencyStatusResponse)
@@ -113,7 +113,7 @@ class LookupController @Inject() (
               apiMetrics.stop()
               Ok(toJson(residencyStatus))
 
-            case Right(matchingFailed) =>
+            case Left(matchingFailed) =>
               matchingFailed.code match {
                 case STATUS_DECEASED            =>
                   auditResponse(
