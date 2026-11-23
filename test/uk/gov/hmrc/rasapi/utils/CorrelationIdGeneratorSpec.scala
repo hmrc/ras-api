@@ -29,15 +29,23 @@ class CorrelationIdGeneratorSpec extends AnyWordSpec with Matchers {
   }
 
   "correlationId" when {
-    "the requestId is present in the headerCarrier" should {
-      "pre-append the requestId when it matches the format (8-4-4-4)" in {
-        val requestId = "abcd0000-dh12-fg34-ij56"
+    "the requestId is present and has at least 12 alphanumeric characters" should {
+      "use its first 12 characters as the leading 8-4 groups and randomise the remaining groups" in {
+        val requestId = "T59jlUF4VjXG-17zfWr0wD2Pn8dgZqMsYJS8wKeoHTRgoHrape7WjQ=="
         generator.correlationId(using HeaderCarrier(requestId = Some(RequestId(requestId)))) shouldBe
-          s"$requestId-${uuid.substring(24)}"
+          s"T59jlUF4-VjXG-${uuid.substring(14)}"
       }
 
-      "return a new id when the requestId does not match the format (8-4-4-4)" in {
-        val requestId = "1a2b-dh12-fg34-ij56"
+      "ignore non-alphanumeric characters when selecting the first 12" in {
+        val requestId = "abcd0000-dh12-fg34-ij56" // alphanumerics: abcd0000dh12fg34ij56
+        generator.correlationId(using HeaderCarrier(requestId = Some(RequestId(requestId)))) shouldBe
+          s"abcd0000-dh12-${uuid.substring(14)}"
+      }
+    }
+
+    "the requestId has fewer than 12 alphanumeric characters" should {
+      "return a new id" in {
+        val requestId = "ab-cd-12" // only 6 alphanumerics
         generator.correlationId(using HeaderCarrier(requestId = Some(RequestId(requestId)))) shouldBe uuid
       }
     }

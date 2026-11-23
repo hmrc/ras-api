@@ -26,7 +26,7 @@ import uk.gov.hmrc.rasapi.models.*
 import uk.gov.hmrc.rasapi.models.FailureReason.*
 import uk.gov.hmrc.rasapi.services.AuditService
 import uk.gov.hmrc.rasapi.utils.CorrelationIdGenerator
-import uk.gov.hmrc.rasapi.utils.LogHelper.failureText
+import uk.gov.hmrc.rasapi.utils.LogHelper.{failureText, successText}
 
 import javax.inject.Inject
 import scala.concurrent.{ExecutionContext, Future}
@@ -209,6 +209,14 @@ class DesConnector @Inject() (
   ): Either[ResidencyStatusFailure, ResidencyStatus] =
     result match {
       case Right((residencyStatus, httpStatus)) =>
+        logger.info(
+          successText(
+            tag,
+            requestData.userId,
+            s"status=$httpStatus",
+            context = Seq("corrId" -> requestData.corrId, "attempt" -> requestData.number.toString)
+          )
+        )
         auditService.audit(DES_AUDIT_TYPE, uri, requestData.successAudit(httpStatus))
         Right(residencyStatus)
 

@@ -23,22 +23,27 @@ import javax.inject.Inject
 
 class CorrelationIdGenerator @Inject() () {
 
+  // Number of leading request-id characters reused as the UUID's first two groups (8 + 4).
+  private val TracePrefixLength = 12
+
   def generateNewUUID: String = randomUUID.toString
 
-  /** Derives a correlation id for a downstream call. When the incoming request id matches the standard 8-4-4-4 UUID
-    * prefix it is preserved and combined with a fresh suffix so the downstream call can be traced back to the
-    * originating request; otherwise a brand new UUID is generated.
+  /** Builds a UUID-shaped correlation id for a downstream call. The first 12 alphanumeric characters of the incoming
+    * request id form the leading two groups (8-4), so related calls that share a request id stay traceable, while the
+    * remaining three groups are randomised per call so each downstream operation still gets a unique id. Falls back to
+    * a fully random UUID when the request id has fewer than 12 usable characters or is absent.
+    *
+    * e.g. requestId "T59jlUF4VjXG-17zf...==" -> "T59jlUF4-VjXG-<random>-<random>-<random>"
     */
-  def correlationId(using hc: HeaderCarrier): String = {
-    val CorrelationIdPattern = """.*([A-Za-z0-9]{8}-[A-Za-z0-9]{4}-[A-Za-z0-9]{4}-[A-Za-z0-9]{4}).*""".r
-    hc.requestId match {
-      case Some(requestId) =>
-        requestId.value match {
-          case CorrelationIdPattern(prefix) => prefix + "-" + generateNewUUID.substring(24)
-          case _                            => generateNewUUID
-        }
-      case _               => generateNewUUID
+  def correlationId(using hc: HeaderCarrier): String =
+    hc.requestId
+      .map(_.value.filter(_.isLetterOrDigit))
+      .filter(_.length >= TracePrefixLength) match {
+      case Some(usable) =>
+        val prefix = usable.take(TracePrefixLength)
+        s"${prefix.substring(0, 8)}-${prefix.substring(8, 12)}-${generateNewUUID.substring(14)}"
+      case None         =>
+        generateNewUUID
     }
-  }
 
 }

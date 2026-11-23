@@ -203,6 +203,9 @@ class UpscanConnectorSpec
       val requestId: String                = "abcd0000-dh12-fg34-ij56"
       given hcWithRequestId: HeaderCarrier = HeaderCarrier(requestId = Some(RequestId(requestId)))
 
+      // correlationId reuses the first 12 alphanumerics of the requestId (abcd0000dh12) as its 8-4 groups.
+      val corrIdPrefix = "abcd0000-dh12-"
+
       withCaptureOfLoggingFrom(connectorLogger) { logs =>
         val failure = intercept[ConnectorFailure](getFile())
 
@@ -216,7 +219,7 @@ class UpscanConnectorSpec
           s"[UpscanConnector][getUpscanFile] outcome=FAILURE reason=CONNECTION_FAILURE userId=$userId"
         )
 
-        errorLogs.head should include(s"corrId=$requestId-")
+        errorLogs.head should include(s"corrId=$corrIdPrefix")
         errorLogs.head should not include "/download"
       }
 
@@ -227,7 +230,7 @@ class UpscanConnectorSpec
         "reason"         -> "CONNECTION_FAILURE",
         "processingPath" -> "UpscanConnector.getUpscanFile.recover"
       )
-      audit("correlationId") should startWith(s"$requestId-")
+      audit("correlationId") should startWith(corrIdPrefix)
       audit.keySet           should contain("errorDetail")
     }
 

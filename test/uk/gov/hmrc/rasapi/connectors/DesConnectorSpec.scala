@@ -252,8 +252,12 @@ class DesConnectorSpec
         audits.head should contain allElementsOf baseAuditFields(attempt = 1, outcome = "SUCCESS") +
           ("httpStatus" -> "200")
 
-        // success is visible through the audit only, to keep bulk-file log volume down
-        logs shouldBe empty
+        // log success
+        logs.map(event => event.getLevel -> event.getFormattedMessage) shouldBe List(
+          Level.INFO ->
+            (s"$tag outcome=SUCCESS userId=$userId corrId=$uuid " +
+              "attempt=1 status=200")
+        )
       }
 
     "When the requested API version is V2.0" should {
