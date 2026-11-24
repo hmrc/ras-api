@@ -18,12 +18,19 @@ package uk.gov.hmrc.rasapi.models
 
 import uk.gov.hmrc.rasapi.services.DesAuditData
 
-case class DesRequestData(userId: String, nino: NINO, corrId: String, number: Int, isBulkRequest: Boolean) {
+case class DesRequestData(
+  userId: String,
+  nino: NINO,
+  corrId: String,
+  requestId: Option[String],
+  number: Int,
+  isBulkRequest: Boolean
+) {
 
   def successAudit(httpStatus: Int): Map[String, String] =
-    DesAuditData.success(userId, nino, corrId, number, isBulkRequest, httpStatus)
+    DesAuditData.success(userId, nino, corrId, requestId, number, isBulkRequest, httpStatus)
 
   def failureAudit(failure: ConnectorFailure, responseCode: String): Map[String, String] =
-    DesAuditData.failure(userId, nino, corrId, number, isBulkRequest, failure, responseCode)
+    DesAuditData.failure(userId, nino, corrId, requestId, number, isBulkRequest, failure, responseCode)
 
 }

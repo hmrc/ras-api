@@ -656,6 +656,30 @@ class DesConnectorSpec
 
           messagesAt(Level.ERROR, logs) shouldBe empty
         }
+
+      "log and audit the incoming requestId alongside the correlationId on every attempt" in
+        withCaptureOfLoggingFrom(desLogger) { logs =>
+          val requestId                        = "govuk-tax-4e9f-aabb-1234"
+          given hcWithRequestId: HeaderCarrier = HeaderCarrier(requestId = Some(RequestId(requestId)))
+
+          stubDesResponse(429)
+
+          await(defaultConnector.getResidencyStatus(member, userId)) shouldBe
+            Left(ResidencyStatusFailure("TOO_MANY_REQUESTS", "Too Many Requests."))
+
+          verifyDesPost(expectedCount = 3)
+
+          // the requestId sits beside the correlationId in every audit event
+          val audits = desAudits()
+          audits should have size 3
+          audits.foreach(_ should contain allElementsOf Map("correlationId" -> uuid, "requestId" -> requestId))
+
+          // and beside the correlationId in the retry log line
+          messagesAt(Level.WARN, logs).filter(_.contains("Retrying DES call")) shouldBe List(
+            s"$tag Retrying DES call userId=$userId corrId=$uuid attempt=2 requestId=$requestId",
+            s"$tag Retrying DES call userId=$userId corrId=$uuid attempt=3 requestId=$requestId"
+          )
+        }
     }
   }
 

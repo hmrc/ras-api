@@ -220,6 +220,9 @@ class UpscanConnectorSpec
         )
         errorLogs.head should not include "/download"
 
+        // the requestId from the header carrier is logged alongside the correlationId
+        errorLogs.head should include(s"requestId=$requestId")
+
         // the correlationId is logged as a valid v4 UUID
         loggedCorrId = s"corrId=($uuidV4)".r.findFirstMatchIn(errorLogs.head).map(_.group(1))
       }
@@ -234,6 +237,7 @@ class UpscanConnectorSpec
         "processingPath" -> "UpscanConnector.getUpscanFile.recover"
       )
       audit("correlationId") shouldBe loggedCorrId.get // the same correlationId appears in the log and the audit
+      audit("requestId")     shouldBe requestId // and the requestId is audited in the same event
       audit.keySet             should contain("errorDetail")
     }
 

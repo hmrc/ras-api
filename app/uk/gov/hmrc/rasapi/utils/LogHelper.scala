@@ -21,7 +21,7 @@ import uk.gov.hmrc.rasapi.models.ConnectorFailure
 
 object LogHelper {
 
-  private def requestId(hc: HeaderCarrier): String = hc.requestId.map(id => s"requestId=${id.value}").getOrElse("")
+  def requestId(hc: HeaderCarrier): String = hc.requestId.map(id => s"requestId=${id.value}").getOrElse("")
 
   // extra fields as `key=value` pairs, e.g. corrId=abc-123 attempt=2
   private def keyValuePairs(context: Seq[(String, String)]): String =

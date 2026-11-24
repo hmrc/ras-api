@@ -25,7 +25,7 @@ import uk.gov.hmrc.rasapi.config.AppContext
 import uk.gov.hmrc.rasapi.models.*
 import uk.gov.hmrc.rasapi.models.FailureReason.*
 import uk.gov.hmrc.rasapi.services.AuditService
-import uk.gov.hmrc.rasapi.utils.CorrelationIdGenerator
+import uk.gov.hmrc.rasapi.utils.{CorrelationIdGenerator, LogHelper}
 import uk.gov.hmrc.rasapi.utils.LogHelper.failureText
 
 import javax.inject.Inject
@@ -79,8 +79,9 @@ class DesConnector @Inject() (
     isBulkRequest: Boolean = false
   )(using hc: HeaderCarrier): Future[Either[ResidencyStatusFailure, ResidencyStatus]] = {
 
-    val uri    = s"$desBaseUrl/individuals/residency-status/"
-    val corrId = correlationIdGenerator.correlationId
+    val uri       = s"$desBaseUrl/individuals/residency-status/"
+    val corrId    = correlationIdGenerator.correlationId
+    val requestId = hc.requestId.map(_.value)
 
     val desHeaders = Seq(
       "Environment"   -> desUrlHeaderEnv,
@@ -91,10 +92,12 @@ class DesConnector @Inject() (
     )
 
     def getResultAndProcess(retryCount: Int = 1): Future[Either[ResidencyStatusFailure, ResidencyStatus]] = {
-      val requestData = DesRequestData(userId, member.nino, corrId, retryCount, isBulkRequest)
+      val requestData = DesRequestData(userId, member.nino, corrId, requestId, retryCount, isBulkRequest)
 
       if (retryCount > 1) {
-        logger.warn(s"$tag Retrying DES call userId=$userId corrId=$corrId attempt=$retryCount")
+        logger.warn(
+          s"$tag Retrying DES call userId=$userId corrId=$corrId attempt=$retryCount ${LogHelper.requestId(hc)}".trim
+        )
       }
 
       sendResidencyStatusRequest(uri, member, desHeaders, requestData) flatMap {
