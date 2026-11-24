@@ -203,6 +203,9 @@ class UpscanConnectorSpec
       val requestId: String                = "abcd0000-dh12-fg34-ij56"
       given hcWithRequestId: HeaderCarrier = HeaderCarrier(requestId = Some(RequestId(requestId)))
 
+      val uuidV4                       = """[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}"""
+      var loggedCorrId: Option[String] = None
+
       withCaptureOfLoggingFrom(connectorLogger) { logs =>
         val failure = intercept[ConnectorFailure](getFile())
 
@@ -215,20 +218,23 @@ class UpscanConnectorSpec
         errorLogs.head should startWith(
           s"[UpscanConnector][getUpscanFile] outcome=FAILURE reason=CONNECTION_FAILURE userId=$userId"
         )
-
-        errorLogs.head should include(s"corrId=$requestId-")
         errorLogs.head should not include "/download"
+
+        // the correlationId is logged as a valid v4 UUID
+        loggedCorrId = s"corrId=($uuidV4)".r.findFirstMatchIn(errorLogs.head).map(_.group(1))
       }
 
+      loggedCorrId shouldBe defined
+
       val audit = auditedData()
-      audit                  should contain allElementsOf commonAuditData
-      audit                  should contain allElementsOf Map(
+      audit                    should contain allElementsOf commonAuditData
+      audit                    should contain allElementsOf Map(
         "outcome"        -> "FAILURE",
         "reason"         -> "CONNECTION_FAILURE",
         "processingPath" -> "UpscanConnector.getUpscanFile.recover"
       )
-      audit("correlationId") should startWith(s"$requestId-")
-      audit.keySet           should contain("errorDetail")
+      audit("correlationId") shouldBe loggedCorrId.get // the same correlationId appears in the log and the audit
+      audit.keySet             should contain("errorDetail")
     }
 
     "fail with TIMEOUT, and log and audit it, when Upscan doesn't respond within the idle timeout" in {
