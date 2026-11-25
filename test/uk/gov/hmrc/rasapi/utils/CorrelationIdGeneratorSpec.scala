@@ -18,77 +18,28 @@ package uk.gov.hmrc.rasapi.utils
 
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpec
-import uk.gov.hmrc.http.{HeaderCarrier, RequestId}
 
 class CorrelationIdGeneratorSpec extends AnyWordSpec with Matchers {
 
   private val generator = new CorrelationIdGenerator()
 
-  // A standard 8-4-4-4-12 UUID string (any hex, any version).
-  private val UuidRegex = "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$"
+  // A standard 8-4-4-4-12 UUID whose version nibble is 4 and variant nibble is one of 8/9/a/b (i.e. a valid v4 UUID).
+  private val UuidV4Regex = "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
 
-  private def corrId(requestId: String): String =
-    generator.correlationId(using HeaderCarrier(requestId = Some(RequestId(requestId))))
+  "correlationId" should {
 
-  // The traceable, request-id-derived part is the first four groups ("xxxxxxxx-xxxx-xxxx-xxxx").
-  private def prefix(id: String): String = id.take(23)
-
-  "correlationId" when {
-
-    "a requestId contains a valid UUID-shaped prefix" should {
-
-      // "1a2b3c4d-5e6f-7a8b-9c0d" is pure hex, so it survives UUID validation and is preserved.
-      val requestId = "1a2b3c4d-5e6f-7a8b-9c0d-eeeeeeeeeeee"
-
-      "generate a valid UUID" in {
-        corrId(requestId) should fullyMatch regex UuidRegex
-      }
-
-      "preserve the UUID-shaped prefix so the downstream call is traceable to the originating request" in {
-        corrId(requestId) should startWith("1a2b3c4d-5e6f-7a8b-9c0d-")
-      }
-
-      "generate a unique id on every call" in {
-        corrId(requestId) should not be corrId(requestId)
-      }
-
-      "keep the same prefix but a fresh suffix for related requests" in {
-        prefix(corrId("1a2b3c4d-5e6f-7a8b-9c0d-aaaaaaaaaaaa")) shouldBe
-          prefix(corrId("1a2b3c4d-5e6f-7a8b-9c0d-bbbbbbbbbbbb"))
-      }
+    "generate a valid v4 UUID" in {
+      generator.correlationId should fullyMatch regex UuidV4Regex
     }
 
-    "a requestId matches the UUID shape but is not valid UUID hex" should {
-      "fall back to a fresh random UUID rather than emit an invalid id" in {
-        // "dh12"/"fg34"/"ij56" contain non-hex characters, so the candidate fails validation.
-        val id = corrId("abcd0000-dh12-fg34-ij56")
-        id should fullyMatch regex UuidRegex
-        id should not startWith "abcd0000-dh12-fg34-ij56-"
-      }
-    }
-
-    "the requestId has no UUID-shaped prefix" should {
-      "generate a fresh random UUID" in {
-        corrId("not-a-uuid") should fullyMatch regex UuidRegex
-      }
-    }
-
-    "the requestId is absent" should {
-
-      "generate a fresh random UUID" in {
-        generator.correlationId(using HeaderCarrier()) should fullyMatch regex UuidRegex
-      }
-
-      "generate a unique id on every call" in {
-        generator.correlationId(using HeaderCarrier()) should not be generator.correlationId(using HeaderCarrier())
-      }
+    "generate a unique id on every call" in {
+      generator.correlationId should not be generator.correlationId
     }
   }
 
   "generateNewUUID" should {
-    "produce a standard 36-character UUID string" in {
-      generator.generateNewUUID should fullyMatch regex
-        "[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}"
+    "produce a valid v4 UUID" in {
+      generator.generateNewUUID should fullyMatch regex UuidV4Regex
     }
   }
 

@@ -16,36 +16,16 @@
 
 package uk.gov.hmrc.rasapi.utils
 
-import uk.gov.hmrc.http.HeaderCarrier
-
-import java.util.UUID
 import java.util.UUID.randomUUID
 import javax.inject.Inject
 
 class CorrelationIdGenerator @Inject() () {
 
-  // The first three groups of a standard 8-4-4-4-12 UUID, as it may appear anywhere within a request id.
-  private val requestIdPattern = """([A-Za-z0-9]{8}-[A-Za-z0-9]{4}-[A-Za-z0-9]{4}-[A-Za-z0-9]{4})""".r
-
   def generateNewUUID: String = randomUUID.toString
 
-  /** Derives a correlation id for a downstream call. When the incoming request id contains a UUID-shaped prefix it is
-    * preserved and combined with a fresh random 12-character suffix, so the downstream call can be traced back to the
-    * originating request; otherwise a brand new UUID is generated.
+  /** A fresh v4 UUID correlation id for a downstream call. The originating request is tied to this id through the
+    * requestId that is logged and audited alongside it
     */
-  def correlationId(using hc: HeaderCarrier): String =
-    try {
-      val candidateUUID = hc.requestId
-        .map(_.value)
-        .flatMap(rid => requestIdPattern.findFirstMatchIn(rid).map(_.group(1)))
-        .map(prefix => s"$prefix-${generateNewUUID.takeRight(12)}")
-        .getOrElse(generateNewUUID)
-
-      // Validate the candidate; a non-UUID prefix would otherwise yield an invalid correlation id.
-      UUID.fromString(candidateUUID)
-      candidateUUID
-    } catch {
-      case _: Exception => generateNewUUID
-    }
+  def correlationId: String = generateNewUUID
 
 }

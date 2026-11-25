@@ -680,40 +680,6 @@ class DesConnectorSpec
             s"$tag Retrying DES call userId=$userId corrId=$uuid attempt=3 requestId=$requestId"
           )
         }
-
-      "derive the correlationId from a UUID-shaped requestId, auditing and logging both on every attempt" in
-        withCaptureOfLoggingFrom(desLogger) { logs =>
-          // a valid UUID-shaped requestId, so the correlationId is derived from it rather than randomly generated
-          val requestId                        = "1a2b3c4d-5e6f-7a8b-9c0d-eeeeeeeeeeee"
-          given hcWithRequestId: HeaderCarrier = HeaderCarrier(requestId = Some(RequestId(requestId)))
-
-          // the requestId's first four UUID groups are preserved, with a fresh (here fixed) 12-char suffix
-          val derivedCorrId = s"1a2b3c4d-5e6f-7a8b-9c0d-${uuid.takeRight(12)}"
-
-          stubDesResponse(429)
-
-          await(defaultConnector.getResidencyStatus(member, userId)) shouldBe
-            Left(ResidencyStatusFailure("TOO_MANY_REQUESTS", "Too Many Requests."))
-
-          // the derived correlationId (not the random uuid) is sent to DES on every attempt
-          server.verify(
-            3,
-            postRequestedFor(urlEqualTo(desUrl)).withHeader("CorrelationId", equalTo(derivedCorrId))
-          )
-
-          // the requestId sits beside the derived correlationId in every audit event
-          val audits = desAudits()
-          audits should have size 3
-          audits.foreach(
-            _ should contain allElementsOf Map("correlationId" -> derivedCorrId, "requestId" -> requestId)
-          )
-
-          // and beside the derived correlationId in the retry log line
-          messagesAt(Level.WARN, logs).filter(_.contains("Retrying DES call")) shouldBe List(
-            s"$tag Retrying DES call userId=$userId corrId=$derivedCorrId attempt=2 requestId=$requestId",
-            s"$tag Retrying DES call userId=$userId corrId=$derivedCorrId attempt=3 requestId=$requestId"
-          )
-        }
     }
   }
 
