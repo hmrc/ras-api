@@ -18,41 +18,28 @@ package uk.gov.hmrc.rasapi.utils
 
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpec
-import uk.gov.hmrc.http.{HeaderCarrier, RequestId}
 
 class CorrelationIdGeneratorSpec extends AnyWordSpec with Matchers {
 
-  val uuid = "123e4567-e89b-42d3-a456-556642440000"
+  private val generator = new CorrelationIdGenerator()
 
-  val generator: CorrelationIdGenerator = new CorrelationIdGenerator {
-    override def generateNewUUID: String = uuid
-  }
+  // A standard 8-4-4-4-12 UUID whose version nibble is 4 and variant nibble is one of 8/9/a/b (i.e. a valid v4 UUID).
+  private val UuidV4Regex = "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
 
-  "correlationId" when {
-    "the requestId is present in the headerCarrier" should {
-      "pre-append the requestId when it matches the format (8-4-4-4)" in {
-        val requestId = "abcd0000-dh12-fg34-ij56"
-        generator.correlationId(using HeaderCarrier(requestId = Some(RequestId(requestId)))) shouldBe
-          s"$requestId-${uuid.substring(24)}"
-      }
+  "correlationId" should {
 
-      "return a new id when the requestId does not match the format (8-4-4-4)" in {
-        val requestId = "1a2b-dh12-fg34-ij56"
-        generator.correlationId(using HeaderCarrier(requestId = Some(RequestId(requestId)))) shouldBe uuid
-      }
+    "generate a valid v4 UUID" in {
+      generator.correlationId should fullyMatch regex UuidV4Regex
     }
 
-    "the requestId is not present in the headerCarrier" should {
-      "return a new id" in {
-        generator.correlationId(using HeaderCarrier()) shouldBe uuid
-      }
+    "generate a unique id on every call" in {
+      generator.correlationId should not be generator.correlationId
     }
   }
 
   "generateNewUUID" should {
-    "produce a standard 36-character UUID string" in {
-      new CorrelationIdGenerator().generateNewUUID should fullyMatch regex
-        "[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}"
+    "produce a valid v4 UUID" in {
+      generator.generateNewUUID should fullyMatch regex UuidV4Regex
     }
   }
 

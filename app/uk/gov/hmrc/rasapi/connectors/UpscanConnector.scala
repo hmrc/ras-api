@@ -26,7 +26,7 @@ import uk.gov.hmrc.rasapi.config.WSHttp
 import uk.gov.hmrc.rasapi.models.ConnectorFailure
 import uk.gov.hmrc.rasapi.models.FailureReason.{CONNECTION_FAILURE, DOWNLOAD_INCOMPLETE, TIMEOUT, UNEXPECTED_STATUS}
 import uk.gov.hmrc.rasapi.services.AuditService
-import uk.gov.hmrc.rasapi.utils.CorrelationIdGenerator
+import uk.gov.hmrc.rasapi.utils.{CorrelationIdGenerator, LogHelper}
 import uk.gov.hmrc.rasapi.utils.LogHelper.{failureText, successText}
 
 import java.io.InputStream
@@ -65,7 +65,9 @@ class UpscanConnector @Inject() (
     val corrId  = correlationIdGenerator.correlationId
     val context = Seq("reference" -> reference, "corrId" -> corrId)
 
-    logger.info(s"$tag Trying to retrieve file from Upscan: $reference for userId ($userId) correlationId ($corrId).")
+    logger.info(
+      s"$tag Trying to retrieve file from Upscan: $reference for userId ($userId) correlationId ($corrId) ${LogHelper.requestId(hc)}".trim
+    )
 
     def logAndAuditFailure(failure: ConnectorFailure, processingPath: String): Unit = {
       logger.error(failureText(tag, userId, failure, context = context))
@@ -146,6 +148,7 @@ class UpscanConnector @Inject() (
     val httpStatus      = failure.flatMap(_.status).map("httpStatus" -> _.toString)
     val failureCategory = failure.flatMap(_.detail).map("failureCategory" -> _)
     val errorDetail     = failure.flatMap(_.cause).flatMap(c => Option(c.getMessage)).map("errorDetail" -> _)
+    val requestId       = hc.requestId.map("requestId" -> _.value)
 
     val auditData: Map[String, String] = Map(
       "downstreamService" -> UPSCAN_DOWNSTREAM_SERVICE,
@@ -155,7 +158,7 @@ class UpscanConnector @Inject() (
       "outcome"           -> outcome,
       "auditEventType"    -> UPSCAN_CALL_AUDIT_TYPE,
       "processingPath"    -> processingPath
-    ) ++ reason ++ httpStatus ++ failureCategory ++ errorDetail
+    ) ++ requestId ++ reason ++ httpStatus ++ failureCategory ++ errorDetail
 
     auditService.audit(auditType = UPSCAN_CALL_AUDIT_TYPE, path = reference, auditData = auditData)
   }

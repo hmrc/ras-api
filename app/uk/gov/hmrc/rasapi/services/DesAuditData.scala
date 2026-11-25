@@ -24,6 +24,7 @@ object DesAuditData {
     userId: String,
     nino: NINO,
     corrId: String,
+    requestId: Option[String],
     attempt: Int,
     isBulkRequest: Boolean,
     outcome: String
@@ -36,22 +37,24 @@ object DesAuditData {
       "attempt"           -> attempt.toString,
       "requestSource"     -> (if (isBulkRequest) "FE_BULK" else "API"),
       "outcome"           -> outcome
-    )
+    ) ++ requestId.map("requestId" -> _)
 
   def success(
     userId: String,
     nino: NINO,
     corrId: String,
+    requestId: Option[String],
     attempt: Int,
     isBulkRequest: Boolean,
     httpStatus: Int
   ): Map[String, String] =
-    baseMap(userId, nino, corrId, attempt, isBulkRequest, "SUCCESS") + ("httpStatus" -> httpStatus.toString)
+    baseMap(userId, nino, corrId, requestId, attempt, isBulkRequest, "SUCCESS") + ("httpStatus" -> httpStatus.toString)
 
   def failure(
     userId: String,
     nino: NINO,
     corrId: String,
+    requestId: Option[String],
     attempt: Int,
     isBulkRequest: Boolean,
     failure: ConnectorFailure,
@@ -62,7 +65,7 @@ object DesAuditData {
     val cause       = failure.cause.map(c => "cause" -> c.getClass.getSimpleName)
     val errorDetail = failure.cause.flatMap(c => Option(c.getMessage)).map("errorDetail" -> _)
 
-    baseMap(userId, nino, corrId, attempt, isBulkRequest, "FAILURE") ++
+    baseMap(userId, nino, corrId, requestId, attempt, isBulkRequest, "FAILURE") ++
       Map("reason" -> failure.reason.toString, "responseCode" -> responseCode) ++
       status ++ parseErrors ++ cause ++ errorDetail
   }
