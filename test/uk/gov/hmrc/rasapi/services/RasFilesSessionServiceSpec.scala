@@ -16,6 +16,8 @@
 
 package uk.gov.hmrc.rasapi.services
 
+import ch.qos.logback.classic.Level
+import ch.qos.logback.classic.spi.ILoggingEvent
 import org.mockito.ArgumentMatchers.any
 import org.mockito.Mockito.*
 import org.scalatest.OptionValues
@@ -24,13 +26,15 @@ import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpec
 import org.scalatestplus.mockito.MockitoSugar
 import org.scalatestplus.play.guice.GuiceOneAppPerSuite
+import play.api.Logger
 import play.api.libs.json.{JsObject, JsValue, Json, Writes}
 import play.api.test.Helpers.{await, defaultAwaitTimeout}
 import uk.gov.hmrc.mongo.CurrentTimestampSupport
 import uk.gov.hmrc.mongo.cache.{CacheItem, DataKey}
 import uk.gov.hmrc.mongo.test.PlayMongoRepositorySupport
+import uk.gov.hmrc.play.bootstrap.tools.LogCapturing
 import uk.gov.hmrc.rasapi.config.AppContext
-import uk.gov.hmrc.rasapi.models.{FileMetadata, FileSession, ResultsFileMetaData, UpscanCallbackData}
+import uk.gov.hmrc.rasapi.models.{FileMetadata, FileSession, ResultsFileMetaData, UploadDetails, UpscanCallbackData}
 import uk.gov.hmrc.rasapi.repository.RasFilesSessionRepository
 
 import java.time.Instant
@@ -43,7 +47,8 @@ class RasFilesSessionServiceSpec
     with Matchers
     with MockitoSugar
     with OptionValues
-    with PlayMongoRepositorySupport[CacheItem] {
+    with PlayMongoRepositorySupport[CacheItem]
+    with LogCapturing {
 
   val appContext: AppContext = app.injector.instanceOf[AppContext]
 
@@ -53,6 +58,26 @@ class RasFilesSessionServiceSpec
     )
 
   val SUT: RasFilesSessionService = new RasFilesSessionService(repository)(using ExecutionContext.global)
+
+  private val serviceLogger: Logger = Logger(classOf[RasFilesSessionService])
+
+  private val downloadUrl: String =
+    "https://test-bucket.example.com/upscan/reference?X-Amz-Signature=fake-signature-for-tests"
+
+  private val originalFileName: String = "smith-family-pension-members.csv"
+
+  private def loggedText(logs: List[ILoggingEvent]): List[String] =
+    logs.flatMap(event => event.getFormattedMessage :: Option(event.getThrowableProxy).map(_.getMessage).toList)
+
+  private def assertNoSensitiveDataLogged(logs: List[ILoggingEvent]): Unit =
+    loggedText(logs).foreach { text =>
+      text should not include downloadUrl
+      text should not include "X-Amz-Signature"
+      text should not include originalFileName
+    }
+
+  private def errorWasLogged(logs: List[ILoggingEvent]): Boolean =
+    logs.exists(_.getLevel == Level.ERROR)
 
   "createFileSession" should {
     "create new session and return true" in {
@@ -119,53 +144,75 @@ class RasFilesSessionServiceSpec
   }
 
   "updateFileSession" should {
-    "update session cache with processing status" in new Setup {
+    "update session cache with processing status, without logging the download URL or file name" in new Setup {
       when(sessionCacheRepositoryMock.get[FileSession]("A1234533")(DataKey("fileSession")))
         .thenReturn(Future.successful(Some(rasSession)))
       when(sessionCacheRepositoryMock.put[FileSession]("A1234533")(DataKey("fileSession"), rasSession))
         .thenReturn(Future.successful(cacheItem))
 
-      val res: CacheItem =
-        await(sessionService.updateFileSession("A1234533", callbackData, Some(resultsFile), Some(fileMetadata)))
-      res.id                  shouldBe "A1234533"
-      res.data("fileSession") shouldBe json
+      withCaptureOfLoggingFrom(serviceLogger) { logs =>
+        val res: CacheItem =
+          await(sessionService.updateFileSession("A1234533", callbackData, Some(resultsFile), Some(fileMetadata)))
+
+        res.id                  shouldBe "A1234533"
+        res.data("fileSession") shouldBe json
+
+        assertNoSensitiveDataLogged(logs)
+      }
     }
 
-    "throw RuntimeException when something goes wrong when fetching FileSession" in new Setup {
+    "throw RuntimeException when something goes wrong when fetching FileSession, without logging the download URL or file name" in new Setup {
       when(sessionCacheRepositoryMock.get[FileSession]("A1234533")(DataKey("fileSession")))
         .thenReturn(Future.failed(new RuntimeException()))
 
-      val exception: RuntimeException = intercept[RuntimeException] {
-        await(sessionService.updateFileSession("A1234533", callbackData, Some(resultsFile), Some(fileMetadata)))
-      }
+      withCaptureOfLoggingFrom(serviceLogger) { logs =>
+        val exception: RuntimeException = intercept[RuntimeException] {
+          await(sessionService.updateFileSession("A1234533", callbackData, Some(resultsFile), Some(fileMetadata)))
+        }
 
-      exception.getMessage.contains("Error in saving sessionCache") shouldBe true
+        exception.getMessage.contains("Error in saving sessionCache") shouldBe true
+        exception.getMessage                                            should not include downloadUrl
+
+        errorWasLogged(logs) shouldBe true
+        assertNoSensitiveDataLogged(logs)
+      }
     }
 
-    "throw RuntimeException when something goes wrong when storing FileSession" in new Setup {
+    "throw RuntimeException when something goes wrong when storing FileSession, without logging the download URL or file name" in new Setup {
       when(sessionCacheRepositoryMock.get[FileSession]("A1234533")(DataKey("fileSession")))
         .thenReturn(Future.successful(Some(rasSession)))
       when(sessionCacheRepositoryMock.put[FileSession]("A1234533")(DataKey("fileSession"), rasSession))
         .thenReturn(Future.failed(new RuntimeException()))
 
-      val exception: RuntimeException = intercept[RuntimeException] {
-        await(sessionService.updateFileSession("A1234533", callbackData, Some(resultsFile), Some(fileMetadata)))
-      }
+      withCaptureOfLoggingFrom(serviceLogger) { logs =>
+        val exception: RuntimeException = intercept[RuntimeException] {
+          await(sessionService.updateFileSession("A1234533", callbackData, Some(resultsFile), Some(fileMetadata)))
+        }
 
-      exception.getMessage.contains("Error in saving sessionCache") shouldBe true
+        exception.getMessage.contains("Error in saving sessionCache") shouldBe true
+        exception.getMessage                                            should not include downloadUrl
+
+        errorWasLogged(logs) shouldBe true
+        assertNoSensitiveDataLogged(logs)
+      }
     }
 
-    "throw RuntimeException when storing FileSession fails and resultsFile is None" in new Setup {
+    "throw RuntimeException when storing FileSession fails and resultsFile is None, without logging the download URL or file name" in new Setup {
       when(sessionCacheRepositoryMock.get[FileSession]("A1234533")(DataKey("fileSession")))
         .thenReturn(Future.successful(Some(rasSession)))
       when(sessionCacheRepositoryMock.put[FileSession](any[String])(any(), any())(any()))
         .thenReturn(Future.failed(new RuntimeException("disk full")))
 
-      val exception: RuntimeException = intercept[RuntimeException] {
-        await(sessionService.updateFileSession("A1234533", callbackData, None, None))
-      }
+      withCaptureOfLoggingFrom(serviceLogger) { logs =>
+        val exception: RuntimeException = intercept[RuntimeException] {
+          await(sessionService.updateFileSession("A1234533", callbackData, None, None))
+        }
 
-      exception.getMessage.contains("Error in saving sessionCache") shouldBe true
+        exception.getMessage.contains("Error in saving sessionCache") shouldBe true
+
+        errorWasLogged(logs) shouldBe true
+        assertNoSensitiveDataLogged(logs)
+      }
     }
   }
 
@@ -173,14 +220,22 @@ class RasFilesSessionServiceSpec
 
     val callbackData: UpscanCallbackData = UpscanCallbackData(
       reference = "reference",
-      downloadUrl = Some("url"),
+      downloadUrl = Some(downloadUrl),
       fileStatus = "READY",
-      uploadDetails = None,
+      uploadDetails = Some(
+        UploadDetails(
+          uploadTimestamp = Instant.parse("2026-11-26T10:00:00Z"),
+          checksum = "396f101dd52e8b2ace0dcf5ed09b1d1f030e608938510ce46e7a5c7a4e775100",
+          fileMimeType = "text/csv",
+          fileName = originalFileName,
+          size = 1024
+        )
+      ),
       failureDetails = None
     )
 
     val resultsFile: ResultsFileMetaData = ResultsFileMetaData("file-id-1", "fileName.csv", 1234L, 123, 1234L)
-    val fileMetadata: FileMetadata       = FileMetadata("file-id-1", Some("fileName"), None)
+    val fileMetadata: FileMetadata       = FileMetadata("file-id-1", Some(originalFileName), None)
 
     val rasSession: FileSession = FileSession(
       Some(callbackData),

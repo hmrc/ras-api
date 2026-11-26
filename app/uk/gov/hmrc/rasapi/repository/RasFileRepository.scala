@@ -112,18 +112,15 @@ class RasFilesRepository @Inject() (val mongoComponent: MongoComponent, val appC
       }
   }
 
-  def fetchResultsFile(fileId: ObjectId): Future[Option[ResultsFile]] = {
-    log.debug(s"[RasFilesRepository][isFileExists] Checking if file exists with id: $fileId ")
+  def fetchResultsFile(fileId: ObjectId): Future[Option[ResultsFile]] =
     gridFSG.find(Document("_id" -> fileId)).headOption().recover { case ex: Throwable =>
       log.error(
         s"[RasFilesRepository][isFileExists] Error trying to find if parent file record exists for id: $fileId. Exception: ${ex.getMessage}"
       )
       throw new RuntimeException(s"Failed to check file exists due to error ${ex.getMessage}")
     }
-  }
 
-  def removeFile(fileName: String, userId: String): Future[Boolean] = {
-    log.debug(s"[RasFilesRepository][removeFile] File to remove => fileName: $fileName for userId ($userId).")
+  def removeFile(fileName: String, userId: String): Future[Boolean] =
     gridFSG.find(Document("filename" -> fileName)).headOption().flatMap {
       case Some(file) =>
         val objectId: ObjectId = file.getObjectId
@@ -153,6 +150,5 @@ class RasFilesRepository @Inject() (val mongoComponent: MongoComponent, val appC
       )
       throw new RuntimeException("Failed to remove file due to error" + ex.getMessage)
     }
-  }
 
 }

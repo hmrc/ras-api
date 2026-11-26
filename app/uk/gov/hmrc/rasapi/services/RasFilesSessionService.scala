@@ -70,10 +70,9 @@ class RasFilesSessionService @Inject() (filesSessionRepository: RasFilesSessionR
       cacheItem
     }).recover { case ex: Throwable =>
       logger.error(
-        s"[SessionCacheService][updateFileSession] unable to update FileSession => " +
-          s"userId ($userId) , userFile : ${userFile.toString} , resultsFile id : " +
-          s"${if (resultsFile.isDefined) resultsFile.get.id}, \n Exception is ${ex.getMessage}",
-        ex
+        s"[RasFilesSessionService][updateFileSession] unable to update FileSession " +
+          s"userId=$userId reference=${userFile.reference} fileStatus=${userFile.fileStatus} " +
+          s"resultsFileId=${resultsFile.map(_.id).getOrElse("none")} cause=${ex.getClass.getSimpleName}"
       )
       throw new RuntimeException("Error in saving sessionCache" + ex.getMessage)
     }
