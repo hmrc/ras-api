@@ -68,7 +68,6 @@ class FileController @Inject() (
       getFile(fileName, id)
         .map { fileData =>
           if (fileData.isDefined) {
-            logger.debug("[FileController][serverFile] File repo enumerator received")
             val bodySource: Source[ByteString, _] = fileData.get.data.map(ByteString.fromArray)
             apiMetrics.stop()
             Ok.sendEntity(HttpEntity.Streamed(bodySource, Some(fileData.get.length), Some(_contentType)))

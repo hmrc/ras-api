@@ -24,17 +24,17 @@ import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpecLike
 import org.scalatestplus.mockito.MockitoSugar
 import org.scalatestplus.play.guice.GuiceOneAppPerSuite
-import play.api.{Application, Logger}
-import uk.gov.hmrc.play.bootstrap.tools.LogCapturing
 import play.api.inject.guice.GuiceApplicationBuilder
 import play.api.libs.functional.syntax.{unlift, *}
 import play.api.libs.json.{JsPath, Json, Writes}
 import play.api.mvc.{BodyParsers, ControllerComponents}
 import play.api.test.Helpers.*
 import play.api.test.{FakeRequest, Helpers}
+import play.api.{Application, Logger}
 import play.mvc.Http.HeaderNames
 import uk.gov.hmrc.auth.core.*
 import uk.gov.hmrc.http.HeaderCarrier
+import uk.gov.hmrc.play.bootstrap.tools.LogCapturing
 import uk.gov.hmrc.rasapi.config.AppContext
 import uk.gov.hmrc.rasapi.connectors.DesConnector
 import uk.gov.hmrc.rasapi.controllers.lookupController.LookupController
